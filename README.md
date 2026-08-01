@@ -1,9 +1,9 @@
-# Tack B2B Quoting — Official Storefront Extensions & Addons
+# TackQuote B2B Quoting — Official Storefront Extensions & Addons
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform Support](https://img.shields.io/badge/Platforms-10%20Supported-emerald)](https://github.com/ackm04/tack-ecommerce-extensions)
 
-Official downloadable plugins and extensions for embedding **Tack B2B Wholesale Quoting & CPQ** into popular eCommerce platforms.
+Official downloadable plugins and extensions for embedding **TackQuote B2B Wholesale Quoting & CPQ** into popular eCommerce platforms.
 
 ---
 
