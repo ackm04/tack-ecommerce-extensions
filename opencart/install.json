@@ -1,0 +1,9 @@
+{
+  "name": "TackQuote",
+  "code": "tackquote",
+  "version": "1.0.0",
+  "author": "TackQuote",
+  "link": "https://tackquote.com",
+  "description": "Add a \"Request a Quote\" button to your product pages and connect this store to your TackQuote B2B quoting account.",
+  "compatible_versions": ["4.0.x.x", "4.1.x.x"]
+}

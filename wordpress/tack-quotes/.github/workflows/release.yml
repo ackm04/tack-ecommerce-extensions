@@ -1,0 +1,35 @@
+name: Release plugin ZIP
+
+# Publishes tack-quotes.zip as a GitHub Release asset when a v* tag is pushed.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Lint PHP
+        run: |
+          find . -path ./dist -prune -o -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+      - name: Build ZIP
+        run: bash bin/build.sh
+
+      - name: Attach ZIP to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/tack-quotes.zip
+          generate_release_notes: true

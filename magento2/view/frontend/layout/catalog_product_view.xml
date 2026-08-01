@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+  Adds the "Request a Quote" button under the add-to-cart area on the product
+  view page — the Magento equivalent of the WooCommerce plugin's
+  woocommerce_after_add_to_cart_button hook.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="product.info.main">
+            <block class="TackQuote\Quotes\Block\RequestQuote"
+                   name="tackquote.request.quote"
+                   template="TackQuote_Quotes::button.phtml"
+                   after="product.info.addtocart"/>
+        </referenceContainer>
+    </body>
+</page>

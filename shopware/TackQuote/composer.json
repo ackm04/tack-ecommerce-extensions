@@ -1,0 +1,36 @@
+{
+  "name": "tackquote/shopware-tack-quote",
+  "description": "TackQuote B2B quoting companion for Shopware 6 — storefront Request a Quote button",
+  "type": "shopware-platform-plugin",
+  "license": "MIT",
+  "version": "0.2.0",
+  "authors": [
+    {
+      "name": "TackQuote",
+      "homepage": "https://tackquote.com"
+    }
+  ],
+  "require": {
+    "shopware/core": "~6.5.0 || ~6.6.0 || ~6.7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "TackQuote\\TackQuote\\": "src/"
+    }
+  },
+  "extra": {
+    "shopware-plugin-class": "TackQuote\\TackQuote\\TackQuote",
+    "label": {
+      "en-GB": "TackQuote",
+      "de-DE": "TackQuote Angebot"
+    },
+    "description": {
+      "en-GB": "Adds a storefront Request a Quote button that submits into TackQuote. Catalog/order sync runs from TackQuote against the Shopware Admin API.",
+      "de-DE": "Fügt einen Angebots-Button im Storefront hinzu, der an TackQuote sendet. Katalog-/Auftragssynchronisierung läuft über die Shopware Admin API von TackQuote."
+    },
+    "manufacturerLink": {
+      "en-GB": "https://tackquote.com",
+      "de-DE": "https://tackquote.com"
+    }
+  }
+}

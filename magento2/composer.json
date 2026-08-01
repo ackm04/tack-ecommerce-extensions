@@ -1,0 +1,22 @@
+{
+    "name": "tackquote/module-quotes",
+    "description": "TackQuote for Magento 2 — a \"Request a Quote\" storefront button that creates a real TackQuote B2B quote request from a product page. Companion to the TackQuote WooCommerce plugin.",
+    "type": "magento2-module",
+    "license": "GPL-2.0-or-later",
+    "version": "1.0.0",
+    "require": {
+        "php": "~8.1.0||~8.2.0||~8.3.0",
+        "magento/framework": "*",
+        "magento/module-catalog": "*",
+        "magento/module-config": "*",
+        "magento/module-store": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "TackQuote\\Quotes\\": ""
+        }
+    }
+}

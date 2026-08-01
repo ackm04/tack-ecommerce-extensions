@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://schemas.shopware.com/dca/config.xsd"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://schemas.shopware.com/dca/config.xsd http://schemas.shopware.com/dca/config-1.0.xsd">
+
+    <card>
+        <title>TackQuote connection</title>
+        <title lang="de-DE">TackQuote-Verbindung</title>
+
+        <input-field type="text">
+            <name>apiUrl</name>
+            <label>TackQuote API base URL</label>
+            <label lang="de-DE">TackQuote API-Basis-URL</label>
+            <defaultValue>https://api.tackquote.com/v1</defaultValue>
+            <helpText>Base URL of the TackQuote API, including /v1 and no trailing slash. Use http://localhost:3001/v1 for local development.</helpText>
+            <helpText lang="de-DE">Basis-URL der TackQuote-API inkl. /v1, ohne abschließenden Schrägstrich.</helpText>
+        </input-field>
+
+        <input-field type="text">
+            <name>tenantSlug</name>
+            <label>TackQuote tenant slug</label>
+            <label lang="de-DE">TackQuote Mandanten-Slug</label>
+            <helpText>Your TackQuote workspace slug (e.g. "demo"). Required for the storefront "Request a Quote" button — it is submitted with every quote request so TackQuote routes it to the right account.</helpText>
+            <helpText lang="de-DE">Der Slug deines TackQuote-Workspace. Wird für den Angebots-Button im Storefront benötigt.</helpText>
+        </input-field>
+
+        <input-field type="password">
+            <name>apiKey</name>
+            <label>TackQuote API key</label>
+            <label lang="de-DE">TackQuote API-Schlüssel</label>
+            <helpText>Create under TackQuote → Settings → Developer → API Keys. Not required for the storefront quote button today (that endpoint is tenant-slug scoped, not API-key authenticated) — reserved for a future dedicated Shopware plugin endpoint (order sync / catalog push). See this plugin's README for details.</helpText>
+            <helpText lang="de-DE">Aktuell nicht für den Angebots-Button erforderlich. Reserviert für zukünftige Auftragssynchronisierung.</helpText>
+        </input-field>
+    </card>
+
+    <card>
+        <title>Request a Quote button</title>
+        <title lang="de-DE">"Angebot anfordern"-Button</title>
+
+        <input-field type="bool">
+            <name>enableButton</name>
+            <label>Show "Request a Quote" button on product pages</label>
+            <label lang="de-DE">"Angebot anfordern"-Button auf Produktseiten anzeigen</label>
+            <defaultValue>true</defaultValue>
+        </input-field>
+
+        <input-field type="text">
+            <name>buttonLabel</name>
+            <label>Button label</label>
+            <label lang="de-DE">Button-Beschriftung</label>
+            <defaultValue>Request a Quote</defaultValue>
+        </input-field>
+    </card>
+</config>

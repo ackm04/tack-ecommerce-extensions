@@ -1,0 +1,53 @@
+<?php
+/**
+ * "Request a Quote" button + inline modal form for the product view page.
+ *
+ * @var \TackQuote\Quotes\Block\RequestQuote $block
+ * @package TackQuote_Quotes
+ */
+
+/** @var \Magento\Framework\Escaper $escaper */
+$product = $block->getCurrentProduct();
+
+if (!$block->isEnabled() || !$product) {
+    return;
+}
+?>
+<div class="tackquote-request-quote"
+     data-sku="<?= $escaper->escapeHtmlAttr($product->getSku()) ?>"
+     data-submit-url="<?= $escaper->escapeUrl($block->getSubmitUrl()) ?>"
+     data-form-key="<?= $escaper->escapeHtmlAttr($block->getFormKeyValue()) ?>">
+    <button type="button" class="action tackquote-open-btn">
+        <span><?= $escaper->escapeHtml($block->getButtonLabel()) ?></span>
+    </button>
+
+    <div class="tackquote-modal" hidden>
+        <div class="tackquote-modal-inner">
+            <button type="button" class="tackquote-modal-close" aria-label="<?= $escaper->escapeHtmlAttr(__('Close')) ?>">&times;</button>
+            <h3><?= $escaper->escapeHtml($block->getButtonLabel()) ?></h3>
+            <p class="tackquote-modal-error" hidden></p>
+            <p class="tackquote-modal-success" hidden></p>
+            <form class="tackquote-form">
+                <label>
+                    <?= $escaper->escapeHtml(__('Your email')) ?>
+                    <input type="email" name="email" required>
+                </label>
+                <label>
+                    <?= $escaper->escapeHtml(__('Quantity')) ?>
+                    <input type="number" name="qty" min="1" value="1" required>
+                </label>
+                <label>
+                    <?= $escaper->escapeHtml(__('Note (optional)')) ?>
+                    <textarea name="note" rows="3"></textarea>
+                </label>
+                <button type="submit" class="action primary tackquote-submit-btn">
+                    <span><?= $escaper->escapeHtml(__('Send request')) ?></span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<link rel="stylesheet" type="text/css" href="<?= $escaper->escapeUrl($block->getViewFileUrl('TackQuote_Quotes::css/request-quote.css')) ?>">
+<script src="<?= $escaper->escapeUrl($block->getViewFileUrl('TackQuote_Quotes::js/request-quote.js')) ?>" defer></script>
+<?php // Plain <script src> (no RequireJS module) is intentional — a small, ?>
+<?php // dependency-free MVP. See the JS file for the click/submit logic. ?>

@@ -1,0 +1,96 @@
+{# "Request a Quote" button, rendered by Tackquotes::index() when this
+   module is assigned to a layout position on the Product route. #}
+<div class="tackquote-widget" id="tackquote-widget">
+  <button type="button" class="btn btn-secondary tackquote-open-btn" id="tackquote-open-btn"
+          data-product-id="{{ tackquote_product_id }}" data-ajax-url="{{ tackquote_ajax_url }}">
+    {{ tackquote_button_label }}
+  </button>
+
+  <div class="tackquote-modal" id="tackquote-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:1050;">
+    <div class="tackquote-modal-content" style="background:#fff; padding:1.5rem; border-radius:.5rem; max-width:420px; width:90%;">
+      <button type="button" class="tackquote-close btn-close float-end" id="tackquote-close" aria-label="Close"></button>
+      <h4>{{ tackquote_button_label }}</h4>
+      <div class="mb-2">
+        <label class="form-label" for="tackquote-email">{{ text_email }}</label>
+        <input type="email" id="tackquote-email" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label" for="tackquote-quantity">{{ text_quantity }}</label>
+        <input type="number" id="tackquote-quantity" class="form-control" value="1" min="1">
+      </div>
+      <div class="mb-2">
+        <label class="form-label" for="tackquote-note">{{ text_note }}</label>
+        <textarea id="tackquote-note" class="form-control" rows="3"></textarea>
+      </div>
+      <div class="alert alert-danger" id="tackquote-error" style="display:none;"></div>
+      <div class="alert alert-success" id="tackquote-success" style="display:none;"></div>
+      <button type="button" class="btn btn-primary" id="tackquote-submit">{{ button_send }}</button>
+    </div>
+  </div>
+</div>
+<script type="text/javascript"><!--
+(function () {
+  var openBtn = document.getElementById('tackquote-open-btn');
+  var modal = document.getElementById('tackquote-modal');
+  var closeBtn = document.getElementById('tackquote-close');
+  var submitBtn = document.getElementById('tackquote-submit');
+  var errorEl = document.getElementById('tackquote-error');
+  var successEl = document.getElementById('tackquote-success');
+
+  if (!openBtn || !modal) {
+    return;
+  }
+
+  openBtn.addEventListener('click', function () {
+    modal.style.display = 'flex';
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function () {
+      modal.style.display = 'none';
+    });
+  }
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', function () {
+      var email = document.getElementById('tackquote-email').value;
+      var quantity = document.getElementById('tackquote-quantity').value;
+      var note = document.getElementById('tackquote-note').value;
+      var ajaxUrl = openBtn.getAttribute('data-ajax-url');
+      var productId = openBtn.getAttribute('data-product-id');
+
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      submitBtn.disabled = true;
+
+      var body = new URLSearchParams();
+      body.set('email', email);
+      body.set('note', note);
+      body.set('quantity', quantity);
+      body.set('product_id', productId);
+
+      fetch(ajaxUrl, {
+        method: 'post',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+          submitBtn.disabled = false;
+          if (json.error) {
+            errorEl.textContent = json.error;
+            errorEl.style.display = 'block';
+            return;
+          }
+          successEl.textContent = json.success || 'Quote request sent.';
+          successEl.style.display = 'block';
+        })
+        .catch(function () {
+          submitBtn.disabled = false;
+          errorEl.textContent = 'Could not reach TackQuote. Please try again.';
+          errorEl.style.display = 'block';
+        });
+    });
+  }
+})();
+//--></script>

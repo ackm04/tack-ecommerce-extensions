@@ -1,0 +1,65 @@
+/* Minimal styling for the TackQuote "Request a Quote" button + modal. */
+.tackquote-request-quote {
+  margin-top: 10px;
+}
+
+.tackquote-request-quote .tackquote-open-btn {
+  cursor: pointer;
+}
+
+.tackquote-request-quote .tackquote-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tackquote-request-quote .tackquote-modal-inner {
+  background: #fff;
+  border-radius: 6px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+}
+
+.tackquote-request-quote .tackquote-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tackquote-request-quote .tackquote-form label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.tackquote-request-quote .tackquote-form input,
+.tackquote-request-quote .tackquote-form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+.tackquote-request-quote .tackquote-modal-error {
+  color: #e02b27;
+  font-size: 13px;
+}
+
+.tackquote-request-quote .tackquote-modal-success {
+  color: #006400;
+  font-size: 13px;
+}

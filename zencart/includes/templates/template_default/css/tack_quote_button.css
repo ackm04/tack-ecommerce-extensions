@@ -1,0 +1,76 @@
+/* TackQuote for Zen Cart — storefront "Request a Quote" button + modal. */
+
+.tackQuoteWidget {
+  margin: 10px 0;
+}
+
+.tackQuoteOpenBtn {
+  cursor: pointer;
+}
+
+.tackQuoteModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tackQuoteModalContent {
+  position: relative;
+  background: #fff;
+  border-radius: 6px;
+  padding: 24px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.tackQuoteClose {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #999;
+}
+
+.tackQuoteField {
+  margin-bottom: 12px;
+}
+
+.tackQuoteField label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.tackQuoteField input,
+.tackQuoteField textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.tackQuoteError {
+  color: #c0392b;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.tackQuoteSuccess {
+  color: #27ae60;
+  font-size: 13px;
+  margin-bottom: 10px;
+}

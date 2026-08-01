@@ -1,0 +1,108 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-tackquote" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if success %}
+      <div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check"></i> {{ success }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endif %}
+    {% if error_warning %}
+      <div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> {{ error_warning }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endif %}
+    <div id="tackquote-test-result"></div>
+
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-tackquote" action="{{ action }}" method="post" data-oc-toggle="ajax">
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-status">{{ entry_status }}</label>
+            <div class="col-sm-10">
+              <select name="module_tackquote_status" id="input-status" class="form-select">
+                <option value="1" {% if module_tackquote_status %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not module_tackquote_status %}selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-api-url">{{ entry_api_url }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="module_tackquote_api_url" value="{{ module_tackquote_api_url }}" id="input-api-url" class="form-control">
+              <div class="form-text">{{ entry_api_url_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-api-key">{{ entry_api_key }}</label>
+            <div class="col-sm-10">
+              <input type="password" name="module_tackquote_api_key" value="" id="input-api-key" class="form-control" autocomplete="new-password">
+              <div class="form-text">
+                {% if module_tackquote_api_key_masked %}
+                  {{ entry_api_key_saved|replace({'%s': module_tackquote_api_key_masked}) }}
+                {% else %}
+                  {{ entry_api_key_help }}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-button-label">{{ entry_button_label }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="module_tackquote_button_label" value="{{ module_tackquote_button_label }}" id="input-button-label" class="form-control">
+              <div class="form-text">{{ entry_button_label_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <div class="col-sm-10 offset-sm-2">
+              <button type="button" id="button-test" data-oc-toggle="ajax" data-oc-target="#tackquote-test-result" class="btn btn-secondary">{{ button_test }}</button>
+              <div class="form-text">{{ entry_button_help }}</div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="text/javascript"><!--
+document.getElementById('button-test').addEventListener('click', function () {
+  var resultEl = document.getElementById('tackquote-test-result');
+  resultEl.innerHTML = '';
+
+  var body = new URLSearchParams();
+  body.set('module_tackquote_api_url', document.getElementById('input-api-url').value);
+  body.set('module_tackquote_api_key', document.getElementById('input-api-key').value);
+
+  fetch('{{ test_action }}', {
+    method: 'post',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (json) {
+      if (json.error) {
+        resultEl.innerHTML = '<div class="alert alert-danger">' + json.error + '</div>';
+      } else if (json.success) {
+        resultEl.innerHTML = '<div class="alert alert-success">' + json.success + '</div>';
+      }
+    })
+    .catch(function () {
+      resultEl.innerHTML = '<div class="alert alert-danger">Could not reach the admin ajax endpoint.</div>';
+    });
+});
+//--></script>
+{{ footer }}
