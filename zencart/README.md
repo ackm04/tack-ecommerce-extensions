@@ -11,14 +11,22 @@ hook) no plugin hook point on the default product info template, so this
 ships as a set of files you copy into your Zen Cart install plus one SQL
 patch and one manual template edit.
 
-This replaces the "coming soon" status previously documented in
-`docs/integrations/ZENCART.md`: `{baseUrl}/tack-connector/*` is still the
-contract used by the **outbound** connector (`ZenCartService` in the Tack
-API, pulling products/orders from *your* store via a Bearer token you
-generate on your side). This module is the reverse direction — your Zen Cart
-store acting as a client of the **Tack API** — and is unrelated to
-`{baseUrl}/tack-connector/*`; it authenticates with a **Tack** API key, the
-same way the WooCommerce/PrestaShop plugins do.
+This directory holds **two independent halves**:
+
+| Half | Direction | What it is |
+|------|-----------|------------|
+| **Quote button** | store → TackQuote | `ajax_tack_quote_request.php` + the template partial. Posts to `POST /v1/integrations/zencart/quote-requests` on the TackQuote API with a **TackQuote API key** (`TACK_API_KEY`). |
+| **Connector** | TackQuote → store | `tack-connector/` — JSON at `{store}/tack-connector/{products,orders}`, authenticated with a **token you generate in this store** (`TACK_CONNECTOR_TOKEN`). This is what `ZenCartService` in the TackQuote API calls to sync products, import orders and place quote-accepted orders. |
+
+The two halves use **different secrets on purpose**. `TACK_API_KEY` lets this
+store talk to TackQuote; `TACK_CONNECTOR_TOKEN` lets TackQuote talk to this
+store. Neither is usable in the other direction.
+
+> **New in 1.1.0.** The connector half did not exist before. `ZenCartService`
+> had always called `{baseUrl}/tack-connector/*`, but TackQuote published
+> nothing that answered there, so every catalog/order sync 404'd and this README
+> described the token as "a Bearer token you generate on your side" for a
+> companion the merchant was expected to write. It now ships here.
 
 ## What's in this directory
 
@@ -26,8 +34,12 @@ same way the WooCommerce/PrestaShop plugins do.
 integrations/zencart/
 ├── zc_install/install.sql              Adds the TackQuote settings group (see below)
 ├── zc_install/uninstall.sql            Removes them
+├── zc_install/upgrade_connector.sql    Adds ONLY the new connector token, for
+│                                       stores that ran install.sql before 1.1.0
 ├── includes/classes/tack_api_client.php                        API client (cURL)
 ├── ajax_tack_quote_request.php                                 Storefront AJAX endpoint
+├── tack-connector/index.php            Inbound catalog/order connector
+├── tack-connector/.htaccess            Sub-path rewrite + Authorization passthrough
 └── includes/templates/template_default/
     ├── templates/tpl_tack_quote_button.php  Button + modal template partial
     ├── css/tack_quote_button.css
@@ -43,6 +55,9 @@ existing `includes/` tree; do not overwrite unrelated files).
 
 1. **Copy files.** From this directory, copy:
    - `ajax_tack_quote_request.php` → your store root.
+   - `tack-connector/` (the whole folder, **including the hidden `.htaccess`**)
+     → your store root, so it sits at `{store}/tack-connector/`. Only needed if
+     you want catalog/order sync; skip it for the quote button alone.
    - `includes/classes/tack_api_client.php` → your store's `includes/classes/`.
    - `includes/templates/template_default/templates/tpl_tack_quote_button.php`,
      `.../css/tack_quote_button.css`, `.../jscript/tack_quote_button.js` → the
@@ -53,6 +68,11 @@ existing `includes/` tree; do not overwrite unrelated files).
    Cart database (phpMyAdmin, `mysql your_db < zc_install/install.sql`, or
    Zen Cart admin's SQL patch tool if you have one enabled). This adds a
    "TackQuote" configuration group.
+
+   **Already installed a pre-1.1.0 version?** Run
+   `zc_install/upgrade_connector.sql` instead — it adds only the new
+   `TACK_CONNECTOR_TOKEN` setting. Re-running `install.sql` on a store that
+   already has the group would create a **second** "TackQuote" group.
 3. **Configure in admin.** In Zen Cart admin, go to **Configuration ▸
    TackQuote** (it appears automatically once the SQL patch has run — Zen
    Cart's admin configuration screen renders a form for any group in
@@ -63,6 +83,10 @@ existing `includes/` tree; do not overwrite unrelated files).
      Developer ▸ API Keys.
    - **Show "Request a Quote" button** — `true`/`false`.
    - **Button label** — e.g. "Request a Quote" or "Get a B2B quote".
+   - **TackQuote connector token** — *optional; only needed for catalog/order
+     sync.* Generate a long random URL-safe string (`openssl rand -hex 32`),
+     paste it here **and** into TackQuote → Settings → Integrations → Zen Cart.
+     Leave it empty and `{store}/tack-connector/*` answers `503 feed_disabled`.
 4. **Add one line to your product template.** Zen Cart's default product
    info template has no hook point at the "Add to Cart" button the way
    PrestaShop's module system does, so wiring in the button requires a
@@ -112,67 +136,134 @@ existing `includes/` tree; do not overwrite unrelated files).
   (`apps/api/src/common/guards/api-key.guard.ts`).
 - **Backend endpoint** —
   `apps/api/src/modules/integrations/zencart/zencart-plugin.controller.ts`
-  (new in this change) exposes `GET /integrations/zencart/ping`,
+  exposes `GET /integrations/zencart/ping`,
   `POST /integrations/zencart/quote-requests`, and
   `POST /integrations/zencart/order-sync`, all behind `ApiKeyGuard`, mirroring
-  `PrestaShopPluginController`/`WooCommercePluginController` exactly. Once
-  registered in `integrations.module.ts` (see "Wiring" below — deliberately
-  left undone here to avoid a merge race with a concurrently-built OpenCart
-  controller), `createQuoteRequest()` genuinely creates a draft quote (buyer
+  `PrestaShopPluginController`/`WooCommercePluginController` exactly. It IS
+  registered in `integrations.module.ts` (an earlier revision of this file said
+  the registration was still outstanding; it is not).
+  `createQuoteRequest()` genuinely creates a draft quote (buyer
   lookup/creation + quote + line items) tagged `['zencart', 'plugin-request']`
   via the same canonical pipeline `PrestaShopService`/`WooCommerceService`
   use, and `order-sync` upserts into `b2b_orders` and can mark a quote paid.
+- **Inbound connector** (`tack-connector/`) — see "The connector routes" below.
 
-## Known gaps / what's not automatic
+## The connector routes
 
-- **No module-zip install.** Zen Cart has no equivalent of PrestaShop's
-  Module Manager upload flow. Files must be copied into the storefront
-  manually (step 1 above), and the SQL patch run manually (step 2). This
-  matches how most third-party Zen Cart add-ons are distributed.
-- **No auto-injecting hook.** Unlike PrestaShop's `displayProductActions`,
-  Zen Cart's default template has no documented, stable hook point for
-  inserting markup next to "Add to Cart" without editing a template file.
-  Step 4 (one `require()` line) is a genuine manual edit, not automated by
-  this module. If your store uses a heavily customized template, the include
-  path in that line may need adjusting.
-- **No cart-level button** — only the single-product page button is
-  implemented, matching the WooCommerce/PrestaShop widgets and this task's
-  storefront button requirement.
-- **No order-push hook from the storefront.** `order-sync` exists
-  server-side (`ZenCartPluginController.orderSync` /
-  `ZenCartService.importPluginOrder`) for parity with the WooCommerce
-  plugin's `Tack_Order_Sync`, but nothing in this Zen Cart module calls it —
-  there's no `zen_cart order status changed`-style hook wired up here.
-  `ZenCartService.syncOrdersInbound()` already exists server-side
-  (pull-based, via the separate `{baseUrl}/tack-connector/*` connector), so
-  this may not be needed for most stores.
-- **Translations.** User-facing strings in the template partial and
-  JavaScript are plain English, not run through Zen Cart's
-  `includes/languages/` translation system.
-- **"Test connection" in admin.** Because this module uses Zen Cart's native
-  configuration-group rendering rather than a custom admin controller, there
-  is no "Test connection" button in the admin screen itself (unlike the
-  WooCommerce/PrestaShop plugins' custom admin pages). To verify
-  connectivity, use the storefront button on any product page — a failed
-  connection surfaces the real error message from `TackApiClient`
-  (`502` with the upstream message, not swallowed).
+All routes require `Authorization: Bearer <TACK_CONNECTOR_TOKEN>` and fail
+**closed**: with no token configured they answer `503`, never an open feed. The
+token is compared with `hash_equals()`.
 
-## Wiring needed on the Tack API side (not done in this change, by design)
+`{store}/tack-connector/products` is not a real file, so the shipped
+`.htaccess` rewrites everything under the directory to its `index.php` with the
+sub-path in `?tack_path=`. It needs `AllowOverride FileInfo` (or `All`), which
+Zen Cart already requires for its own `.htaccess` files. **nginx** has no
+`.htaccess`; add to the server block instead:
 
-`apps/api/src/modules/integrations/zencart/zencart-plugin.controller.ts` and
-the new methods on `ZenCartService`
-(`createQuoteFromPluginRequest`, `importPluginOrder`) are complete and
-type-check, but the controller is **not yet registered** in
-`apps/api/src/modules/integrations/integrations.module.ts` — a concurrent
-change is adding the OpenCart equivalent controller and both registrations
-are meant to land together to avoid a merge conflict. To finish wiring, add:
-
-```ts
-import { ZenCartPluginController } from './zencart/zencart-plugin.controller'
+```nginx
+location /tack-connector/ {
+    try_files $uri /tack-connector/index.php?tack_path=$uri&$args;
+}
+# and, in the php-fpm location:
+fastcgi_param HTTP_AUTHORIZATION $http_authorization;
 ```
 
-to the imports, and add `ZenCartPluginController` to the `controllers: [...]`
-array (the `ZenCartService` provider is already registered — no change
-needed there). No other file needs touching; `ZenCartService`'s constructor
-already receives `DataSource` and `QuotesService` exactly as
-`PrestaShopService` does.
+`GET {store}/tack-connector/` (authenticated, no sub-path) returns a small
+discovery document — the quickest way to check the rewrite works.
+
+### `GET /tack-connector/products`
+
+```json
+{ "products": [ { "id": 7, "model": "MDL-7", "name": "Widget",
+                  "description": "…", "price": "19.9900",
+                  "image": "widget.jpg", "active": true, "quantity": 12 } ],
+  "page": 1, "limit": 0 }
+```
+
+Unpaginated by default: TackQuote's `syncProducts()` makes one call with no
+paging, so a default page size here would silently import the first page and
+report success. `page`/`limit` are honoured if sent. Disabled products are
+included with `active: false` so TackQuote deactivates its copy rather than
+leaving a stale product live.
+
+### `GET /tack-connector/orders?page=1&limit=50` · `GET /tack-connector/orders/{id}`
+
+```json
+{ "orders": [ { "id": 51, "orderNumber": "51", "status": "Processing",
+                "total": "250.0000", "currency": "EUR",
+                "orderedAt": "2026-02-02T10:00:00+00:00",
+                "note": "Created from TackQuote.",
+                "lineItems": [ { "productId": 7, "name": "Widget",
+                                 "sku": "MDL-7", "quantity": 2,
+                                 "price": 125 } ] } ],
+  "page": 1, "limit": 50 }
+```
+
+- `limit` defaults to 50, caps at 250. Ordered by `orders_id` **ASC** so orders
+  placed mid-walk cannot shift the window and hide a row.
+- Excludes `orders_status = 0`.
+- `total` and line `price` are **converted into the order's own currency**
+  (`x currency_value`), because Zen Cart stores them in the store's default
+  currency and reporting the raw number next to `currency` would label a EUR
+  order with a USD amount.
+- `note` is the first status-history comment, if any.
+- `orderedAt` is ISO-8601 with an offset, not a bare MySQL `DATETIME`.
+
+### `POST /tack-connector/orders`
+
+```json
+{ "customer": { "email": "buyer@acme.com", "firstName": "Bea", "lastName": "Buyer" },
+  "lineItems": [ { "productId": 7, "quantity": 3, "price": 12.5 } ],
+  "currency": "EUR", "note": "Quote TK-2026-000001" }
+```
+
+Zen Cart's own `order` class is checkout-session driven and cannot place an
+order from arbitrary data, so this writes the four tables Zen Cart's checkout
+writes — `orders`, `orders_products`, `orders_total`, `orders_status_history` —
+using `$db->bindVars()` for every non-integer value and `(int)` casts elsewhere.
+
+- **`price` is honoured** when supplied, because it is the whole point of a
+  quote: the negotiated unit price. It is stored as `final_price` with the
+  catalog price kept in `products_price`, which is exactly how Zen Cart records
+  a discounted line, so the discount stays visible in admin. A negative price is
+  rejected.
+- Unknown or disabled product ids **reject the whole order** rather than placing
+  a short one; an unknown currency is refused rather than defaulted.
+- The order lands on `DEFAULT_ORDERS_STATUS_ID` with `customer_notified = 0`.
+- It is attached to an existing customer account when the email matches exactly;
+  **no account is created** (guest order, `customers_id = 0`, otherwise).
+- **No tax and no shipping** are calculated: there is no address to resolve a
+  tax zone or a shipping quote from, so `order_tax` is 0 and no `ot_shipping`
+  row is written. TackQuote is the system of record for tax on a quote.
+  Recorded, not guessed.
+
+## Known gaps / what is not automatic
+
+- **No module-zip install.** Zen Cart has no equivalent of PrestaShop's Module
+  Manager upload flow. Files are copied manually and the SQL patch run manually,
+  which is how most third-party Zen Cart add-ons are distributed.
+- **No auto-injecting hook** for the storefront button — step 4 above is a real
+  one-line template edit.
+- **No "Test connection" button in admin.** This module uses Zen Cart's native
+  configuration-group rendering rather than a custom admin page. Verify the
+  quote button from a product page, and the connector with
+  `curl -H "Authorization: Bearer <token>" {store}/tack-connector/` or
+  TackQuote's own Test connection.
+- **Order options/attributes** are not carried by `POST /orders`; simple product
+  lines only. Nothing is written to `orders_products_attributes`.
+- **No outbound webhook.** `ZenCartService.importPluginOrder` /
+  `POST /v1/integrations/zencart/order-sync` exist on the TackQuote side for
+  parity with the WooCommerce plugin, but nothing in this module calls them —
+  order import happens by pull, through `GET /tack-connector/orders`.
+- **Translations.** User-facing strings in the template partial, the JavaScript
+  and the connector's JSON errors are plain English, not run through
+  `includes/languages/`.
+- **`checkoutUrl`** (`index.php?main_page=checkout_shipping`) renders the
+  visitor's own session cart, so a buyer following it only lands somewhere
+  useful if their session already holds the items. Seeding a stranger's session
+  from a server-to-server call is not something Zen Cart supports; unchanged and
+  still unverified.
+- Not verified against a running Zen Cart install. Table and column names are
+  taken from the v1.5.8a schema and `includes/database_tables.php`, and the PHP
+  is syntax-checked (`php -l`), but there is no integration test against a live
+  store.

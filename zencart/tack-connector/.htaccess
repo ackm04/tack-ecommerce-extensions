@@ -1,0 +1,40 @@
+# TackQuote for Zen Cart — connector routing.
+#
+# TackQuote calls {store}/tack-connector/products and
+# {store}/tack-connector/orders. Neither is a real file, so everything under
+# this directory is handed to index.php with the sub-path in ?tack_path=.
+#
+# Apache reads the .htaccess of the nearest EXISTING parent directory, so this
+# file applies to /tack-connector/products even though that path does not
+# exist. It requires "AllowOverride FileInfo" (or All) on the vhost — Zen Cart
+# already requires AllowOverride for its own .htaccess files.
+#
+# nginx has no .htaccess. Add this to the server block instead:
+#
+#   location /tack-connector/ {
+#       try_files $uri /tack-connector/index.php?tack_path=$uri&$args;
+#   }
+#   fastcgi_param HTTP_AUTHORIZATION $http_authorization;   # in the php location
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve real files (this .htaccess is not one of them - see the deny below).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^(.*)$ index.php?tack_path=$1 [QSA,L]
+</IfModule>
+
+# CGI/FastCGI strips the Authorization header unless it is forwarded
+# explicitly. Without this the connector sees no token and answers 401, which
+# reads to the merchant as "wrong token" rather than "header dropped".
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+<IfModule mod_setenvif.c>
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
