@@ -56,3 +56,18 @@ SELECT
   'Text shown on the storefront button, e.g. "Request a Quote" or "Get a B2B quote".',
   configuration_group_id, 4, now(), NULL, NULL
 FROM configuration_group WHERE configuration_group_title = 'TackQuote';
+
+-- Inbound direction (TackQuote -> this store): the Bearer token that
+-- tack-connector/index.php accepts on /products and /orders. This is a
+-- DIFFERENT secret from TACK_API_KEY above, which authenticates this store when
+-- it calls OUT to the TackQuote API. Empty = the connector is switched off and
+-- answers 503, so a store that has merely copied the files in never serves
+-- catalog or order data to an unauthenticated caller.
+INSERT INTO configuration
+  (configuration_title, configuration_key, configuration_value, configuration_description,
+   configuration_group_id, sort_order, date_added, use_function, set_function)
+SELECT
+  'TackQuote connector token', 'TACK_CONNECTOR_TOKEN', '',
+  'Bearer token TackQuote must present to read this store''s catalog and orders and to place quote-accepted orders. Generate a long random URL-safe string (letters, digits, - and _), paste it here, and paste the SAME string into TackQuote under Settings > Integrations > Zen Cart. Leave empty to keep the connector switched off.',
+  configuration_group_id, 5, now(), NULL, NULL
+FROM configuration_group WHERE configuration_group_title = 'TackQuote';

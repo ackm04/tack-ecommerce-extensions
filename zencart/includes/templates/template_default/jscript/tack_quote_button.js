@@ -59,7 +59,8 @@
             submitBtn.disabled = false;
             if (!result.ok || !result.data.success) {
               errorEl.textContent =
-                (result.data && result.data.message) || 'Could not create the quote. Please try again.';
+                (result.data && result.data.message) ||
+                'Could not create the quote. Please try again.';
               errorEl.style.display = 'block';
               return;
             }

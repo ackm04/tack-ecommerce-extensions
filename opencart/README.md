@@ -1,206 +1,261 @@
 # TackQuote for OpenCart
 
-An OpenCart 4.x extension that adds a "Request a Quote" button to product
-pages and connects the store to a TackQuote B2B quoting account (API base
-URL + API key). It mirrors the pattern used by the TackQuote WooCommerce
-plugin (`integrations/wordpress/tack-quotes/`) and PrestaShop module
-(`integrations/prestashop/modules/tackquotes/`), adapted to OpenCart's own
-MVC(L) controller/model/view + PSR-4 extension layout.
+An OpenCart 4.x extension with **two independent halves**:
 
-Before this extension, `docs/integrations/OPENCART.md` described OpenCart as
-"API-only aspirational" — a Nest-side connector (`OpenCartService`,
-`OpenCartPlatformAdapter`) existed with no companion store-side package to
-talk to. This directory, plus the new
-`apps/api/src/modules/integrations/opencart/opencart-plugin.controller.ts`
-(see below), makes that connector genuinely functional end-to-end.
+| Half | Direction | What it is |
+|------|-----------|------------|
+| **Quote button** | store → TackQuote | A "Request a Quote" button on product pages that posts to `POST /v1/integrations/opencart/quote-requests` on the TackQuote API, authenticated with a **TackQuote API key**. |
+| **Catalog / order feed** | TackQuote → store | JSON routes `index.php?route=extension/tack/api/{product.list,order.list,order.add}`, authenticated with a **feed token you generate in this store**. This is what `OpenCartService` in the TackQuote API calls to sync products, import orders and place quote-accepted orders. |
 
-## Directory layout (assumption — read this first)
+The two halves use **different secrets on purpose**. The API key lets this
+store talk to TackQuote; the feed token lets TackQuote talk to this store.
+Neither is usable in the other direction.
+
+> **New in 1.1.0.** The feed half did not exist before. `OpenCartService` had
+> always called `extension/tack/api/*`, but TackQuote published nothing that
+> answered there, so every catalog/order sync 404'd and the docs told merchants
+> to write the endpoints themselves. They now ship here.
+>
+> 1.1.0 also **relaid out the package**. See "Layout" below — the 1.0.0 tree
+> could not be installed by either supported method.
+
+## Layout
 
 ```
 integrations/opencart/
-├── install.json                 — OpenCart 4.x Extension Installer manifest
+├── install.json
 ├── README.md
-└── upload/                      — mirrors the OpenCart web root; this is what
-    │                               gets zipped and uploaded
-    ├── admin/
-    │   ├── controller/extension/tackquote/module/tackquotes.php
-    │   ├── language/en-gb/extension/tackquote/module/tackquotes.php
-    │   └── view/template/extension/tackquote/module/tackquotes.twig
-    ├── catalog/
-    │   ├── controller/extension/tackquote/module/tackquotes.php
-    │   ├── language/en-gb/extension/tackquote/module/tackquotes.php
-    │   └── view/template/extension/tackquote/module/tackquotes.twig
-    └── system/
-        └── library/tackquote/apiclient.php
+├── admin/
+│   ├── controller/module/tackquotes.php          settings screen + Test connection
+│   ├── language/en-gb/module/tackquotes.php
+│   └── view/template/module/tackquotes.twig
+├── catalog/
+│   ├── controller/module/tackquotes.php          storefront button + quote AJAX
+│   ├── controller/api/product.php                GET  …route=extension/tack/api/product.list
+│   ├── controller/api/order.php                  GET  …route=extension/tack/api/order.list
+│   │                                             POST …route=extension/tack/api/order.add
+│   ├── language/en-gb/module/tackquotes.php
+│   └── view/template/module/tackquotes.twig
+└── system/library/
+    ├── api_client.php                            store → TackQuote HTTP client
+    └── api_guard.php                             TackQuote → store auth/paging/JSON
 ```
 
-**Assumption**: this targets **OpenCart 4.0/4.1's namespaced extension
-convention** — `admin/`, `catalog/`, and `system/` living directly under
-`upload/` (not nested inside `extension/{vendor}/`), with PHP classes
-namespaced `Opencart\Admin\Controller\Extension\Tackquote\Module\Tackquotes`,
-`Opencart\Catalog\Controller\Extension\Tackquote\Module\Tackquotes`, and
-`Opencart\System\Library\Tackquote\ApiClient`, PSR-4 autoloaded by
-OpenCart's core loader from those exact paths. This is the current
-documented OC4 "vendor/extension_name" convention as of OpenCart 4.0.2.3+,
-and is the most standard/common structure I'm confident in. I have **not**
-verified this against a running OpenCart 4 install, so treat file
-paths/namespaces as "should be correct for a recent 4.0.x/4.1.x release,
-verify against your exact point release before shipping to the OpenCart
-Marketplace."
+This is OpenCart 4's real extension layout, confirmed against **OpenCart's own
+developer guide** — <https://docs.opencart.com/developer-guide/extensions> — and
+cross-checked against the 4.0.2.3 source rather than assumed:
 
-**OpenCart 3.x is not supported by these exact files** — OC3 controllers are
-un-namespaced (e.g. `ControllerExtensionModuleTackquotes extends Controller`,
-loaded by filename convention, no `system/library` PSR-4 autoloading), and
-its admin `Loader`/`Model` API differs in several method names. Porting this
-to OC3 means: drop the `Opencart\...` namespaces, rename classes to the
-un-namespaced `ControllerExtensionModuleTackquotes` / `ModelExtensionModuleTackquotes`
-style, and swap `Opencart\System\Library\Tackquote\ApiClient` for a manually
-`require_once`'d global class. This is a real gap — no OC3-specific files are
-shipped here.
+- The Extension Installer extracts the **zip root** into `extension/<code>/`,
+  with no `upload/` folder stripping and no `extension/<code>/` prefix of its
+  own — so the zip must contain `install.json`, `admin/`, `catalog/`, `system/`
+  at its root. Core's own bundled extension has exactly this shape
+  ([`upload/extension/opencart/`](https://github.com/opencart/opencart/tree/4.0.2.3/upload/extension/opencart)).
+  [installer.php](https://github.com/opencart/opencart/blob/4.0.2.3/upload/admin/controller/marketplace/installer.php) ·
+  [developer guide](https://github.com/opencart/opencart/blob/master/docs/developer-guide/extensions.md)
+- `<code>` comes from the **zip filename** (`basename($filename, '.ocmod.zip')`),
+  not from `install.json`. The archive must therefore be named
+  **`tack.ocmod.zip`** — that is what makes the routes resolve as
+  `extension/tack/api/*`, which is the contract `OpenCartService` calls.
+- `catalog/controller/startup/extension.php` registers
+  `Opencart\Catalog\Controller\Extension\Tack` → `extension/tack/catalog/controller/`,
+  and `system/engine/autoloader.php` maps the rest of the class name to a file
+  with `strtolower(preg_replace('~([a-z])([A-Z]|[0-9])~', '\1_\2', …))` — which
+  is why the client library is `api_client.php`, not `apiclient.php`.
+  [startup/extension.php](https://github.com/opencart/opencart/blob/4.0.2.3/upload/catalog/controller/startup/extension.php) ·
+  [autoloader.php](https://github.com/opencart/opencart/blob/4.0.2.3/upload/system/engine/autoloader.php)
+- `index.php?route=extension/tack/api/product.list` is split at the **last dot**
+  into route `extension/tack/api/product` + method `list`.
+  [action.php](https://github.com/opencart/opencart/blob/4.0.2.3/upload/system/engine/action.php)
+- An extension's catalog controllers are **not confined to `module/`**. The
+  vendor guide's own worked example puts one at `catalog/controller/events.php`
+  (namespace `…\Extension\TestModule`, invoked as
+  `extension/test_module/events.onCartAddBefore`), which is exactly the shape
+  the `api/` directory here uses.
+- JSON is emitted the way the vendor guide emits it:
+  `$this->response->addHeader('Content-Type: application/json')` +
+  `setOutput(json_encode($json))`.
 
-## What's real
+### Two places the vendor guide is not a reliable source
 
-- **Admin settings controller** (`upload/admin/controller/extension/tackquote/module/tackquotes.php`)
-  — a genuine OpenCart module controller: `index()` renders a form and saves
-  API URL / API key / button label / enabled flag via OpenCart's standard
-  `oc_setting` table (`model_setting_setting::editSetting('module_tackquote', ...)`,
-  the same mechanism every stock OpenCart module — Banner, HTML Content, etc.
-  — uses). `test()` is a real AJAX action that calls
-  `ApiClient::testConnection()` against the live TackQuote API and returns
-  JSON. `install()`/`uninstall()` hook into OpenCart's extension lifecycle;
-  `uninstall()` deletes the `module_tackquote_*` settings.
-- **Admin settings template** (`upload/admin/view/template/extension/tackquote/module/tackquotes.twig`)
-  — a real Twig form (OC4 uses Twig, not `.tpl`) with a "Test connection"
-  button wired to fetch() the `test()` AJAX route client-side, matching the
-  PrestaShop module's HelperForm + separate test-connection block.
-- **Storefront module controller** (`upload/catalog/controller/extension/tackquote/module/tackquotes.php`)
-  — `index($setting)` is the standard signature OpenCart calls for any
-  content module assigned to a layout position (see "Displaying the button"
-  below); it loads the current product via `model_catalog_product::getProduct()`,
-  and renders nothing (`''`) when disabled, unconfigured, or off a product
-  page — the same "don't show a button that can't work" behavior as the
-  PrestaShop module's `hookDisplayProductActions()`. `quote()` is the real
-  AJAX endpoint the storefront modal POSTs to: validates the email,
-  re-fetches the product server-side (never trusts client-submitted
-  price/name), and calls `ApiClient::createQuoteRequest()`.
-- **Storefront template** (`upload/catalog/view/template/extension/tackquote/module/tackquotes.twig`)
-  — button + inline modal (email, quantity, note) with vanilla-JS `fetch()`
-  submission, functionally identical to the PrestaShop module's
-  `quote_button.tpl` + `tackquotes.js`, just inlined into one Twig file
-  (OpenCart doesn't split JS into a separate enqueued file for a single small
-  module the way PrestaShop registers stylesheets/scripts per-hook).
-- **API client** (`upload/system/library/tackquote/apiclient.php`) — a real
-  cURL-based HTTP client, authenticated exactly like the WooCommerce plugin's
-  `Tack_Api_Client` and the PrestaShop module's `TackApiClient`:
-  `Authorization: Bearer <key>` + `X-Api-Key: <key>` headers, matching how
-  `ApiKeyGuard` on the Tack API accepts credentials
-  (`apps/api/src/common/guards/api-key.guard.ts`). Calls
-  `GET /integrations/opencart/ping` (falling back to `GET /health`) for "Test
-  connection", and `POST /integrations/opencart/quote-requests` for the
-  storefront button — **both routes now exist** (see Part 2 below), unlike
-  the PrestaShop module's README at the time it was written, which had to
-  document those routes as missing.
-- **Installer manifest** (`install.json`) — a minimal OC4 Extension Installer
-  manifest (name/code/version/author/link/compatible_versions).
+Recorded so a future reader does not "fix" working code to match a doc bug:
 
-## Displaying the button (important — read before assuming it's broken)
+- The guide's directory listing says the storefront template lives at
+  `catalog/view/theme/default/template/module/…`. **No released OpenCart does
+  that.** 4.0.2.3, 4.1.0.3 and master all register
+  `DIR_EXTENSION . <code> . '/catalog/view/template/'` in
+  `catalog/controller/startup/extension.php`, and core's own bundled extension
+  keeps its templates at `extension/opencart/catalog/view/template/module/`.
+  This package follows the source.
+- Template **extension**: `.twig` on 4.0.x and 4.1.x, `.html` on master
+  (unreleased). This package ships `.twig` and declares 4.0.x/4.1.x
+  compatibility accordingly; a future 4.2 will need the storefront/admin twig
+  files renamed.
 
-Unlike PrestaShop's hook system (`displayProductActions`), OpenCart has no
-built-in "action buttons next to Add to Cart" hook point that a module can
-attach to without editing the theme template. The standard, non-hacky
-OpenCart way to add storefront content is the one used by every stock
-content module (Banner, HTML Content, Google Analytics, etc.): **the
-merchant assigns the module to a layout position** via **Design > Layouts**
-→ edit (or create) the layout used by the Product route → add a "TackQuote"
-module in a position such as "Content Bottom" or "Content Top". OpenCart
-then calls `Tackquotes::index($setting)` for that position/route and injects
-whatever HTML it returns. This is documented in Installation step 6 below.
+### Not covered by the vendor docs at all — UNVERIFIED
 
-This is a deliberate design choice, not a shortcut: modifying theme template
-files (`catalog/view/template/product/product.twig`) directly, or doing a
-`str_replace()` against pre-rendered HTML via OpenCart's event system, would
-be far more fragile (broken by any theme change) than using the layout
-system OpenCart ships specifically for this purpose. The trade-off is an
-extra one-time admin step compared to PrestaShop/WooCommerce, where the
-button appears automatically after activation — that's a genuine UX gap
-worth calling out, not a hidden one.
+- **Authenticating a custom extension route.** OpenCart publishes nothing on
+  this. Its only API page,
+  <https://docs.opencart.com/admin-interface/system/users/api>, documents the
+  admin-managed API user for core's *session cart/checkout* API, which an
+  extension controller cannot reuse. The Bearer + `hash_equals()` scheme here is
+  TackQuote's own, chosen to match what the connector already sends. That page
+  does recommend IP-restricting API credentials — worth applying to these routes
+  at the web-server level.
+- **SQL escaping.** The Coding Standard page
+  (<https://docs.opencart.com/developer-guide/coding-standard>) covers naming
+  and formatting only; no escaping guidance exists anywhere in the docs, and
+  `$this->db` has no prepared-statement API. The `(int)`-cast /
+  `$this->db->escape()` idiom used here is taken from core's own models.
 
-## Installation
+**What 1.0.0 got wrong** (recorded so it is not reintroduced): it shipped
+`upload/admin/controller/extension/tackquote/module/tackquotes.php` — both an
+`upload/` wrapper the installer does not strip *and* a second
+`extension/<code>/` segment. Installed through the Extension Installer the files
+landed at `extension/tackquote/upload/admin/…`, where nothing autoloads; copied
+into the web root by FTP the module never appeared in Extensions > Modules,
+because that screen lists only paths the installer recorded
+([extension/module.php](https://github.com/opencart/opencart/blob/4.0.2.3/upload/admin/controller/extension/module.php)).
+`system/library/tackquote/apiclient.php` could not have loaded under either
+method. None of this is a behaviour change for any working install — there could
+not have been one.
 
-1. Zip the **contents of `integrations/opencart/`** (`install.json` and
-   `upload/` at the zip root, not nested inside another folder):
-   ```
-   cd integrations/opencart
-   zip -r tackquote.ocmod.zip install.json upload
-   ```
-2. In your OpenCart admin, go to **Extensions > Installer** and upload
-   `tackquote.ocmod.zip`.
-3. Go to **Extensions > Extensions**, filter by type **Modules**, find
-   **TackQuote**, and click the install (+) icon, then the edit (pencil)
-   icon.
-4. Enter your **TackQuote API URL** (defaults to `https://api.tackquote.com/v1`)
-   and paste your **TackQuote API key** (create one in TackQuote under
-   Settings > Developer > API Keys — the same kind of key the WooCommerce
-   and PrestaShop plugins use). Set **Status** to Enabled and click
-   **Test connection**, then **Save**.
-5. Go to **Design > Layouts**, choose (or create) the layout used by the
-   **Product** route, and add the **TackQuote** module to a position such as
-   "Content Bottom".
-6. Shoppers on any product page assigned that layout will now see the
-   "Request a Quote" button.
+**OpenCart 3.x is not supported by these files.** OC3 controllers are
+un-namespaced (`ControllerExtensionModuleTackquotes extends Controller`, loaded
+by filename), there is no `extension/` directory and no PSR-4-ish autoloading,
+and `Action`/`Factory` resolve routes differently — the API routes above cannot
+exist on OC3 in this form. Porting means an OC3-specific tree, which is not
+shipped.
 
-## What still needed a new Nest endpoint (Part 2 — now done)
+## Build
 
-Before this change, the Tack API had no OpenCart equivalent of the
-WooCommerce/PrestaShop plugin controllers — `apps/api/src/modules/integrations/opencart/opencart.service.ts`
-only supported the seller-portal-driven, JWT-authenticated direction (Tack
-pulling products/orders from the store's own companion API). There was no
-inbound, API-key-authenticated route for a storefront module to call.
+```
+bash scripts/package-integrations.sh
+```
 
-This is now added:
+produces two artifacts in `dist/extensions/`:
 
-- `apps/api/src/modules/integrations/opencart/opencart-plugin.controller.ts`
-  — `OpenCartPluginController`, mirroring `PrestaShopPluginController` /
-  `WooCommercePluginController` exactly: `@UseGuards(ApiKeyGuard, PlanGuard)`
-  on `@Controller('integrations/opencart')`, with `GET ping`,
-  `POST quote-requests` (creates a real draft quote via the canonical
-  `QuotesService` pipeline, tagged `['opencart', 'plugin-request']`), and
-  `POST order-sync` for parity with the other plugin controllers.
-- `OpenCartService.createQuoteFromPluginRequest()` / `.importPluginOrder()`
-  in `apps/api/src/modules/integrations/opencart/opencart.service.ts` — added
-  alongside the existing `syncProducts()`/`createOrder()`/`syncOrdersInbound()`
-  methods, following `PrestaShopService.createQuoteFromPluginRequest()` /
-  `.importPluginOrder()` line for line (buyer upsert via a `buyers` table
-  query, `QuotesService.create()`, `B2bOrdersService.upsertExternal()`,
-  `QuotesService.markPaidFromPlatformReference()`).
+| File | What it is |
+|------|------------|
+| **`tack.ocmod.zip`** | What a merchant installs. `install.json` + `admin/` + `catalog/` + `system/` at the zip root. **The filename sets the extension code — do not rename it.** |
+| `tack-opencart.zip` | Source archive for GitHub Releases (adds `README.md`, wrapped in an `opencart/` folder). **Not installable** by OpenCart's installer. |
 
-**Not yet wired**: `OpenCartPluginController` still needs to be registered
-in `apps/api/src/modules/integrations/integrations.module.ts` — intentionally
-left out of this change to avoid a merge race with a concurrent Zen Cart
-controller registration. See the top-level task report for the exact one-line
-import + controllers-array edit needed.
+To build just the installable one by hand:
 
-## Known gaps / assumptions summary
+```
+cd integrations/opencart
+zip -r ../../dist/extensions/tack.ocmod.zip install.json admin catalog system
+```
 
-- Built and reasoned about against OpenCart 4.0.x/4.1.x conventions from
-  documentation and general PHP/OpenCart knowledge, **not verified against a
-  running OpenCart install** — file paths, namespaces, and the exact
-  `model_setting_setting`/`model_catalog_product` method signatures should be
-  double-checked against your specific OpenCart point release before
-  production use.
-- **No OpenCart 3.x package.** OC3's un-namespaced controller/model
-  convention is different enough that shipping one file tree for "3.x/4.x"
-  wasn't feasible without either duplicating the whole extension or building
-  an abstraction neither codebase has. 4.x was chosen as the actively
-  maintained line.
-- The storefront button requires a **one-time manual layout-assignment step**
-  (Design > Layouts) that PrestaShop/WooCommerce don't need — see
-  "Displaying the button" above for why that's the standard OpenCart pattern
-  rather than a shortcut.
-- No OCMOD-style automatic theme file patching is used anywhere — deliberate,
-  to avoid breaking on theme updates.
-- `order-sync` exists for parity with the other plugin controllers but, like
-  PrestaShop's, is not called by any hook in this extension yet (OpenCart has
-  no storefront "order placed" webhook wired up here) — it's there so a
-  future admin-side "sync orders to TackQuote" action has a real endpoint to
-  call.
+## Install
+
+1. **Extensions > Installer** → upload `tack.ocmod.zip`, then click Install.
+2. **Extensions > Extensions**, filter by **Modules**, find **TackQuote**, click
+   the **+** (install), then the **pencil** (edit).
+3. Fill in:
+   - **TackQuote API URL** — `https://api.tackquote.com/v1`.
+   - **TackQuote API Key** — TackQuote → Settings → Developer → API Keys. Used by
+     the storefront button. Click **Test connection**.
+   - **Catalog / order feed token** — *optional; only needed for catalog/order
+     sync.* Generate a long random URL-safe string (`openssl rand -hex 32`),
+     paste it here **and** into TackQuote → Settings → Integrations → OpenCart.
+     Leave it empty and the feed routes answer `503 feed_disabled`.
+   - **Status** → Enabled. Save.
+4. **Design > Layouts** → the layout used by the **Product** route → add the
+   **TackQuote** module to a position such as "Content Bottom". OpenCart has no
+   built-in hook next to Add to Cart, so layout assignment is the standard
+   (and theme-update-safe) way to place storefront module output; that is a
+   genuine extra step compared with WooCommerce/PrestaShop.
+
+To switch the feed off later, save the token field with a single dash (`-`).
+
+## The feed routes
+
+All three require `Authorization: Bearer <feed token>` and fail **closed**: with
+no token configured they answer `503`, never an open feed. The token is compared
+with `hash_equals()`.
+
+### `GET index.php?route=extension/tack/api/product.list`
+
+```json
+{ "products": [ { "product_id": 42, "model": "MDL-42", "sku": "SKU-42",
+                  "name": "Widget", "description": "…", "price": "100.0000",
+                  "special": "80.0000", "image": "catalog/demo/widget.jpg",
+                  "status": "1", "quantity": 7 } ],
+  "total": 1, "page": 1, "limit": 0 }
+```
+
+- **Unpaginated by default.** TackQuote's `syncProducts()` makes one call with
+  no paging, so a default page size here would silently import the first page
+  and report success. `page`/`limit` are honoured if sent. Very large catalogs
+  may need a higher PHP `memory_limit`.
+- Scoped to the connected store via `product_to_store`.
+- **Disabled products are included** with `status: "0"` so TackQuote deactivates
+  its copy instead of leaving a stale product live.
+- `special` is the live special price for the store's default customer group
+  (same subquery core's catalog model uses), or `false` — never `0`, which would
+  read as a free product.
+
+### `GET index.php?route=extension/tack/api/order.list&page=1&limit=50`
+
+```json
+{ "orders": [ { "order_id": 51, "order_status": "Complete", "total": "99.5000",
+                "currency_code": "EUR", "date_added": "2026-02-02T10:00:00+00:00",
+                "comment": "…",
+                "products": [ { "product_id": 42, "name": "Widget",
+                                "model": "MDL-42", "quantity": 2,
+                                "price": "49.7500" } ] } ],
+  "total": 51, "page": 1, "limit": 50 }
+```
+
+- `limit` defaults to 50, caps at 250. Ordered by `order_id` **ASC** so orders
+  placed mid-walk cannot shift the window and hide a row.
+- Excludes `order_status_id = 0` — OpenCart's "missing order" state (an
+  abandoned confirm step), not revenue.
+- `total` and line `price` are **converted into the order's own currency**
+  (`× currency_value`), because OpenCart stores them in the store's default
+  currency and reporting the raw number next to `currency_code` would label a
+  EUR order with a USD amount.
+- `date_added` is ISO-8601 with an offset, not a bare MySQL `DATETIME`.
+
+### `POST index.php?route=extension/tack/api/order.add`
+
+Body is `application/x-www-form-urlencoded`:
+`firstname, lastname, email, comment, currency_code, products[i][product_id], products[i][quantity]`.
+
+- Written through OpenCart's own `checkout/order` model (`addOrder()` +
+  `addHistory()`), not hand-rolled INSERTs, so order/product/total rows and
+  stock handling stay consistent with the rest of OpenCart.
+- **Prices always come from this store's catalog.** The request carries none and
+  none would be honoured — an endpoint that let the caller name its own price
+  would be a discount oracle for anyone who obtained the token.
+- Unknown or disabled product ids **reject the whole order** rather than placing
+  a short one.
+- An unknown/disabled `currency_code` is refused rather than defaulted.
+- The order lands on the store's configured default order status
+  (`config_order_status_id`) with `notify = false`, so the merchant sees a real
+  order and the buyer gets no OpenCart email — TackQuote owns that conversation.
+- The order is attached to an existing customer account when the email matches
+  exactly; **no account is created** (guest order, `customer_id = 0`, otherwise).
+- **No tax is calculated.** There is no shipping/payment address to resolve a
+  tax zone from, so OpenCart's tax rules cannot be applied honestly; TackQuote
+  is the system of record for tax on a quote. Recorded, not guessed.
+
+## Known gaps
+
+- **`checkoutUrl`.** `OpenCartService.createOrder` hands back
+  `index.php?route=checkout/checkout`. That route exists, but it renders the
+  *visitor's own session cart* and bounces when that cart is empty, so a buyer
+  following the link only lands somewhere useful if their session already has
+  the items. Seeding a stranger's session from a server-to-server call is not
+  something OpenCart supports; **unchanged and still unverified**.
+- **Order options/variants.** `order.add` places simple product lines only —
+  product options, subscriptions and vouchers are not carried.
+- **Multi-store.** The feed is scoped to the store OpenCart resolves for the
+  request host. A second storefront needs its own TackQuote connection.
+- **No OpenCart Marketplace listing** and no OC3 package.
+- **`order-sync`** (`POST /v1/integrations/opencart/order-sync` on the TackQuote
+  side) still has no caller in this extension — order import happens through
+  `order.list` above instead.
+- Not verified against a running OpenCart install. Every structural claim above
+  is cited to 4.0.2.3 source, and the PHP is syntax-checked in CI-equivalent
+  fashion (`php -l`), but there is no integration test against a live store.
