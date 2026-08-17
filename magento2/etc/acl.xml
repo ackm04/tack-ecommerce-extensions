@@ -1,16 +1,33 @@
 <?xml version="1.0"?>
 <!--
-  Admin ACL resource for the TackQuote configuration section, nested under
-  Stores > Settings > Configuration so only admins with config access can see it.
+  Admin ACL resources for TackQuote.
+
+  Two separate trees on purpose:
+
+  * TackQuote_Quotes::config lives under Stores > Settings > Configuration, because
+    Magento resolves a system.xml section's <resource> against that tree. Moving it
+    would hide the configuration section from admins who legitimately have config
+    access.
+
+  * TackQuote_Quotes::tackquote is a top-level resource backing the sidebar menu, so a
+    role can be granted day-to-day TackQuote access (viewing connection status,
+    running a connection test) WITHOUT also being granted store configuration rights.
+    Collapsing both into the config resource would mean anyone who can look at the
+    dashboard could also edit every store setting.
 -->
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Authorization:etc/acl.xsd">
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
     <acl>
         <resources>
             <resource id="Magento_Backend::admin">
+                <resource id="TackQuote_Quotes::tackquote" title="TackQuote" translate="title" sortOrder="45">
+                    <resource id="TackQuote_Quotes::overview" title="Dashboard" translate="title" sortOrder="10"/>
+                </resource>
                 <resource id="Magento_Backend::stores">
                     <resource id="Magento_Backend::stores_settings">
                         <resource id="Magento_Config::config">
-                            <resource id="TackQuote_Quotes::config" title="TackQuote Section" translate="title" sortOrder="500"/>
+                            <resource id="TackQuote_Quotes::config" title="TackQuote Section"
+                                      translate="title" sortOrder="500"/>
                         </resource>
                     </resource>
                 </resource>

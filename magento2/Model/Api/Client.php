@@ -3,21 +3,11 @@
  * Thin HTTP client for the TackQuote API, mirroring the WordPress plugin's
  * Tack_Api_Client (includes/class-tack-api-client.php).
  *
- * IMPORTANT — inbound endpoint gap (see README.md "What's real vs. what's a gap"):
- * As of this module's initial version, apps/api ships an API-key-authenticated
- * plugin controller only for WooCommerce
- * (apps/api/src/modules/integrations/woocommerce/woocommerce-plugin.controller.ts,
- * routes under /v1/integrations/woocommerce/*). There is no Magento-specific
- * equivalent yet. Those two routes are payload-generic (buyerEmail/note/
- * lineItems for quote-requests; {ok,tenantId} for ping) and this client reuses
- * them as a stand-in so quote-request creation genuinely works end-to-end
- * today. Quotes created this way are tagged server-side using the `source`
- * field this client sends (WooCommerceService::createQuoteFromPluginRequest
- * reads `payload.source`, defaulting to 'woocommerce' when absent), so a
- * Magento-originated quote is correctly tagged ['magento','plugin-request']
- * rather than ['woocommerce','plugin-request']. A dedicated
- * /v1/integrations/magento/quote-requests endpoint still doesn't exist — see
- * the README for that remaining gap.
+ * It talks to TackQuote's own Magento plugin routes — MagentoPluginController in
+ * apps/api/src/modules/integrations/magento/magento-plugin.controller.ts — which are
+ * authenticated by the store's TackQuote API key rather than a seller JWT. That
+ * controller is separate from MagentoController, which is JWT-guarded and drives the
+ * opposite direction (Tack reading the store's catalog and creating orders).
  *
  * @package TackQuote_Quotes
  */
@@ -34,10 +24,15 @@ use TackQuote\Quotes\Model\Config;
 class Client
 {
     /**
-     * Reused WooCommerce-plugin inbound route — see class docblock.
+     * Magento's own inbound routes. These replaced the WooCommerce routes this client
+     * borrowed before `/v1/integrations/magento/*` existed. Unlike that stand-in, they
+     * register the buyer AND their company through the same path the buyer portal uses
+     * (PluginRegistrationService -> BuyersService::registerWithCompany), rather than
+     * creating a bare buyer named after the local part of an email address.
      */
-    private const PATH_PING = '/integrations/woocommerce/ping';
-    private const PATH_QUOTE_REQUESTS = '/integrations/woocommerce/quote-requests';
+    private const PATH_PING = '/integrations/magento/ping';
+    private const PATH_REGISTRATION_CONFIG = '/integrations/magento/registration-config';
+    private const PATH_QUOTE_REQUESTS = '/integrations/magento/quote-requests';
 
     private const TIMEOUT_SECONDS = 20;
 
@@ -96,15 +91,46 @@ class Client
     }
 
     /**
-     * Create a quote request from a product page or (future) cart submission.
+     * The seller's registration policy.
      *
-     * @param array $payload {buyerEmail, note, source, lineItems:[{sku,name,quantity,unitPrice,externalProductId}]}
+     * Which of companies/individuals are allowed, which company details are required,
+     * and the seller's own custom questions.
+     *
      * @param int|null $storeId
-     * @return array{ok: bool, id?: string, quoteNumber?: string, portalUrl?: string, message?: string}
+     * @return array{ok: bool, data?: array, message?: string}
      */
-    public function createQuoteRequest(array $payload, ?int $storeId = null): array
+    public function getRegistrationConfig(?int $storeId = null): array
     {
-        $result = $this->request('POST', self::PATH_QUOTE_REQUESTS, $payload, $storeId);
+        return $this->request('GET', self::PATH_REGISTRATION_CONFIG, null, $storeId);
+    }
+
+    /**
+     * Create a quote request from a product page or quote-list submission.
+     *
+     * Registers the buyer — and their company, where the seller's policy allows — in the
+     * process.
+     *
+     * @param array $payload {buyerEmail, firstName, lastName, phone, companyName,
+     *                        company:{...}, customFields:{...}, note, source,
+     *                        lineItems:[{sku,name,quantity,unitPrice,externalProductId}]}
+     * @param int|null $storeId
+     * @param string $idempotencyKey Guards against a double-click or a retry creating
+     *                               two identical quotes.
+     * @return array{ok: bool, id?: string, quoteNumber?: string, portalUrl?: string,
+     *               company?: array|null, awaitingApproval?: bool, message?: string}
+     */
+    public function createQuoteRequest(
+        array $payload,
+        ?int $storeId = null,
+        string $idempotencyKey = ''
+    ): array {
+        $result = $this->request(
+            'POST',
+            self::PATH_QUOTE_REQUESTS,
+            $payload,
+            $storeId,
+            $idempotencyKey
+        );
         if (!$result['ok']) {
             return ['ok' => false, 'message' => $result['message'] ?? 'Could not create the quote. Please try again.'];
         }
@@ -116,18 +142,28 @@ class Client
             'id' => isset($data['id']) ? (string) $data['id'] : null,
             'quoteNumber' => isset($data['quoteNumber']) ? (string) $data['quoteNumber'] : null,
             'portalUrl' => isset($data['portalUrl']) ? (string) $data['portalUrl'] : null,
+            'company' => isset($data['company']) && is_array($data['company']) ? $data['company'] : null,
+            'awaitingApproval' => !empty($data['awaitingApproval']),
         ];
     }
 
     /**
+     * Perform one authenticated request against the TackQuote API.
+     *
      * @param string $method
      * @param string $path Path beginning with '/'.
      * @param array|null $body
      * @param int|null $storeId
+     * @param string $idempotencyKey
      * @return array{ok: bool, data?: array, message?: string}
      */
-    private function request(string $method, string $path, ?array $body, ?int $storeId): array
-    {
+    private function request(
+        string $method,
+        string $path,
+        ?array $body,
+        ?int $storeId,
+        string $idempotencyKey = ''
+    ): array {
         $apiKey = $this->config->getApiKey($storeId);
         if ($apiKey === '') {
             return ['ok' => false, 'message' => 'No TackQuote API key configured.'];
@@ -141,6 +177,25 @@ class Client
         $this->curl->addHeader('Content-Type', 'application/json');
         $this->curl->addHeader('Accept', 'application/json');
         $this->curl->addHeader('User-Agent', 'TackQuote-Magento2/1.0.0');
+
+        /*
+         * Server-side duplicate suppression.
+         *
+         * This was suppressed for a while: TackQuote's idempotency layer wrote to
+         * `api_idempotency_keys` — a FORCE-RLS table — without establishing a tenant
+         * context, so any request carrying the header failed with "new row violates
+         * row-level security policy" and returned 500. No plugin had ever sent the header,
+         * so the defect had never surfaced. It is now fixed upstream and verified here:
+         * the same key replays the original quote instead of creating a second one.
+         *
+         * Model\IdempotencyGuard is deliberately KEPT alongside this rather than replaced.
+         * The two catch different things — the guard stops a double-click before it leaves
+         * the store at all, while this catches retries the guard cannot see (a second
+         * Magento node, or after a cache flush).
+         */
+        if ($idempotencyKey !== '') {
+            $this->curl->addHeader('Idempotency-Key', $idempotencyKey);
+        }
 
         try {
             if ($method === 'GET') {

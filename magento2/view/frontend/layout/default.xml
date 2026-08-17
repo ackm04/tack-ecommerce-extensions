@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+  Site-wide quote list + the shared quote form.
+
+  Rendered on every storefront page (before.body.end, the page-bottom container declared by
+  Magento's own page layouts) because a shopper builds a quote list across category pages,
+  search results and product pages — the same reasoning behind a theme's persistent
+  mini-cart. Putting it only on product pages would strand the list everywhere else.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="TackQuote_Quotes::css/request-quote.css"/>
+    </head>
+    <body>
+        <referenceContainer name="before.body.end">
+            <block class="TackQuote\Quotes\Block\QuoteList"
+                   name="tackquote.quote.list"
+                   template="TackQuote_Quotes::quote-list.phtml"/>
+        </referenceContainer>
+    </body>
+</page>

@@ -1,0 +1,27 @@
+<?php
+/**
+ * "Add to Quote" inside a product tile on category / search listings.
+ *
+ * @var \TackQuote\Quotes\Block\ListingButton $block
+ * @var \Magento\Framework\Escaper $escaper
+ * @package TackQuote_Quotes
+ */
+
+$product = $block->getProduct();
+
+if (!$block->isEnabled() || !$product) {
+    return;
+}
+
+$requiresOptions = $block->requiresOptions($product);
+?>
+<div class="tackquote-listing-action"
+     data-role="tackquote-product"
+     data-sku="<?= $escaper->escapeHtmlAttr($product->getSku()) ?>"
+     data-name="<?= $escaper->escapeHtmlAttr($product->getName()) ?>"
+     data-requires-options="<?= $requiresOptions ? '1' : '0' ?>"
+     data-product-url="<?= $escaper->escapeUrl($product->getProductUrl()) ?>">
+    <button type="button" class="action tackquote-add-btn tackquote-add-btn--listing">
+        <span><?= $escaper->escapeHtml($block->getAddToQuoteLabel()) ?></span>
+    </button>
+</div>

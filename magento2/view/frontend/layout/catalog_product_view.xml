@@ -4,7 +4,9 @@
   view page — the Magento equivalent of the WooCommerce plugin's
   woocommerce_after_add_to_cart_button hook.
 -->
-<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <!-- The stylesheet is loaded site-wide by default.xml, alongside the quote list. -->
     <body>
         <referenceContainer name="product.info.main">
             <block class="TackQuote\Quotes\Block\RequestQuote"

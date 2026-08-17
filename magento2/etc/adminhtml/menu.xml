@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!--
+  Top-level TackQuote entry in the admin sidebar.
+
+  Previously the module had no menu presence at all — its only admin surface was a
+  configuration section buried under Stores > Configuration, which an admin had to know
+  existed to find. A B2B quoting integration is a thing sellers work with daily, not a
+  set-and-forget setting, so it gets its own sidebar section.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="TackQuote_Quotes::tackquote"
+             title="TackQuote"
+             translate="title"
+             module="TackQuote_Quotes"
+             sortOrder="45"
+             resource="TackQuote_Quotes::tackquote"/>
+
+        <!--
+          Id is ::overview, NOT ::dashboard, and that is deliberate. Magento derives a
+          menu item's CSS class from the last segment of its id
+          (Backend\Block\Menu::_getMenuItemCssClass → "item-" . strtolower($itemName)),
+          so ::dashboard produced class "item-dashboard" — which Magento's own admin theme
+          styles with an icon-font glyph meant for the core Dashboard
+          (theme-adminhtml-backend/.../_menu.less:400). Our submenu item inherited that
+          rule and rendered a missing-glyph box next to the label. Renaming the id sidesteps
+          the collision instead of fighting the theme with more CSS.
+        -->
+        <add id="TackQuote_Quotes::overview"
+             title="Dashboard"
+             translate="title"
+             module="TackQuote_Quotes"
+             sortOrder="10"
+             parent="TackQuote_Quotes::tackquote"
+             action="tackquote/dashboard/index"
+             resource="TackQuote_Quotes::overview"/>
+
+        <!--
+          Deep-links straight into the module's own configuration section rather than
+          dropping the admin at the top of Stores > Configuration to hunt for it.
+        -->
+        <add id="TackQuote_Quotes::settings"
+             title="Settings"
+             translate="title"
+             module="TackQuote_Quotes"
+             sortOrder="20"
+             parent="TackQuote_Quotes::tackquote"
+             action="adminhtml/system_config/edit/section/tackquote_quotes"
+             resource="TackQuote_Quotes::config"/>
+    </menu>
+</config>

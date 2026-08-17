@@ -2,11 +2,21 @@
 <!--
   Module declaration for TackQuote_Quotes.
 -->
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
     <module name="TackQuote_Quotes" setup_version="1.0.0">
         <sequence>
             <module name="Magento_Catalog"/>
             <module name="Magento_Config"/>
+            <!-- ProductQuoteResolver resolves a configurable's chosen variant so the
+                 quote names a fulfillable child SKU at its real price. -->
+            <module name="Magento_ConfigurableProduct"/>
+            <!-- Prefills a signed-in shopper's identity instead of asking them to
+                 retype what the store already knows. -->
+            <module name="Magento_Customer"/>
+            <!-- The storefront modal is built on Magento_Ui's modal widget so it
+                 inherits the active theme rather than imposing its own chrome. -->
+            <module name="Magento_Ui"/>
         </sequence>
     </module>
 </config>
