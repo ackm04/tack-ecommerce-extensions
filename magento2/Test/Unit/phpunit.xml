@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Unit-test suite for TackQuote_Quotes.
+ *
+ * Reuses Magento's own unit-test bootstrap (which registers the autoloader and, crucially,
+ * installs a Phrase renderer so `__()` can be cast to string outside a booted application).
+ * Nothing here touches a database or the object manager.
+ *
+ * @package TackQuote_Quotes
+ */
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="../../../../../../dev/tests/unit/framework/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <testsuite name="TackQuote_Quotes_Unit">
+            <directory>.</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">../../Model</directory>
+            <directory suffix=".php">../../Controller</directory>
+            <directory suffix=".php">../../Block</directory>
+        </include>
+    </source>
+    <php>
+        <ini name="memory_limit" value="-1"/>
+        <ini name="date.timezone" value="UTC"/>
+    </php>
+</phpunit>

@@ -5,41 +5,112 @@
   (tack_quotes_api_url / tack_quotes_api_key / tack_quotes_button_label),
   scoped per-website here via Magento's standard scope switcher.
 -->
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
     <system>
         <tab id="tackquote" translate="label" sortOrder="200">
             <label>TackQuote</label>
         </tab>
-        <section id="tackquote_quotes" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="0">
+        <section id="tackquote_quotes" translate="label" type="text" sortOrder="200"
+                 showInDefault="1" showInWebsite="1" showInStore="0">
             <label>TackQuote Settings</label>
             <tab>tackquote</tab>
             <resource>TackQuote_Quotes::config</resource>
-            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+            <group id="general" translate="label" type="text" sortOrder="10"
+                   showInDefault="1" showInWebsite="1" showInStore="0">
                 <label>Connection</label>
-                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                <field id="enabled" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Enable TackQuote</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Turns the storefront "Request a Quote" button and quote-request calls on or off.</comment>
+                    <comment>
+                        Turns the storefront "Request a Quote" button and quote-request calls
+                        on or off.
+                    </comment>
                 </field>
-                <field id="api_base_url" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
+                <field id="api_base_url" translate="label comment" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>TackQuote API Base URL</label>
-                    <comment>Default is https://api.tackquote.com/v1. Include the /v1 path, no trailing slash. Change only for a staging/custom deployment.</comment>
+                    <comment>
+                        Default is https://api.tackquote.com/v1. Include the /v1 path, no
+                        trailing slash. Change only for a staging/custom deployment.
+                    </comment>
                 </field>
-                <field id="api_key" translate="label comment" type="obscure" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                <field id="api_key" translate="label comment" type="obscure" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>TackQuote API Key</label>
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
-                    <comment>Create an API key in TackQuote under Settings &gt; Developer &gt; API Keys, then paste it here. Stored encrypted using Magento's crypt key.</comment>
+                    <comment><![CDATA[Create an API key in TackQuote under
+                        <strong>Settings &gt; Developer &gt; API Keys</strong> with the
+                        <code>quotes:write</code> scope, then paste it here. Stored encrypted
+                        using Magento's crypt key.<br>
+                        <em>Until a key is saved the storefront quote button stays hidden.</em>]]></comment>
+                </field>
+                <!--
+                  Save-then-verify in one place. Without this an admin has to save, leave
+                  the page and test elsewhere, which is how stores end up misconfigured.
+                -->
+                <field id="test_connection" translate="label" sortOrder="40"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Verify</label>
+                    <frontend_model>TackQuote\Quotes\Block\Adminhtml\System\Config\TestConnection</frontend_model>
+                    <comment>Save the settings above first, then test.</comment>
                 </field>
             </group>
-            <group id="storefront" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
+            <group id="storefront" translate="label" type="text" sortOrder="20"
+                   showInDefault="1" showInWebsite="1" showInStore="0">
                 <label>Request a Quote button</label>
-                <field id="show_button" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                <field id="show_button" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Show quote button on product pages</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>When enabled, shoppers see a "Request a Quote" button on the product view page. Submitting it creates a quote request in TackQuote — it does not add to cart or affect checkout.</comment>
+                    <comment>
+                        When enabled, shoppers see a "Request a Quote" button on the product
+                        view page. Submitting it creates a quote request in TackQuote — it
+                        does not add to cart or affect checkout.
+                    </comment>
                 </field>
-                <field id="button_label" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
+                <field id="button_label" translate="label" type="text" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Button label</label>
+                </field>
+                <!--
+                  Multi-product quoting. Kept as separate toggles (rather than one
+                  "enable quoting" switch) to mirror the WooCommerce plugin, where a
+                  merchant can run single-product requests, a multi-product quote list,
+                  both, or neither.
+                -->
+                <field id="show_add_to_quote" translate="label comment" type="select" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Show "Add to Quote" button</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>
+                        Lets shoppers collect several products into a quote list and submit
+                        them as one request. The list is held in the browser and never touches
+                        the Magento cart, so stock, cart totals and checkout are unaffected.
+                    </comment>
+                </field>
+                <field id="add_to_quote_label" translate="label" type="text" sortOrder="40"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>"Add to Quote" label</label>
+                    <depends><field id="show_add_to_quote">1</field></depends>
+                </field>
+                <field id="show_on_listing" translate="label comment" type="select" sortOrder="50"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Show on category and search results</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>
+                        Adds "Add to Quote" to product listings, so a buyer can build a large
+                        request without opening every product page. Products with required
+                        options (configurable, bundle) link to the product page instead, since
+                        a quote needs the chosen variant.
+                    </comment>
+                    <depends><field id="show_add_to_quote">1</field></depends>
+                </field>
+                <field id="checkout_button_label" translate="label" type="text" sortOrder="60"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Quote list submit label</label>
+                    <depends><field id="show_add_to_quote">1</field></depends>
                 </field>
             </group>
         </section>

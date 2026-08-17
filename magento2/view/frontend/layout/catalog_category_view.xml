@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+  "Add to Quote" inside each product tile on category listings.
+
+  Attached to `category.product.addto` — the container Magento_Wishlist uses for "Add to
+  Wish List" — so no core file is edited and no catalog template is overridden. A buyer
+  building a large request can then add from the listing instead of opening every product
+  page in turn.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="category.product.addto">
+            <block class="TackQuote\Quotes\Block\ListingButton"
+                   name="category.product.addto.tackquote"
+                   as="tackquote"
+                   before="-"
+                   template="TackQuote_Quotes::listing-button.phtml"/>
+        </referenceBlock>
+    </body>
+</page>

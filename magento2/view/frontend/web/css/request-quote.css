@@ -1,65 +1,554 @@
-/* Minimal styling for the TackQuote "Request a Quote" button + modal. */
-.tackquote-request-quote {
-  margin-top: 10px;
+/*
+ * TackQuote storefront quote-request form.
+ *
+ * DESIGN STANCE — "native precision". This form ships inside merchants' storefronts, so
+ * it must read as part of THEIR shop, not as a vendor widget dropped on top. It
+ * therefore inherits the active theme's typography, colour and control styling entirely
+ * (Luma, Hyvä, or custom) via Magento's markup contract, and invests its craft in
+ * structure instead: field rhythm, a legible step indicator, a properly separated
+ * footer, and unambiguous state. No imposed fonts, no brand palette, no gradients.
+ *
+ * Colour is expressed only through `currentColor` and theme-neutral greys, so the form
+ * recolours automatically with the surrounding theme.
+ */
+
+/* ---------------------------------------------------------------------------
+ * [hidden] enforcement — THE bug this file exists to prevent.
+ *
+ * The `hidden` attribute only works through the UA stylesheet's
+ * `[hidden] { display: none }`, which loses to ANY author `display` rule. Luma sets a
+ * display value on `.message`, `.action` and fieldsets, so previously:
+ *   * both empty message bars rendered as coloured strips on open, and
+ *   * "Send request" showed alongside "Continue" on step one.
+ * Scoped !important is the correct remedy: `hidden` is a semantic contract, and no
+ * theme rule should be able to override it inside this component.
+ * ------------------------------------------------------------------------ */
+/*
+ * Scoped three ways deliberately. Magento_Ui's modal widget MOVES the dialog out of
+ * .tackquote-app and into .modals-wrapper at the end of <body>, so a selector
+ * anchored only to the block would silently stop matching the moment the modal opens —
+ * which is precisely when these rules matter. The data-role selector is the one that
+ * cannot break, since it lives on the element itself.
+ *
+ * The :not() exclusions are load-bearing. The dialog container itself carries `hidden`
+ * to prevent the form flashing inline before JS runs; without excluding it, this
+ * !important rule beats the widget's own visibility handling and collapses the entire
+ * modal body to nothing. quote-app.js removes that attribute once the widget has
+ * adopted the element, but the exclusions keep the rule correct regardless of timing.
+ */
+.tackquote-app [hidden]:not([data-role='tackquote-modal']),
+.tackquote-modal-popup [hidden]:not([data-role='tackquote-modal']),
+[data-role='tackquote-modal'] [hidden] {
+  display: none !important;
 }
 
-.tackquote-request-quote .tackquote-open-btn {
-  cursor: pointer;
+/* Product-page trigger row spacing lives with the trigger styles further down. */
+
+/* ---------------------------------------------------------------------------
+ * Modal shell
+ * ------------------------------------------------------------------------ */
+
+.tackquote-modal-popup .modal-inner-wrap {
+  max-width: 620px;
 }
 
-.tackquote-request-quote .tackquote-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 900;
-  background: rgba(0, 0, 0, 0.5);
+/* A readable measure. Full-bleed inputs across a 900px modal are the single biggest
+   reason the previous version looked unconsidered. */
+.tackquote-modal-popup .modal-content {
+  padding-bottom: 0;
+}
+
+.tackquote-form {
+  --tq-gap: 20px;
+  --tq-rule: rgba(0, 0, 0, 0.12);
+  --tq-muted: rgba(0, 0, 0, 0.55);
+}
+
+/* ---------------------------------------------------------------------------
+ * Step indicator
+ *
+ * A connecting rule turns three disconnected labels into a sense of progress, which is
+ * what makes a multi-step form feel short rather than long.
+ * ------------------------------------------------------------------------ */
+
+.tackquote-steps {
   display: flex;
   align-items: center;
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--tq-rule);
+  counter-reset: tackquote-step;
+  gap: 0;
+}
+
+.tackquote-steps__item {
+  counter-increment: tackquote-step;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.3rem;
+  line-height: 1.2;
+  color: var(--tq-muted);
+  white-space: nowrap;
+}
+
+/* The rule between steps carries the eye forward. */
+.tackquote-steps__item + .tackquote-steps__item {
+  flex: 1;
+}
+
+.tackquote-steps__item + .tackquote-steps__item::after {
+  content: '';
+  order: -1;
+  flex: 1;
+  height: 1px;
+  min-width: 16px;
+  margin: 0 12px;
+  background: var(--tq-rule);
+}
+
+.tackquote-steps__item::before {
+  content: counter(tackquote-step);
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 1.2rem;
+  line-height: 1;
+  flex: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.tackquote-request-quote .tackquote-modal-inner {
-  background: #fff;
-  border-radius: 6px;
-  padding: 24px;
-  max-width: 420px;
-  width: 90%;
-  position: relative;
+.tackquote-steps__item._active {
+  color: inherit;
+  font-weight: 600;
 }
 
-.tackquote-request-quote .tackquote-modal-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  border: none;
+/*
+ * "You are here" is signalled with weight and a heavier ring, NOT a filled disc.
+ * A filled disc would need the numeral punched out in the modal's background colour,
+ * which this component cannot know — an earlier attempt used a white inset shadow and
+ * the numeral simply disappeared on light themes.
+ */
+.tackquote-steps__item._active::before {
+  border-width: 2px;
+  font-weight: 700;
+}
+
+.tackquote-steps__item._complete {
+  color: inherit;
+}
+
+.tackquote-steps__item._complete::before {
+  content: '\2713';
+  font-size: 1.1rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Fields
+ * ------------------------------------------------------------------------ */
+
+.tackquote-form .fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tackquote-form .fieldset > .legend {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  font-size: 1.8rem;
+  line-height: 1.3;
+  font-weight: 600;
+  float: none;
+  width: auto;
+}
+
+.tackquote-form .field {
+  margin: 0 0 var(--tq-gap);
+}
+
+.tackquote-form .field > .label {
+  display: block;
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 1.3rem;
+}
+
+.tackquote-form .field .control {
+  width: 100%;
+}
+
+.tackquote-form .field .note {
+  margin-top: 6px;
+  font-size: 1.2rem;
+  color: var(--tq-muted);
+}
+
+/*
+ * The required marker is left ENTIRELY to the theme. An earlier revision declared its
+ * own `::after` asterisk to survive a row wrapper, which then rendered twice on any
+ * field the theme could still reach — "Quantity * *". Keeping fields as direct children
+ * of .fieldset means the theme's own rule applies once, everywhere.
+ */
+
+/*
+ * Pair naturally-related fields on wider viewports. Asking for a first and last name on
+ * two full-width rows is what made the form feel like an endless column.
+ *
+ * Done with grid ON THE FIELDSET rather than wrapper elements, so every .field remains a
+ * direct child and the theme's own `.fieldset > .field` rules (required asterisk, label
+ * styling, error states) keep applying untouched.
+ */
+@media (min-width: 640px) {
+  .tackquote-form .fieldset {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 var(--tq-gap);
+    align-items: start;
+  }
+
+  /* Anything that is not a paired input spans the full width. */
+  .tackquote-form .fieldset > .legend,
+  .tackquote-form .fieldset > .tackquote-summary-list,
+  .tackquote-form .fieldset > .field.tackquote-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Quantity is a small number; a full-width input for it looks like a mistake. */
+.tackquote-form .field.tackquote-qty .control {
+  max-width: 140px;
+}
+
+/* Error state, drawn with the theme's own error colour where one is exposed. */
+.tackquote-form .mage-error[aria-invalid='true'] {
+  border-color: #e02b27;
+}
+
+.tackquote-form .field-error {
+  margin-top: 6px;
+  font-size: 1.2rem;
+  color: #e02b27;
+}
+
+/* ---------------------------------------------------------------------------
+ * Selected product summary
+ * ------------------------------------------------------------------------ */
+
+.tackquote-summary {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14px 16px;
+  margin-bottom: var(--tq-gap);
+  border: 1px solid var(--tq-rule);
+  border-radius: 3px;
+}
+
+.tackquote-summary__name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.tackquote-summary__variant {
+  margin: 4px 0 0;
+  font-size: 1.2rem;
+  color: var(--tq-muted);
+}
+
+.tackquote-summary__sku {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--tq-muted);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+ * Messages
+ * ------------------------------------------------------------------------ */
+
+.tackquote-form .tackquote-modal-error,
+.tackquote-form .tackquote-modal-success {
+  margin: 0 0 var(--tq-gap);
+}
+
+/* ---------------------------------------------------------------------------
+ * Footer
+ *
+ * Separated by a rule and pinned to the end of the dialog so the primary action has a
+ * consistent home instead of floating wherever the current step happens to end.
+ * ------------------------------------------------------------------------ */
+
+.tackquote-form .actions-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px -30px 0;
+  padding: 20px 30px;
+  border-top: 1px solid var(--tq-rule);
+}
+
+.tackquote-form .actions-toolbar .secondary,
+.tackquote-form .actions-toolbar .primary {
+  margin: 0;
+  float: none;
+}
+
+/*
+ * The Back control deliberately avoids Luma's `.action.back` class: Luma ships
+ * `.actions-toolbar > .secondary .action.back { display: none }`, which silently hid the
+ * button on every step. Styled as a quiet text action so it never competes with the
+ * primary control.
+ */
+.tackquote-form .tackquote-back {
   background: none;
-  font-size: 20px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
   cursor: pointer;
+  font-size: 1.3rem;
+}
+
+.tackquote-form .tackquote-back:hover {
+  opacity: 0.75;
+}
+
+/* Keep the primary action hard right even when Back is absent. */
+.tackquote-form .actions-toolbar .secondary:empty,
+.tackquote-form .actions-toolbar .secondary > [hidden] {
+  margin-right: auto;
+}
+
+.tackquote-form .actions-toolbar .primary {
+  margin-left: auto;
+}
+
+@media (max-width: 639px) {
+  .tackquote-form .actions-toolbar {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Completed state — the form is replaced by its outcome, so a submitted request
+ * cannot be silently resubmitted.
+ * ------------------------------------------------------------------------ */
+
+.tackquote-done {
+  padding: 8px 0 24px;
+}
+
+.tackquote-done__title {
+  margin: 0 0 8px;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.tackquote-done__body {
+  margin: 0;
+  color: var(--tq-muted);
+}
+
+/* ---------------------------------------------------------------------------
+ * Quote list widget + drawer
+ *
+ * A persistent, theme-neutral affordance in the corner of every page — the same role a
+ * theme's mini-cart plays, which is the mental model B2B shoppers already have for
+ * "things I have collected". Deliberately quiet: it must never compete with the store's
+ * own cart.
+ * ------------------------------------------------------------------------ */
+
+.tackquote-widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 700;
+}
+
+.tackquote-widget__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.tackquote-widget__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #111;
+  font-size: 1.1rem;
+  font-weight: 700;
   line-height: 1;
 }
 
-.tackquote-request-quote .tackquote-form label {
-  display: block;
-  margin-bottom: 12px;
-  font-size: 13px;
+.tackquote-drawer {
+  position: fixed;
+  right: 20px;
+  bottom: 74px;
+  z-index: 701;
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
 }
 
-.tackquote-request-quote .tackquote-form input,
-.tackquote-request-quote .tackquote-form textarea {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  box-sizing: border-box;
+.tackquote-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.tackquote-request-quote .tackquote-modal-error {
-  color: #e02b27;
-  font-size: 13px;
+.tackquote-drawer__close {
+  background: none;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
 }
 
-.tackquote-request-quote .tackquote-modal-success {
-  color: #006400;
-  font-size: 13px;
+.tackquote-drawer__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+}
+
+.tackquote-drawer__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin: 0;
+}
+
+.tackquote-drawer__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1.3rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Specificity is deliberate: Luma sets `.input-text { width: 100% }`, which otherwise wins
+ * and stretches the quantity box until the remove button is pushed out of the drawer.
+ */
+.tackquote-drawer .tackquote-drawer__item .tackquote-drawer__qty {
+  width: 56px;
+  min-width: 0;
+  flex: 0 0 56px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.tackquote-drawer__remove {
+  background: none;
+  border: 0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+
+.tackquote-drawer__remove:hover {
+  opacity: 1;
+}
+
+.tackquote-drawer__empty {
+  margin: 0;
+  padding: 20px 16px;
+  font-size: 1.3rem;
+  opacity: 0.7;
+}
+
+.tackquote-drawer__submit {
+  margin: 12px 16px 16px;
+}
+
+/* Review list inside the form's final step. */
+
+.tackquote-summary-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+
+.tackquote-summary-list__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.tackquote-summary-list__item:last-child {
+  border-bottom: 0;
+}
+
+.tackquote-summary-list__qty {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Product-page trigger row. */
+
+.tackquote-product-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.tackquote-product-actions .action {
+  flex: 1 1 auto;
+}
+
+/*
+ * Inline message beside a product-page or listing trigger.
+ *
+ * Needed because the modal's error region is unreachable when adding to the quote list —
+ * the modal is closed at that point, so an error written there was invisible and the
+ * button simply appeared dead.
+ */
+.tackquote-inline-note {
+  flex: 1 0 100%;
+  margin: 6px 0 0;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  color: #b91c1c;
 }

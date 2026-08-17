@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!--
+  Admin route: /tackquote/dashboard/index and /tackquote/connection/test.
+
+  Registered under the `adminhtml` router, separate from the storefront route of the
+  same name in etc/frontend/routes.xml — Magento keeps the two routers' frontNames in
+  different namespaces, so `tackquote` on the storefront and `tackquote` in the admin
+  do not collide.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="admin">
+        <route id="tackquote" frontName="tackquote">
+            <module name="TackQuote_Quotes" before="Magento_Backend"/>
+        </route>
+    </router>
+</config>

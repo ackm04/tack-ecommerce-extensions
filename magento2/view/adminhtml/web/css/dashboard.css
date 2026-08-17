@@ -1,0 +1,295 @@
+/*
+ * TackQuote admin dashboard.
+ *
+ * Scoped under .tq-admin so nothing here can leak into Magento's own admin styling.
+ * Colours follow the Tack buyer-portal palette (slate neutrals, indigo accent) so the
+ * integration reads as the same product across both surfaces.
+ */
+
+.tq-admin {
+  --tq-indigo: #4f46e5;
+  --tq-indigo-soft: #eef2ff;
+  --tq-slate-900: #0f172a;
+  --tq-slate-600: #475569;
+  --tq-slate-400: #94a3b8;
+  --tq-slate-200: #e2e8f0;
+  --tq-slate-50: #f8fafc;
+  --tq-green: #047857;
+  --tq-green-soft: #ecfdf5;
+  --tq-amber: #b45309;
+  --tq-amber-soft: #fffbeb;
+  --tq-red: #b91c1c;
+  --tq-red-soft: #fef2f2;
+
+  max-width: 1100px;
+  color: var(--tq-slate-900);
+}
+
+.tq-admin__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.tq-admin__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tq-admin__subtitle {
+  margin: 4px 0 0;
+  color: var(--tq-slate-600);
+  font-size: 13px;
+}
+
+.tq-admin__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tq-btn {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.tq-btn:focus-visible {
+  outline: 2px solid var(--tq-indigo);
+  outline-offset: 2px;
+}
+
+.tq-btn--primary,
+.tq-btn--primary:hover {
+  background: var(--tq-indigo);
+  color: #fff;
+  text-decoration: none;
+}
+
+.tq-btn--primary:hover {
+  background: #4338ca;
+}
+
+.tq-btn--secondary {
+  background: #fff;
+  border-color: var(--tq-slate-200);
+  color: var(--tq-slate-900);
+}
+
+.tq-btn--secondary:hover {
+  background: var(--tq-slate-50);
+}
+
+.tq-btn[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Status banner ---------------------------------------------------------- */
+
+.tq-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+}
+
+.tq-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.tq-status--ok {
+  background: var(--tq-green-soft);
+  border-color: #a7f3d0;
+  color: var(--tq-green);
+}
+
+.tq-status--ok .tq-status__dot {
+  background: var(--tq-green);
+}
+
+.tq-status--warn {
+  background: var(--tq-amber-soft);
+  border-color: #fde68a;
+  color: var(--tq-amber);
+}
+
+.tq-status--warn .tq-status__dot {
+  background: var(--tq-amber);
+}
+
+/* Cards ------------------------------------------------------------------ */
+
+.tq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.tq-card {
+  background: #fff;
+  border: 1px solid var(--tq-slate-200);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.tq-card__title {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tq-slate-600);
+}
+
+/* Checklist -------------------------------------------------------------- */
+
+.tq-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tq-checklist__item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--tq-slate-200);
+}
+
+.tq-checklist__item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.tq-checklist__mark {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tq-checklist__item--ok .tq-checklist__mark {
+  background: var(--tq-green-soft);
+  color: var(--tq-green);
+}
+
+.tq-checklist__item--todo .tq-checklist__mark {
+  background: var(--tq-amber-soft);
+  color: var(--tq-amber);
+}
+
+.tq-checklist__body {
+  display: block;
+}
+
+.tq-checklist__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tq-checklist__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--tq-slate-600);
+  line-height: 1.5;
+}
+
+/* Facts list ------------------------------------------------------------- */
+
+.tq-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 16px;
+  align-items: baseline;
+}
+
+.tq-facts dt {
+  font-size: 12px;
+  color: var(--tq-slate-600);
+  font-weight: 600;
+}
+
+.tq-facts dd {
+  margin: 0;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.tq-facts code {
+  background: var(--tq-slate-50);
+  border: 1px solid var(--tq-slate-200);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.tq-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tq-pill--ok {
+  background: var(--tq-green-soft);
+  color: var(--tq-green);
+}
+
+.tq-pill--warn {
+  background: var(--tq-amber-soft);
+  color: var(--tq-amber);
+}
+
+/* Test-connection result ------------------------------------------------- */
+
+.tq-result {
+  margin: 16px 0 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tq-result--pending {
+  background: var(--tq-slate-50);
+  color: var(--tq-slate-600);
+}
+
+.tq-result--ok {
+  background: var(--tq-green-soft);
+  color: var(--tq-green);
+}
+
+.tq-result--error {
+  background: var(--tq-red-soft);
+  color: var(--tq-red);
+}

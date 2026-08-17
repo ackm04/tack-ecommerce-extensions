@@ -1,53 +1,45 @@
 <?php
 /**
- * "Request a Quote" button + inline modal form for the product view page.
+ * Product-page quote controls.
+ *
+ * This template renders ONLY triggers. The multi-step form itself lives once per page in
+ * Block\QuoteList (before.body.end), because a shopper can build a quote list from
+ * category pages and search results too — rendering a second copy of the form here would
+ * duplicate every field, validation rule and policy branch.
+ *
+ * THEME ADAPTATION — controls use Magento's own button classes so they inherit whatever
+ * theme the storefront runs (Luma, Hyvä, custom) instead of imposing their own chrome.
  *
  * @var \TackQuote\Quotes\Block\RequestQuote $block
+ * @var \Magento\Framework\Escaper $escaper
  * @package TackQuote_Quotes
  */
 
-/** @var \Magento\Framework\Escaper $escaper */
 $product = $block->getCurrentProduct();
+$showRequest = $block->isEnabled();
+$showAdd = $block->isAddToQuoteEnabled();
 
-if (!$block->isEnabled() || !$product) {
+if ((!$showRequest && !$showAdd) || !$product) {
     return;
 }
 ?>
-<div class="tackquote-request-quote"
+<div class="tackquote-product-actions"
+     data-role="tackquote-product"
      data-sku="<?= $escaper->escapeHtmlAttr($product->getSku()) ?>"
-     data-submit-url="<?= $escaper->escapeUrl($block->getSubmitUrl()) ?>"
-     data-form-key="<?= $escaper->escapeHtmlAttr($block->getFormKeyValue()) ?>">
-    <button type="button" class="action tackquote-open-btn">
-        <span><?= $escaper->escapeHtml($block->getButtonLabel()) ?></span>
-    </button>
+     data-name="<?= $escaper->escapeHtmlAttr($product->getName()) ?>"
+     data-requires-options="<?= $block->productRequiresOptions() ? '1' : '0' ?>">
 
-    <div class="tackquote-modal" hidden>
-        <div class="tackquote-modal-inner">
-            <button type="button" class="tackquote-modal-close" aria-label="<?= $escaper->escapeHtmlAttr(__('Close')) ?>">&times;</button>
-            <h3><?= $escaper->escapeHtml($block->getButtonLabel()) ?></h3>
-            <p class="tackquote-modal-error" hidden></p>
-            <p class="tackquote-modal-success" hidden></p>
-            <form class="tackquote-form">
-                <label>
-                    <?= $escaper->escapeHtml(__('Your email')) ?>
-                    <input type="email" name="email" required>
-                </label>
-                <label>
-                    <?= $escaper->escapeHtml(__('Quantity')) ?>
-                    <input type="number" name="qty" min="1" value="1" required>
-                </label>
-                <label>
-                    <?= $escaper->escapeHtml(__('Note (optional)')) ?>
-                    <textarea name="note" rows="3"></textarea>
-                </label>
-                <button type="submit" class="action primary tackquote-submit-btn">
-                    <span><?= $escaper->escapeHtml(__('Send request')) ?></span>
-                </button>
-            </form>
-        </div>
-    </div>
+    <?php if ($showAdd): ?>
+        <button type="button" class="action tocart tackquote-add-btn">
+            <span><?= $escaper->escapeHtml($block->getAddToQuoteLabel()) ?></span>
+        </button>
+    <?php endif; ?>
+
+    <?php if ($showRequest): ?>
+        <button type="button"
+                class="action <?= $showAdd ? 'secondary' : 'tocart' ?> tackquote-request-btn"
+                aria-haspopup="dialog">
+            <span><?= $escaper->escapeHtml($block->getButtonLabel()) ?></span>
+        </button>
+    <?php endif; ?>
 </div>
-<link rel="stylesheet" type="text/css" href="<?= $escaper->escapeUrl($block->getViewFileUrl('TackQuote_Quotes::css/request-quote.css')) ?>">
-<script src="<?= $escaper->escapeUrl($block->getViewFileUrl('TackQuote_Quotes::js/request-quote.js')) ?>" defer></script>
-<?php // Plain <script src> (no RequireJS module) is intentional — a small, ?>
-<?php // dependency-free MVP. See the JS file for the click/submit logic. ?>

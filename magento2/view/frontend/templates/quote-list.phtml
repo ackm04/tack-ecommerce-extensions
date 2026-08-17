@@ -1,0 +1,274 @@
+<?php
+/**
+ * Floating quote list + the shared multi-step quote form. Rendered once per page.
+ *
+ * @var \TackQuote\Quotes\Block\QuoteList $block
+ * @var \Magento\Framework\Escaper $escaper
+ * @package TackQuote_Quotes
+ */
+
+if (!$block->isEnabled()) {
+    return;
+}
+
+$showCompany = $block->isCompanyStepEnabled();
+$companyRequired = $block->isCompanyRequired();
+$requiredCompanyFields = $block->getRequiredCompanyFields();
+$customFields = $block->getCustomFields();
+
+$companyFieldLabels = [
+    'phone' => __('Company phone'),
+    'website' => __('Company website'),
+    'taxRegistrationNumber' => __('Tax / VAT registration number'),
+    'addressLine1' => __('Street address'),
+    'addressLine2' => __('Address line 2'),
+    'city' => __('City'),
+    'state' => __('State / region'),
+    'postalCode' => __('Postal code'),
+    'country' => __('Country'),
+    'contactTitle' => __('Your job title'),
+];
+
+// Always offer the registrant's job title; add whichever extras the seller requires.
+$companyFieldsToRender = array_values(array_unique(array_merge(
+    ['contactTitle'],
+    $requiredCompanyFields
+)));
+?>
+<div class="tackquote-app"
+     data-submit-url="<?= $escaper->escapeUrl($block->getSubmitUrl()) ?>"
+     data-company-mode="<?= $companyRequired ? 'required' : ($showCompany ? 'optional' : 'off') ?>">
+
+    <?php if ($block->isListEnabled()): ?>
+        <?php /* Hidden until the list has something in it — drawn client-side from localStorage. */ ?>
+        <div class="tackquote-widget" data-role="tackquote-widget" hidden>
+            <button type="button" class="action primary tackquote-widget__toggle" aria-expanded="false">
+                <span><?= $escaper->escapeHtml(__('Quote list')) ?></span>
+                <span class="tackquote-widget__count" data-role="tackquote-count">0</span>
+            </button>
+        </div>
+
+        <div class="tackquote-drawer" data-role="tackquote-drawer" hidden>
+            <div class="tackquote-drawer__head">
+                <strong><?= $escaper->escapeHtml(__('Your quote list')) ?></strong>
+                <button type="button" class="action tackquote-drawer__close"
+                        aria-label="<?= $escaper->escapeHtmlAttr(__('Close')) ?>">&times;</button>
+            </div>
+            <ul class="tackquote-drawer__items" data-role="tackquote-items"></ul>
+            <p class="tackquote-drawer__empty" data-role="tackquote-empty">
+                <?= $escaper->escapeHtml(__('No products added yet.')) ?>
+            </p>
+            <button type="button" class="action primary tackquote-drawer__submit" data-role="tackquote-request-list">
+                <span><?= $escaper->escapeHtml($block->getSubmitLabel()) ?></span>
+            </button>
+        </div>
+    <?php endif; ?>
+
+    <?php
+    /*
+     * NOTE: the form key is deliberately NOT rendered server-side. This block is cacheable
+     * and pages are served from Full Page Cache, so a server-rendered key would be baked
+     * into the cached HTML and shared by every visitor — failing CSRF validation for all of
+     * them. The empty input below is populated client-side by Magento_PageCache's
+     * form-key-provider.js from the form_key cookie.
+     */
+    ?>
+    <div class="tackquote-modal" data-role="tackquote-modal" hidden>
+        <form class="form tackquote-form" novalidate>
+            <input type="hidden" name="form_key" value="">
+
+            <p class="message error tackquote-modal-error" role="alert" hidden></p>
+
+            <div class="tackquote-done" role="status" hidden>
+                <p class="tackquote-done__title"></p>
+                <p class="tackquote-done__body"></p>
+            </div>
+
+            <ol class="tackquote-steps" aria-hidden="true">
+                <li class="tackquote-steps__item"
+                    data-step-marker="1"><?= $escaper->escapeHtml(__('Your details')) ?></li>
+                <?php if ($showCompany): ?>
+                    <li class="tackquote-steps__item"
+                        data-step-marker="2"><?= $escaper->escapeHtml(__('Company')) ?></li>
+                <?php endif; ?>
+                <li class="tackquote-steps__item"
+                    data-step-marker="3"><?= $escaper->escapeHtml(__('Your request')) ?></li>
+            </ol>
+
+            <fieldset class="fieldset tackquote-step" data-step="1">
+                <legend class="legend"><span><?= $escaper->escapeHtml(__('Your details')) ?></span></legend>
+
+                <div class="field required">
+                    <label class="label"
+                           for="tq-firstName"><span><?= $escaper->escapeHtml(__('First name')) ?></span></label>
+                    <div class="control">
+                        <input type="text" id="tq-firstName" name="firstName" class="input-text"
+                               autocomplete="given-name" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label"
+                           for="tq-lastName"><span><?= $escaper->escapeHtml(__('Last name')) ?></span></label>
+                    <div class="control">
+                        <input type="text" id="tq-lastName" name="lastName" class="input-text"
+                               autocomplete="family-name">
+                    </div>
+                </div>
+                <div class="field required">
+                    <label class="label"
+                           for="tq-email"><span><?= $escaper->escapeHtml(__('Work email')) ?></span></label>
+                    <div class="control">
+                        <input type="email" id="tq-email" name="email" class="input-text" autocomplete="email" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="tq-phone"><span><?= $escaper->escapeHtml(__('Phone')) ?></span></label>
+                    <div class="control">
+                        <input type="tel" id="tq-phone" name="phone" class="input-text" autocomplete="tel">
+                    </div>
+                </div>
+            </fieldset>
+
+            <?php if ($showCompany): ?>
+                <fieldset class="fieldset tackquote-step" data-step="2" hidden>
+                    <legend class="legend"><span><?= $escaper->escapeHtml(__('Company')) ?></span></legend>
+
+                    <div class="field tackquote-wide<?= $companyRequired ? ' required' : '' ?>">
+                        <label class="label"
+                               for="tq-companyName"><span><?= $escaper->escapeHtml(__('Company name')) ?></span></label>
+                        <div class="control">
+                            <input type="text" id="tq-companyName" name="companyName" class="input-text"
+                                   autocomplete="organization" <?= $companyRequired ? 'required' : '' ?>>
+                            <?php if (!$companyRequired): ?>
+                                <?php $individualNote = __('Leave blank if you are buying as an individual.'); ?>
+                                <p class="note"><?= $escaper->escapeHtml($individualNote) ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <?php foreach ($companyFieldsToRender as $field): ?>
+                        <?php
+                        $isRequired = in_array($field, $requiredCompanyFields, true);
+                        $label = $companyFieldLabels[$field] ?? $field;
+                        $isWide = in_array($field, ['addressLine1', 'addressLine2', 'website'], true);
+                        ?>
+                        <div class="field<?= $isWide ? ' tackquote-wide' : '' ?><?= $isRequired ? ' required' : '' ?>">
+                            <label class="label" for="tq-company-<?= $escaper->escapeHtmlAttr($field) ?>">
+                                <span><?= $escaper->escapeHtml($label) ?></span>
+                            </label>
+                            <div class="control">
+                                <input type="<?= $field === 'website' ? 'url' : 'text' ?>"
+                                       id="tq-company-<?= $escaper->escapeHtmlAttr($field) ?>"
+                                       name="company[<?= $escaper->escapeHtmlAttr($field) ?>]"
+                                       class="input-text"
+                                       <?= $isRequired ? 'data-tq-required="1"' : '' ?>>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <?php foreach ($customFields as $custom): ?>
+                        <?php
+                        $key = (string) ($custom['key'] ?? '');
+                        if ($key === '') {
+                            continue;
+                        }
+                        $label = (string) ($custom['label'] ?? $key);
+                        $type = (string) ($custom['type'] ?? 'text');
+                        $isRequired = !empty($custom['required']);
+                        $help = (string) ($custom['helpText'] ?? '');
+                        $inputId = 'tq-custom-' . $key;
+                        $inputName = 'customFields[' . $key . ']';
+                        $customFieldClass = 'field'
+                            . (in_array($type, ['textarea', 'checkbox'], true) ? ' tackquote-wide' : '')
+                            . ($isRequired ? ' required' : '');
+                        ?>
+                        <div class="<?= $escaper->escapeHtmlAttr($customFieldClass) ?>">
+                            <label class="label" for="<?= $escaper->escapeHtmlAttr($inputId) ?>">
+                                <span><?= $escaper->escapeHtml($label) ?></span>
+                            </label>
+                            <div class="control">
+                                <?php if ($type === 'textarea'): ?>
+                                    <textarea id="<?= $escaper->escapeHtmlAttr($inputId) ?>"
+                                              name="<?= $escaper->escapeHtmlAttr($inputName) ?>"
+                                              class="input-text" rows="3"
+                                              <?= $isRequired ? 'data-tq-required="1"' : '' ?>></textarea>
+                                <?php elseif ($type === 'select'): ?>
+                                    <select id="<?= $escaper->escapeHtmlAttr($inputId) ?>"
+                                            name="<?= $escaper->escapeHtmlAttr($inputName) ?>"
+                                            class="select" <?= $isRequired ? 'data-tq-required="1"' : '' ?>>
+                                        <option value=""><?= $escaper->escapeHtml(__('Please choose')) ?></option>
+                                        <?php foreach ((array) ($custom['options'] ?? []) as $option): ?>
+                                            <option value="<?= $escaper->escapeHtmlAttr((string) $option) ?>">
+                                                <?= $escaper->escapeHtml((string) $option) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                <?php elseif ($type === 'checkbox'): ?>
+                                    <input type="checkbox" value="1"
+                                           id="<?= $escaper->escapeHtmlAttr($inputId) ?>"
+                                           name="<?= $escaper->escapeHtmlAttr($inputName) ?>"
+                                           class="checkbox" <?= $isRequired ? 'data-tq-required="1"' : '' ?>>
+                                <?php else: ?>
+                                    <input type="<?= $type === 'number'
+                                        ? 'number'
+                                        : ($type === 'date' ? 'date' : 'text') ?>"
+                                           id="<?= $escaper->escapeHtmlAttr($inputId) ?>"
+                                           name="<?= $escaper->escapeHtmlAttr($inputName) ?>"
+                                           class="input-text" <?= $isRequired ? 'data-tq-required="1"' : '' ?>>
+                                <?php endif; ?>
+                                <?php if ($help !== ''): ?>
+                                    <p class="note"><?= $escaper->escapeHtml($help) ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </fieldset>
+            <?php endif; ?>
+
+            <fieldset class="fieldset tackquote-step" data-step="3" hidden>
+                <legend class="legend"><span><?= $escaper->escapeHtml(__('Your request')) ?></span></legend>
+
+                <?php /* Rendered client-side: one row per quoted product, single or list. */ ?>
+                <ul class="tackquote-summary-list" data-role="tackquote-review"></ul>
+
+                <div class="field tackquote-wide">
+                    <label class="label" for="tq-note"><span><?= $escaper->escapeHtml(__('Notes')) ?></span></label>
+                    <div class="control">
+                        <textarea id="tq-note" name="note" class="input-text" rows="3"
+                                  placeholder="<?= $escaper->escapeHtmlAttr(
+                                      __('Target price, delivery date, or anything else the seller should know.')
+                                  ) ?>"></textarea>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="actions-toolbar tackquote-actions">
+                <div class="secondary">
+                    <button type="button" class="action secondary tackquote-back" hidden>
+                        <span><?= $escaper->escapeHtml(__('Back')) ?></span>
+                    </button>
+                </div>
+                <div class="primary">
+                    <button type="button" class="action primary tackquote-next">
+                        <span><?= $escaper->escapeHtml(__('Continue')) ?></span>
+                    </button>
+                    <button type="submit" class="action primary tackquote-submit-btn" hidden>
+                        <span><?= $escaper->escapeHtml(__('Send request')) ?></span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="text/x-magento-init">
+{
+    ".tackquote-app": {
+        "TackQuote_Quotes/js/quote-app": {
+            "modalTitle": "<?= $escaper->escapeJs($block->getFormTitle()) ?>",
+            "listEnabled": <?= $block->isListEnabled() ? 'true' : 'false' ?>,
+            "registrationConfig": <?= /* @noEscape */ $block->getRegistrationConfigJson() ?>
+        }
+    }
+}
+</script>
