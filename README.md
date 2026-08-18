@@ -5,6 +5,8 @@
 
 Official downloadable plugins and extensions for embedding **TackQuote B2B Wholesale Quoting & CPQ** into popular eCommerce platforms.
 
+📖 **[Browse the platforms, install steps and verification evidence →](https://ackm04.github.io/tack-ecommerce-extensions/)**
+
 The public [`ackm04/tack-ecommerce-extensions`](https://github.com/ackm04/tack-ecommerce-extensions)
 release is the distribution authority. This monorepo directory is build/source material only; do
 not direct merchants to download files from a TackQuote application checkout.
