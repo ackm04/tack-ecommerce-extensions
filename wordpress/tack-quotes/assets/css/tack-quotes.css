@@ -1,316 +1,385 @@
 .tack-quote-buttons {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 10px;
-	margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .tack-quote-buttons .tack-quote-btn,
 .tack-quote-buttons .tack-add-to-quote-btn {
-	margin-top: 0;
+  margin-top: 0;
 }
 
 .tack-quote-btn,
 .tack-add-to-quote-btn {
-	margin-top: 10px;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	border-radius: 8px;
-	padding: 10px 18px;
-	font-weight: 600;
-	cursor: pointer;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* "Checkout as Quote" (quote-list drawer) / "Request a Quote" (product page) — primary, final action. */
 .tack-quote-btn {
-	background: #2563eb;
-	color: #fff;
-	border: none;
+  background: #2563eb;
+  color: #fff;
+  border: none;
 }
 
 .tack-quote-btn:hover {
-	background: #1d4ed8;
-	color: #fff;
+  background: #1d4ed8;
+  color: #fff;
 }
 
 /* "Add to Quote" (product page) — secondary, non-final action, sits next to
    the theme's own Add to Cart button without competing with it visually. */
 .tack-add-to-quote-btn {
-	background: #fff;
-	color: #2563eb;
-	border: 1.5px solid #2563eb;
+  background: #fff;
+  color: #2563eb;
+  border: 1.5px solid #2563eb;
 }
 
 .tack-add-to-quote-btn:hover {
-	background: #eff6ff;
-	color: #1d4ed8;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .tack-quote-btn:disabled,
 .tack-add-to-quote-btn:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .tack-quote-modal-overlay {
-	position: fixed;
-	inset: 0;
-	background: rgba(15, 23, 42, 0.5);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 100000;
-	padding: 16px;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 16px;
 }
 
 .tack-quote-modal-overlay[hidden] {
-	display: none;
+  display: none;
 }
 
 body.tack-quote-modal-open {
-	overflow: hidden;
+  overflow: hidden;
 }
 
 .tack-quote-modal {
-	position: relative;
-	background: #fff;
-	border-radius: 12px;
-	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
-	width: 100%;
-	max-width: 420px;
-	padding: 28px 24px 22px;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px 22px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .tack-quote-modal h2 {
-	margin: 0 0 16px;
-	font-size: 18px;
-	font-weight: 700;
-	color: #0f172a;
-	padding-right: 24px;
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  padding-right: 24px;
 }
 
 .tack-quote-modal-close {
-	position: absolute;
-	top: 14px;
-	right: 14px;
-	background: none;
-	border: none;
-	font-size: 22px;
-	line-height: 1;
-	color: #94a3b8;
-	cursor: pointer;
-	padding: 4px;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
 }
 
 .tack-quote-modal-close:hover {
-	color: #475569;
+  color: #475569;
 }
 
 .tack-quote-field {
-	margin-bottom: 14px;
+  margin-bottom: 14px;
 }
 
 .tack-quote-field label {
-	display: block;
-	font-size: 13px;
-	font-weight: 600;
-	color: #334155;
-	margin-bottom: 5px;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 5px;
 }
 
 .tack-quote-field input,
 .tack-quote-field textarea {
-	width: 100%;
-	box-sizing: border-box;
-	border: 1px solid #cbd5e1;
-	border-radius: 8px;
-	padding: 9px 11px;
-	font-size: 14px;
-	font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 14px;
+  font-family: inherit;
 }
 
 .tack-quote-field input:focus,
 .tack-quote-field textarea:focus {
-	outline: none;
-	border-color: #2563eb;
-	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .tack-quote-modal-error {
-	color: #b91c1c;
-	background: #fef2f2;
-	border: 1px solid #fecaca;
-	border-radius: 8px;
-	padding: 8px 10px;
-	font-size: 13px;
-	margin: 0 0 14px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  margin: 0 0 14px;
 }
 
 .tack-quote-modal-success {
-	color: #15803d;
-	background: #f0fdf4;
-	border: 1px solid #bbf7d0;
-	border-radius: 8px;
-	padding: 8px 10px;
-	font-size: 13px;
-	margin: 0 0 4px;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  margin: 0 0 4px;
 }
 
 .tack-quote-modal-actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: 10px;
-	margin-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .tack-quote-modal-cancel {
-	background: none;
-	border: 1px solid #cbd5e1;
-	color: #334155;
-	border-radius: 8px;
-	padding: 9px 16px;
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
+  background: none;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .tack-quote-modal-cancel:hover {
-	background: #f1f5f9;
+  background: #f1f5f9;
 }
 
 .tack-quote-modal-submit {
-	background: #2563eb;
-	color: #fff;
-	border: none;
-	border-radius: 8px;
-	padding: 9px 18px;
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .tack-quote-modal-submit:hover {
-	background: #1d4ed8;
+  background: #1d4ed8;
 }
 
 .tack-quote-modal-submit:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Floating "quote list" widget — printed site-wide in wp_footer, separate
    from the WooCommerce cart. Hidden by JS until at least one item is added. */
 .tack-quote-list-widget {
-	position: fixed;
-	right: 20px;
-	bottom: 20px;
-	z-index: 99999;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 99999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .tack-quote-list-widget[hidden] {
-	display: none;
+  display: none;
 }
 
 .tack-quote-list-toggle {
-	background: #0f172a;
-	color: #fff;
-	border: none;
-	border-radius: 999px;
-	padding: 12px 20px;
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
-	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
 }
 
 .tack-quote-list-toggle:hover {
-	background: #1e293b;
+  background: #1e293b;
 }
 
 .tack-quote-list-drawer {
-	position: absolute;
-	right: 0;
-	bottom: calc(100% + 12px);
-	width: 320px;
-	max-width: calc(100vw - 40px);
-	background: #fff;
-	border-radius: 12px;
-	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
-	padding: 16px;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  padding: 16px;
 }
 
 .tack-quote-list-drawer[hidden] {
-	display: none;
+  display: none;
 }
 
 .tack-quote-list-drawer-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 10px;
-	font-size: 14px;
-	color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #0f172a;
 }
 
 .tack-quote-list-drawer-header button {
-	background: none;
-	border: none;
-	font-size: 20px;
-	line-height: 1;
-	color: #94a3b8;
-	cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
 }
 
 .tack-quote-list-items {
-	list-style: none;
-	margin: 0 0 12px;
-	padding: 0;
-	max-height: 240px;
-	overflow-y: auto;
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .tack-quote-list-item {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 8px 0;
-	border-bottom: 1px solid #f1f5f9;
-	font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
 }
 
 .tack-quote-list-item-name {
-	flex: 1;
-	color: #334155;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+  flex: 1;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tack-quote-list-item-qty {
-	color: #64748b;
-	font-variant-numeric: tabular-nums;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
 }
 
 .tack-quote-list-item-remove {
-	background: none;
-	border: none;
-	font-size: 16px;
-	line-height: 1;
-	color: #cbd5e1;
-	cursor: pointer;
-	padding: 2px 4px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 2px 4px;
 }
 
 .tack-quote-list-item-remove:hover {
-	color: #b91c1c;
+  color: #b91c1c;
 }
 
 .tack-quote-list-checkout {
-	width: 100%;
-	justify-content: center;
-	margin-top: 0;
+  width: 100%;
+  justify-content: center;
+  margin-top: 0;
+}
+
+/* ─── Registration form fields ──────────────────────────────────────────────────
+   Added when the modal grew from a single email box to a policy-driven buyer +
+   company form. Kept deliberately plain: this markup is injected into whatever
+   theme the store runs, so it inherits the theme's input styling and only lays
+   fields out rather than restyling them. */
+
+.tack-quote-field-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.tack-quote-field-half {
+  flex: 1 1 0;
+  /* Without min-width:0 a long placeholder makes a flex item refuse to shrink and
+     the row overflows the modal on narrow screens. */
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .tack-quote-field-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.tack-quote-optional {
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: 0.85em;
+}
+
+.tack-quote-buying-as {
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.tack-quote-buying-as legend {
+  padding: 0;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.tack-quote-buying-as label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 1rem;
+  font-weight: 400;
+}
+
+.tack-quote-company-section {
+  border-top: 1px solid rgba(15, 23, 42, 0.12);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+/* `hidden` must beat the layout rules above, or toggling the company section leaves
+   it visible — the same specificity trap that kept a modal open in the Magento
+   extension. */
+.tack-quote-company-section[hidden] {
+  display: none !important;
+}
+
+.tack-quote-company-heading {
+  font-size: 1em;
+  margin: 0 0 0.5rem;
 }

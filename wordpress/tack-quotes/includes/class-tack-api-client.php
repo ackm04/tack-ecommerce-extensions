@@ -90,6 +90,54 @@ class Tack_Api_Client {
 	}
 
 	/**
+	 * The seller's registration policy, which decides what the storefront form must render:
+	 * whether companies or individuals are allowed, which company details are mandatory, and
+	 * the seller's own custom questions.
+	 *
+	 * Cached, because this is fetched on every front-end page view that renders the button
+	 * and the answer changes only when a seller edits their settings. Two different TTLs on
+	 * purpose:
+	 *
+	 *   success  15 minutes — long enough to be cheap, short enough that a policy change
+	 *                        shows up without anyone clearing caches.
+	 *   failure  60 seconds — a short NEGATIVE cache. Without it, an API that is down turns
+	 *                        every page view into a blocking HTTP call with the full timeout,
+	 *                        and the storefront crawls. Caching the failure briefly keeps the
+	 *                        page fast while still recovering quickly.
+	 *
+	 * Returns null on failure rather than throwing: the caller falls back to a minimal form
+	 * so a quote can still be requested when Tack is unreachable.
+	 *
+	 * @param bool $force Bypass the cache (used by the settings screen's test button).
+	 * @return array|null
+	 */
+	public function get_registration_config( $force = false ) {
+		$key = 'tack_quotes_registration_config';
+
+		if ( ! $force ) {
+			$cached = get_transient( $key );
+			if ( is_array( $cached ) ) {
+				return $cached;
+			}
+			// A cached failure is stored as the string 'unavailable' so it is
+			// distinguishable from "nothing cached yet" — an empty array would not be.
+			if ( 'unavailable' === $cached ) {
+				return null;
+			}
+		}
+
+		$result = $this->request( 'GET', '/integrations/woocommerce/registration-config' );
+
+		if ( is_wp_error( $result ) || ! is_array( $result ) || empty( $result ) ) {
+			set_transient( $key, 'unavailable', 60 );
+			return null;
+		}
+
+		set_transient( $key, $result, 15 * MINUTE_IN_SECONDS );
+		return $result;
+	}
+
+	/**
 	 * Create a quote request from cart/product line items.
 	 *
 	 * @param array $payload {buyerEmail, note, lineItems:[{sku,name,quantity,unitPrice}]}.

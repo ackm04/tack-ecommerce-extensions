@@ -1,0 +1,25 @@
+{
+  "tackQuote": {
+    "form": {
+      "productLabel": "Product",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "company": "Company",
+      "quantity": "Quantity",
+      "message": "Message",
+      "submit": "Submit request"
+    },
+    "message": {
+      "success": "Quote request submitted. You will hear from us shortly.",
+      "successWithNumber": "Quote request submitted (%quoteNumber%). You will hear from us shortly.",
+      "genericError": "Something went wrong. Please try again.",
+      "networkError": "Could not reach the quote service. Please try again.",
+      "requiredFields": "First name and email are required.",
+      "productUnavailable": "This product is not available for quoting."
+    },
+    "button": {
+      "label": "Request a Quote"
+    }
+  }
+}

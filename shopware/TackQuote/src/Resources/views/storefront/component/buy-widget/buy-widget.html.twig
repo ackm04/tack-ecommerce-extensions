@@ -1,0 +1,206 @@
+{#
+  Extends the COMPONENT buy widget, which is what actually renders on a product page.
+
+  Shopware 6 product pages are CMS-driven: cms-element-buy-box.html.twig sw_includes
+  '@Storefront/storefront/component/buy-widget/buy-widget.html.twig'. The legacy
+  page/product-detail/buy-widget.html.twig still exists in core but is NOT in the render
+  path, so extending it rendered nothing on every product page.
+
+  The context variable here is `product`, not `page.product`.
+#}
+{% sw_extends '@Storefront/storefront/component/buy-widget/buy-widget.html.twig' %}
+
+{% block buy_widget %}
+    {{ parent() }}
+
+    {% if config('TackQuote.config.enableButton') %}
+        {#
+          Bootstrap 5 modal, matching how Shopware core does it (see
+          page/account/order/cancel-order-modal.html.twig). The previous version hand-rolled
+          a modal from a plain .card plus a "backdrop" div and toggled style.display in JS.
+          It shipped NO CSS, so the classes were inert: the dialog rendered at
+          position:relative / z-index:auto — an inline card pushed into the page flow rather
+          than an overlay — and the backdrop was position:static, covering nothing. Using
+          the framework the storefront already bundles (Bootstrap 5.3.2) supplies the
+          overlay, centring, focus trap, Escape-to-close and ARIA wiring for free, none of
+          which the hand-rolled version had.
+
+          The id is per-product because a listing or cross-selling slider can render several
+          buy widgets on one page, and duplicate ids would make every trigger open the first
+          modal.
+        #}
+        {% set tackModalId = 'tackQuoteModal-' ~ product.id %}
+
+        <div class="tack-quote-request mt-2"
+             {# productId is the ONLY product input the endpoint accepts. Name, SKU, unit
+                price and URL used to be posted from here as well, which let anyone curl the
+                route and quote any product at any price — the controller now resolves all
+                four server-side from this id. #}
+             data-product-id="{{ product.id }}"
+             {# No CSRF token: Shopware removed sw_csrf in 6.5 (same-site cookies replaced
+                it). Calling it here threw "Unknown function" as soon as this block rendered. #}
+             data-endpoint="{{ path('frontend.tackquote.quote-request') }}"
+             {# Messages are passed in already translated: the inline script must not
+                contain English of its own, or it can never be localised. #}
+             data-msg-success="{{ 'tackQuote.message.success'|trans }}"
+             data-msg-success-numbered="{{ 'tackQuote.message.successWithNumber'|trans }}"
+             data-msg-error="{{ 'tackQuote.message.genericError'|trans }}"
+             data-msg-network-error="{{ 'tackQuote.message.networkError'|trans }}">
+
+            <button type="button"
+                    class="btn btn-outline-primary w-100 js-tack-quote-open"
+                    data-bs-toggle="modal"
+                    data-bs-target="#{{ tackModalId }}">
+                {{ config('TackQuote.config.buttonLabel')|default('tackQuote.button.label'|trans) }}
+            </button>
+
+            <div class="modal fade tack-quote-modal"
+                 id="{{ tackModalId }}"
+                 tabindex="-1"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-hidden="true"
+                 aria-labelledby="{{ tackModalId }}-title">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="{{ tackModalId }}-title">
+                                {{ config('TackQuote.config.buttonLabel')|default('tackQuote.button.label'|trans) }}
+                            </h5>
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="{{ 'global.default.close'|trans|default('Close') }}"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <p class="text-muted small mb-3">{{ product.translated.name|default(product.name) }}</p>
+
+                            <div class="js-tack-quote-error alert alert-danger d-none" role="alert"></div>
+                            <div class="js-tack-quote-success alert alert-success d-none" role="status"></div>
+
+                            <form class="js-tack-quote-form">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label" for="{{ tackModalId }}-firstName">{{ 'tackQuote.form.firstName'|trans }} *</label>
+                                        <input type="text" id="{{ tackModalId }}-firstName" name="firstName" class="form-control" autocomplete="given-name" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label" for="{{ tackModalId }}-lastName">{{ 'tackQuote.form.lastName'|trans }}</label>
+                                        <input type="text" id="{{ tackModalId }}-lastName" name="lastName" class="form-control" autocomplete="family-name">
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="form-label" for="{{ tackModalId }}-email">{{ 'tackQuote.form.email'|trans }} *</label>
+                                    <input type="email" id="{{ tackModalId }}-email" name="email" class="form-control" autocomplete="email" required>
+                                </div>
+                                <div class="row g-2 mt-2">
+                                    <div class="col-6">
+                                        <label class="form-label" for="{{ tackModalId }}-company">{{ 'tackQuote.form.company'|trans }}</label>
+                                        <input type="text" id="{{ tackModalId }}-company" name="company" class="form-control" autocomplete="organization">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label" for="{{ tackModalId }}-quantity">{{ 'tackQuote.form.quantity'|trans }}</label>
+                                        <input type="number" id="{{ tackModalId }}-quantity" name="quantity" class="form-control" value="1" min="1">
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="form-label" for="{{ tackModalId }}-message">{{ 'tackQuote.form.message'|trans }}</label>
+                                    <textarea id="{{ tackModalId }}-message" name="message" class="form-control" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-3 w-100 js-tack-quote-submit">
+                                    {{ 'tackQuote.form.submit'|trans }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% block page_product_detail_tack_quote_script %}
+            {#
+              Open/close is handled entirely by Bootstrap via data-bs-toggle / data-bs-dismiss,
+              so this script only owns submission. The previous version also implemented
+              show/hide by hand.
+            #}
+            <script>
+                (function () {
+                    function initTackQuote(root) {
+                        if (root.dataset.tackQuoteBound === '1') {
+                            return;
+                        }
+                        root.dataset.tackQuoteBound = '1';
+
+                        var form = root.querySelector('.js-tack-quote-form');
+                        var errorBox = root.querySelector('.js-tack-quote-error');
+                        var successBox = root.querySelector('.js-tack-quote-success');
+                        var submitBtn = root.querySelector('.js-tack-quote-submit');
+
+                        if (!form) {
+                            return;
+                        }
+
+                        function show(el, text) {
+                            el.textContent = text;
+                            el.classList.remove('d-none');
+                        }
+
+                        function hide(el) {
+                            el.classList.add('d-none');
+                        }
+
+                        form.addEventListener('submit', function (evt) {
+                            evt.preventDefault();
+                            hide(errorBox);
+                            hide(successBox);
+                            submitBtn.disabled = true;
+
+                            var data = new URLSearchParams(new FormData(form));
+                            data.set('productId', root.getAttribute('data-product-id'));
+
+                            fetch(root.getAttribute('data-endpoint'), {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: data.toString()
+                            })
+                                .then(function (r) { return r.json(); })
+                                .then(function (json) {
+                                    submitBtn.disabled = false;
+                                    if (json.success) {
+                                        show(successBox, json.quoteNumber
+                                            ? root.getAttribute('data-msg-success-numbered')
+                                                .replace('%quoteNumber%', json.quoteNumber)
+                                            : root.getAttribute('data-msg-success'));
+                                        form.classList.add('d-none');
+                                    } else {
+                                        show(errorBox, json.message || root.getAttribute('data-msg-error'));
+                                    }
+                                })
+                                .catch(function () {
+                                    submitBtn.disabled = false;
+                                    show(errorBox, root.getAttribute('data-msg-network-error'));
+                                });
+                        });
+                    }
+
+                    function initAll() {
+                        document.querySelectorAll('.tack-quote-request').forEach(initTackQuote);
+                    }
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', initAll);
+                    } else {
+                        // Already parsed: a listing filter or variant switch can inject this
+                        // markup after DOMContentLoaded has fired, in which case a listener
+                        // would never run.
+                        initAll();
+                    }
+                })();
+            </script>
+        {% endblock %}
+    {% endif %}
+{% endblock %}

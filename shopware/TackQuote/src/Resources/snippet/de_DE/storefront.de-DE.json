@@ -1,0 +1,25 @@
+{
+  "tackQuote": {
+    "form": {
+      "productLabel": "Produkt",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "E-Mail",
+      "company": "Firma",
+      "quantity": "Menge",
+      "message": "Nachricht",
+      "submit": "Anfrage senden"
+    },
+    "message": {
+      "success": "Angebotsanfrage gesendet. Wir melden uns in Kürze bei Ihnen.",
+      "successWithNumber": "Angebotsanfrage gesendet (%quoteNumber%). Wir melden uns in Kürze bei Ihnen.",
+      "genericError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "networkError": "Der Angebotsdienst ist nicht erreichbar. Bitte versuchen Sie es erneut.",
+      "requiredFields": "Vorname und E-Mail-Adresse sind erforderlich.",
+      "productUnavailable": "Für dieses Produkt kann kein Angebot angefordert werden."
+    },
+    "button": {
+      "label": "Angebot anfordern"
+    }
+  }
+}

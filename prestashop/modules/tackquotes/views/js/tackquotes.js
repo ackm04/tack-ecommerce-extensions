@@ -1,6 +1,21 @@
 /**
- * TackQuote for PrestaShop — storefront "Request a Quote" button behavior.
- * No dependency on jQuery beyond what PrestaShop's front theme already loads.
+ * TackQuote for PrestaShop
+ *
+ * Adds a "Request a Quote" button to product pages and connects this store to a
+ * TackQuote B2B quoting account.
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 2 of the License, or (at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * @author    TackQuote
+ * @copyright Since 2026 TackQuote
+ * @license   https://www.gnu.org/licenses/old-licenses/gpl-2.0.html GPL-2.0-or-later
  */
 (function () {
   'use strict';
@@ -61,16 +76,17 @@
             submitBtn.disabled = false;
             if (!result.ok || !result.data.success) {
               errorEl.textContent =
-                (result.data && result.data.message) || 'Could not create the quote. Please try again.';
+                (result.data && result.data.message) ||
+                'Could not create the quote. Please try again.';
               errorEl.style.display = 'block';
               return;
             }
-            successEl.textContent = 'Quote request sent. Check your email for a link to the quote.';
+            successEl.textContent = openBtn.getAttribute('data-msg-success');
             successEl.style.display = 'block';
           })
           .catch(function () {
             submitBtn.disabled = false;
-            errorEl.textContent = 'Could not reach TackQuote. Please try again.';
+            errorEl.textContent = openBtn.getAttribute('data-msg-network-error');
             errorEl.style.display = 'block';
           });
       });

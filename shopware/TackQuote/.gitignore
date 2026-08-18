@@ -1,0 +1,5 @@
+# PHPUnit caches — machine-local, rewritten on every run.
+# Both paths: cacheDirectory in phpunit.xml.dist, and the legacy result-cache file
+# PHPUnit still falls back to.
+.phpunit.cache/
+.phpunit.result.cache

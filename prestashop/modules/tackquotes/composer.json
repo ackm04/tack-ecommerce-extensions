@@ -1,0 +1,29 @@
+{
+    "name": "tackquote/prestashop-tackquotes",
+    "description": "TackQuote for PrestaShop \u2014 adds a Request a Quote button to product pages and connects the shop to a TackQuote B2B quoting account.",
+    "type": "prestashop-module",
+    "license": "OSL-3.0",
+    "authors": [
+        {
+            "name": "PrestaShop SA",
+            "email": "contact@prestashop.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2.5"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "prestashop/header-stamp": "^2.0",
+        "prestashop/php-dev-tools": "^4.2"
+    },
+    "config": {
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "scripts": {
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "header-stamp": "header-stamp --license=.github/license-header.txt --exclude=vendor,tests,_dev"
+    }
+}

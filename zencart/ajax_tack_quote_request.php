@@ -82,7 +82,7 @@ require_once(DIR_WS_CLASSES . 'tack_api_client.php');
 
 $client = new TackApiClient($apiUrl, $apiKey);
 
-$result = $client->createQuoteRequest(array(
+$payload = array(
     'buyerEmail' => $email,
     'note' => $note,
     'source' => 'zencart',
@@ -95,7 +95,24 @@ $result = $client->createQuoteRequest(array(
             'externalProductId' => (string) $productId,
         ),
     ),
-));
+);
+
+// products_price is stored in the store's DEFAULT currency, not the session currency, so
+// that is the currency this quote is denominated in — sending the session currency here
+// would label an unconverted amount with the wrong code, which is worse than the original
+// bug. Without any currency Tack fell back to a hardcoded 'USD'.
+//
+// `DEFAULT_CURRENCY` is the store's configured default; this repo's own Zen Cart connector
+// already treats it as such (see tack-connector/index.php, tack_connector_currency()).
+// Sent only when it looks like ISO 4217 alpha-3, so a misconfigured store falls back to
+// the tenant's configured currency rather than receiving junk.
+$currency = defined('DEFAULT_CURRENCY') ? strtoupper(trim((string) DEFAULT_CURRENCY)) : '';
+
+if (preg_match('/^[A-Z]{3}$/', $currency)) {
+    $payload['currency'] = $currency;
+}
+
+$result = $client->createQuoteRequest($payload);
 
 if (is_string($result)) {
     // Surface the real error to the shopper rather than pretending it worked —

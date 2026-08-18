@@ -45,8 +45,23 @@ class Tack_Widget {
 		if ( is_admin() ) {
 			return;
 		}
-		wp_enqueue_style( 'tack-quotes', TACK_QUOTES_URL . 'assets/css/tack-quotes.css', array(), TACK_QUOTES_VERSION );
-		wp_enqueue_script( 'tack-quotes', TACK_QUOTES_URL . 'assets/js/tack-quotes.js', array( 'jquery' ), TACK_QUOTES_VERSION, true );
+		// Asset version: the plugin version in production, the file's mtime when WP_DEBUG is
+		// on. TACK_QUOTES_VERSION is a hardcoded constant, so during development every edit
+		// to these files kept the SAME ?ver= and browsers served the cached copy — a fix
+		// applied to the JS looked like a fix that did not work, which cost real debugging
+		// time. Production behaviour is unchanged: released versions still bust the cache
+		// through the version bump.
+		$css = TACK_QUOTES_DIR . 'assets/css/tack-quotes.css';
+		$js  = TACK_QUOTES_DIR . 'assets/js/tack-quotes.js';
+		$css_ver = ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( $css ) )
+			? (string) filemtime( $css )
+			: TACK_QUOTES_VERSION;
+		$js_ver  = ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( $js ) )
+			? (string) filemtime( $js )
+			: TACK_QUOTES_VERSION;
+
+		wp_enqueue_style( 'tack-quotes', TACK_QUOTES_URL . 'assets/css/tack-quotes.css', array(), $css_ver );
+		wp_enqueue_script( 'tack-quotes', TACK_QUOTES_URL . 'assets/js/tack-quotes.js', array( 'jquery' ), $js_ver, true );
 		wp_localize_script(
 			'tack-quotes',
 			'TackQuotes',
@@ -55,11 +70,48 @@ class Tack_Widget {
 				'nonce'         => wp_create_nonce( 'tack_request_quote' ),
 				'customerEmail' => $this->current_customer_email(),
 				'checkoutButtonLabel' => (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tack-quotes' ) ),
+				// The seller's registration policy drives which fields the form renders. Null
+				// when Tack is unreachable, in which case the JS falls back to a minimal
+				// name+email form rather than rendering nothing — a shopper must still be able
+				// to ask for a quote when our own API is having a bad day.
+				'registration'  => $this->registration_config(),
 				'i18n'          => array(
 					'modalTitle'        => __( 'Request a Quote', 'tack-quotes' ),
+					'firstNameLabel'    => __( 'First name', 'tack-quotes' ),
+					'lastNameLabel'     => __( 'Last name', 'tack-quotes' ),
 					'emailLabel'        => __( 'Email address', 'tack-quotes' ),
+					'phoneLabel'        => __( 'Phone', 'tack-quotes' ),
+					'companyHeading'    => __( 'Company details', 'tack-quotes' ),
+					'companyNameLabel'  => __( 'Company name', 'tack-quotes' ),
+					'buyingAsLabel'     => __( 'I am buying as', 'tack-quotes' ),
+					'buyingAsIndividual' => __( 'An individual', 'tack-quotes' ),
+					'buyingAsCompany'   => __( 'A company', 'tack-quotes' ),
+					'optional'          => __( '(optional)', 'tack-quotes' ),
+					'firstNameRequired' => __( 'Please enter your first name.', 'tack-quotes' ),
+					'companyRequired'   => __( 'Please complete the required company details.', 'tack-quotes' ),
+					'awaitingApproval'  => __( 'Quote requested. Your company registration is awaiting approval by the seller.', 'tack-quotes' ),
+					// Company field labels, keyed by the field names the API's
+					// requiredCompanyFields returns. Anything not listed here falls back to a
+					// humanised version of the key, so a new policy field still renders.
+					'companyFields'     => array(
+						'legalName'      => __( 'Legal name', 'tack-quotes' ),
+						'taxId'          => __( 'Tax / VAT ID', 'tack-quotes' ),
+						'registrationNumber' => __( 'Registration number', 'tack-quotes' ),
+						'website'        => __( 'Website', 'tack-quotes' ),
+						'addressLine1'   => __( 'Address', 'tack-quotes' ),
+						'addressLine2'   => __( 'Address line 2', 'tack-quotes' ),
+						'city'           => __( 'City', 'tack-quotes' ),
+						'state'          => __( 'State / Province', 'tack-quotes' ),
+						'postalCode'     => __( 'Postal code', 'tack-quotes' ),
+						'country'        => __( 'Country', 'tack-quotes' ),
+						'phone'          => __( 'Company phone', 'tack-quotes' ),
+						'industry'       => __( 'Industry', 'tack-quotes' ),
+						'employeeCount'  => __( 'Number of employees', 'tack-quotes' ),
+					),
 					'emailPlaceholder'  => __( 'you@example.com', 'tack-quotes' ),
-					'noteLabel'         => __( 'Note (optional)', 'tack-quotes' ),
+					// Just "Note": the optional marker is appended generically by the form
+					// builder now, and leaving it in the string rendered "Note (optional) (optional)".
+					'noteLabel'         => __( 'Note', 'tack-quotes' ),
 					'notePlaceholder'   => __( 'Anything the seller should know about this request…', 'tack-quotes' ),
 					'submit'            => __( 'Send request', 'tack-quotes' ),
 					'sending'           => __( 'Sending…', 'tack-quotes' ),
@@ -99,6 +151,23 @@ class Tack_Widget {
 			}
 		}
 		return '';
+	}
+
+	/**
+	 * Fetch the seller's registration policy for the storefront form.
+	 *
+	 * Deliberately tolerant: a null return means "render the minimal form", never "render
+	 * nothing". The alternative — hiding the button when Tack is unreachable — loses a lead
+	 * for a reason the shopper cannot see or fix.
+	 *
+	 * @return array|null
+	 */
+	private function registration_config() {
+		if ( ! class_exists( 'Tack_Api_Client' ) ) {
+			return null;
+		}
+		$client = new Tack_Api_Client();
+		return $client->get_registration_config();
 	}
 
 	/**
@@ -202,9 +271,31 @@ class Tack_Widget {
 
 		$email      = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 		$note       = isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '';
+		$first_name = isset( $_POST['first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['first_name'] ) ) : '';
+		$last_name  = isset( $_POST['last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['last_name'] ) ) : '';
+		$phone      = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
+		$company_name = isset( $_POST['company_name'] ) ? sanitize_text_field( wp_unslash( $_POST['company_name'] ) ) : '';
+		// Company details arrive as company[key]=value. Sanitised per-value and keys
+		// restricted to a safe charset, so a crafted key cannot inject anything downstream.
+		$company = array();
+		if ( isset( $_POST['company'] ) && is_array( $_POST['company'] ) ) {
+			foreach ( wp_unslash( $_POST['company'] ) as $key => $value ) {
+				if ( ! is_string( $key ) || ! preg_match( '/^[A-Za-z0-9_]{1,40}$/', $key ) ) {
+					continue;
+				}
+				if ( is_scalar( $value ) ) {
+					$company[ $key ] = sanitize_text_field( (string) $value );
+				}
+			}
+		}
 		$items_json = isset( $_POST['items'] ) ? wp_unslash( $_POST['items'] ) : '';
 		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
 		$quantity   = isset( $_POST['quantity'] ) ? max( 1, absint( wp_unslash( $_POST['quantity'] ) ) ) : 1;
+		// Which VARIATION the shopper chose. A variable product's button carries the parent
+		// id, so without this a quote for "X-Large" was recorded against the parent — wrong
+		// SKU and the parent's (cheapest) price. Validated against the parent below, so it
+		// cannot be used to quote some unrelated product.
+		$variation_id = isset( $_POST['variation_id'] ) ? absint( wp_unslash( $_POST['variation_id'] ) ) : 0;
 
 		if ( '' === $email || ! is_email( $email ) ) {
 			wp_send_json_error( array( 'message' => __( 'A valid email address is required.', 'tack-quotes' ) ), 400 );
@@ -213,22 +304,74 @@ class Tack_Widget {
 		if ( $items_json ) {
 			$line_items = $this->quote_list_line_items( $items_json );
 		} else {
-			$line_items = $this->product_line_items( $product_id, $quantity );
+			$line_items = $this->product_line_items( $product_id, $quantity, $variation_id );
 		}
 
 		if ( empty( $line_items ) ) {
-			wp_send_json_error( array( 'message' => __( 'No products to quote.', 'tack-quotes' ) ), 400 );
+			// Distinguish "you have not chosen options yet" from "there is nothing here".
+			// Both produce no line items, but only one is the shopper's to fix, and the
+			// generic message left them re-clicking a button that could never succeed.
+			$parent = $product_id ? wc_get_product( $product_id ) : null;
+			$needs_variation = ! $items_json
+				&& $parent instanceof WC_Product_Variable;
+
+			wp_send_json_error(
+				array(
+					'message' => $needs_variation
+						? __( 'Please choose the product options before requesting a quote.', 'tack-quotes' )
+						: __( 'No products to quote.', 'tack-quotes' ),
+				),
+				400
+			);
+		}
+
+		$payload = array(
+			'buyerEmail' => $email,
+			'note'       => $note,
+			'source'     => 'woocommerce',
+			'lineItems'  => $line_items,
+		);
+
+		// Buyer identity. Sent only when non-empty so an older storefront cache that still
+		// posts email-only does not overwrite a stored name with blanks.
+		if ( '' !== $first_name ) {
+			$payload['firstName'] = $first_name;
+		}
+		if ( '' !== $last_name ) {
+			$payload['lastName'] = $last_name;
+		}
+		if ( '' !== $phone ) {
+			$payload['phone'] = $phone;
+		}
+		if ( '' !== $company_name ) {
+			$payload['companyName'] = $company_name;
+		}
+		if ( ! empty( $company ) ) {
+			$payload['company'] = $company;
+		}
+
+		/*
+		 * The prices in $line_items are in the store's currency, so the quote has to say
+		 * which currency that is. Without this Tack fell back to a hardcoded 'USD' and a
+		 * store selling in EUR produced USD quotes with no error anywhere.
+		 *
+		 * `get_woocommerce_currency()` returns the currently selected currency code (per
+		 * WooCommerce's multi-currency developer docs), which is the one the prices above
+		 * were rendered in. Guarded with function_exists because this file is also
+		 * reachable when WooCommerce is inactive. Sent only when it looks like an ISO 4217
+		 * alpha-3 code — otherwise omitted, so Tack applies the tenant's configured
+		 * currency instead of receiving junk.
+		 */
+		if ( function_exists( 'get_woocommerce_currency' ) ) {
+			$currency = strtoupper( trim( (string) get_woocommerce_currency() ) );
+
+			if ( preg_match( '/^[A-Z]{3}$/', $currency ) ) {
+				$payload['currency'] = $currency;
+			}
 		}
 
 		$client = new Tack_Api_Client();
-		$result = $client->create_quote_request(
-			array(
-				'buyerEmail' => $email,
-				'note'       => $note,
-				'source'     => 'woocommerce',
-				'lineItems'  => $line_items,
-			)
-		);
+		$result = $client->create_quote_request( $payload );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ), 502 );
@@ -237,23 +380,98 @@ class Tack_Widget {
 		wp_send_json_success(
 			array(
 				'quoteId'  => isset( $result['id'] ) ? $result['id'] : null,
+				'quoteNumber' => isset( $result['quoteNumber'] ) ? sanitize_text_field( (string) $result['quoteNumber'] ) : null,
 				'portalUrl' => isset( $result['portalUrl'] ) ? esc_url_raw( $result['portalUrl'] ) : ( isset( $result['quoteUrl'] ) ? esc_url_raw( $result['quoteUrl'] ) : '' ),
+				// Forwarded so the storefront can say "awaiting approval" instead of implying
+				// the buyer portal is ready to use. Without this the shopper is redirected to a
+				// login they cannot pass yet.
+				'awaitingApproval' => ! empty( $result['awaitingApproval'] ),
+				'company'  => isset( $result['company'] ) && is_array( $result['company'] )
+					? array(
+						'name'   => isset( $result['company']['name'] ) ? sanitize_text_field( (string) $result['company']['name'] ) : '',
+						'status' => isset( $result['company']['status'] ) ? sanitize_text_field( (string) $result['company']['status'] ) : '',
+					)
+					: null,
 			)
 		);
 	}
 
 	/**
+	 * Narrow a product to the thing actually being quoted, or reject it.
+	 *
+	 * Shared by both entry points — the single-product button and the quote list — because
+	 * they had drifted: the single-product path was fixed to honour the chosen variation
+	 * while the quote list still resolved the parent, so the same product quoted correctly
+	 * one way and incorrectly the other.
+	 *
+	 * Returns the variation when one was chosen and it really belongs to this product, the
+	 * product itself when it is not variable, or NULL when it is variable and no valid
+	 * variation was supplied.
+	 *
+	 * Rejecting rather than falling back to the parent is deliberate. A variable parent's
+	 * SKU is not something the store can fulfil, and its price is the cheapest variation's,
+	 * so quoting it is both the wrong item and an underquote. WooCommerce takes the same
+	 * position in its own UI: variation-add-to-cart-button.php ships
+	 * `<input type="hidden" name="variation_id" value="0">` and core's frontend JS holds the
+	 * add-to-cart button in `disabled wc-variation-selection-needed` until a purchasable
+	 * variation is found.
+	 *
+	 * The variation id is caller-supplied, so it is only honoured after confirming its
+	 * parent — otherwise any product's id could be passed as a "variation" of another and
+	 * have its price quoted under that product's name.
+	 *
+	 * @param WC_Product $product      The product (a parent, for a variable product).
+	 * @param int        $variation_id Caller-supplied variation id, or 0.
+	 * @return WC_Product|null
+	 */
+	private function resolve_purchasable( $product, $variation_id ) {
+		if ( $variation_id ) {
+			$variation = wc_get_product( $variation_id );
+			if ( $variation instanceof WC_Product_Variation
+				&& (int) $variation->get_parent_id() === (int) $product->get_id() ) {
+				// get_name() on a variation already carries the attribute summary
+				// ("Cut-Resistant Gloves - X-Large"), which is what a salesperson needs on
+				// the quote line.
+				return $variation;
+			}
+		}
+
+		if ( $product instanceof WC_Product_Variable ) {
+			return null;
+		}
+
+		return $product;
+	}
+
+	/**
 	 * Build a single-product line item.
 	 *
-	 * @param int $product_id Product ID.
-	 * @param int $quantity   Quantity.
+	 * When the shopper picked a variation, THAT is what gets quoted: a variation carries
+	 * its own SKU and its own price, and the button on a variable product page can only
+	 * carry the parent id. Quoting the parent recorded the wrong SKU at the parent's
+	 * price — on this devstore's gloves, "X-Large" (TQ-GLOVE-XL, 47.50) was quoted as
+	 * TQ-GLOVE-PARENT at 42.00, i.e. the wrong item underpriced by 5.50 a unit.
+	 *
+	 * The variation id is caller-supplied, so it is only honoured after confirming it is
+	 * really a variation OF THIS PRODUCT. Otherwise anyone could post any product's id as
+	 * a "variation" and have its price quoted under another product's page.
+	 *
+	 * @param int $product_id   Product ID (the parent, for a variable product).
+	 * @param int $quantity     Quantity.
+	 * @param int $variation_id Selected variation ID, or 0.
 	 * @return array
 	 */
-	private function product_line_items( $product_id, $quantity ) {
+	private function product_line_items( $product_id, $quantity, $variation_id = 0 ) {
 		$product = $product_id ? wc_get_product( $product_id ) : null;
 		if ( ! $product instanceof WC_Product ) {
 			return array();
 		}
+
+		$product = $this->resolve_purchasable( $product, $variation_id );
+		if ( ! $product ) {
+			return array();
+		}
+
 		return array(
 			array(
 				'sku'                => $product->get_sku(),
@@ -286,10 +504,18 @@ class Tack_Widget {
 			if ( ! is_array( $row ) || empty( $row['product_id'] ) ) {
 				continue;
 			}
-			$product_id = absint( $row['product_id'] );
-			$quantity   = isset( $row['quantity'] ) ? max( 1, absint( $row['quantity'] ) ) : 1;
-			$product    = wc_get_product( $product_id );
+			$product_id   = absint( $row['product_id'] );
+			$quantity     = isset( $row['quantity'] ) ? max( 1, absint( $row['quantity'] ) ) : 1;
+			$variation_id = isset( $row['variation_id'] ) ? absint( $row['variation_id'] ) : 0;
+			$product      = wc_get_product( $product_id );
 			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+			// Same rule as the single-product path: quote the chosen variation, and skip a
+			// variable product whose variation is missing or does not belong to it rather
+			// than silently quoting the parent.
+			$product = $this->resolve_purchasable( $product, $variation_id );
+			if ( ! $product ) {
 				continue;
 			}
 			$items[] = array(

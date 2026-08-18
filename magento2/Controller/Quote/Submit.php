@@ -495,7 +495,10 @@ class Submit extends Action implements HttpPostActionInterface, CsrfAwareActionI
         try {
             return (string) $this->storeManager->getStore()->getCurrentCurrencyCode();
         } catch (\Exception $e) {
-            return 'USD';
+            // Empty, NOT 'USD'. Tack treats an unusable currency as "not supplied" and
+            // falls back to the tenant's own configured currency; hardcoding USD here
+            // would override that with a guess, which is the bug this whole change fixes.
+            return '';
         }
     }
 

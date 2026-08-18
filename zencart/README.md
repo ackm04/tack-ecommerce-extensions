@@ -22,6 +22,11 @@ The two halves use **different secrets on purpose**. `TACK_API_KEY` lets this
 store talk to TackQuote; `TACK_CONNECTOR_TOKEN` lets TackQuote talk to this
 store. Neither is usable in the other direction.
 
+Distribution authority: the public GitHub release asset is
+[`tack-zencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-zencart.zip).
+This monorepo directory is build/source only. No Zen Cart plugin-directory listing
+is claimed.
+
 > **New in 1.1.0.** The connector half did not exist before. `ZenCartService`
 > had always called `{baseUrl}/tack-connector/*`, but TackQuote published
 > nothing that answered there, so every catalog/order sync 404'd and this README

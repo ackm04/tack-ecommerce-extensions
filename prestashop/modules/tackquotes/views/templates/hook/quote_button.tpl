@@ -8,7 +8,12 @@
             class="btn btn-secondary tackquotes-open-btn"
             id="tackquotes-open-btn"
             data-product-id="{$tackquotes_product_id|intval}"
-            data-ajax-url="{$tackquotes_ajax_url|escape:'html':'UTF-8'}">
+            data-ajax-url="{$tackquotes_ajax_url|escape:'html':'UTF-8'}"
+            {* Messages are handed to the JS already translated. The script must not hold
+               English of its own, or these two strings are the only part of the module a
+               merchant cannot translate — every other wording goes through {l} or trans(). *}
+            data-msg-success="{l s='Quote request sent. Check your email for a link to the quote.' d='Modules.Tackquotes.Shop'|escape:'html':'UTF-8'}"
+            data-msg-network-error="{l s='Could not reach TackQuote. Please try again.' d='Modules.Tackquotes.Shop'|escape:'html':'UTF-8'}">
         {$tackquotes_button_label|escape:'html':'UTF-8'}
     </button>
 

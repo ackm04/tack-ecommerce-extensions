@@ -14,7 +14,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * plugin to call without a full API-key-authenticated integration:
  *
  *   POST {apiUrl}/widget/quote-request
- *   Body: { tenantSlug, firstName, lastName, email, company, phone, message, items[] }
+ *   Body: { tenantSlug, firstName, lastName, email, company, phone, message, currency?, items[] }
  *
  * (see apps/api/src/modules/quotes/widget.controller.ts — @Public(), no auth,
  * resolves the tenant by `tenantSlug`). It is the same endpoint the generic
@@ -32,6 +32,14 @@ class TackQuoteApiClient
 {
     private const CONFIG_DOMAIN = 'TackQuote.config.';
 
+    /**
+     * Last-resort fallback only. The authoritative default is the <defaultValue> on the
+     * apiUrl field in Resources/config/config.xml, which Shopware applies on install;
+     * this covers the case where the setting has been explicitly blanked. Kept as a
+     * named constant so the duplication is visible — if you change one, change both.
+     */
+    private const DEFAULT_API_URL = 'https://api.tackquote.com/v1';
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly SystemConfigService $systemConfig,
@@ -42,7 +50,7 @@ class TackQuoteApiClient
     public function getApiUrl(?string $salesChannelId = null): string
     {
         $url = (string) ($this->systemConfig->get(self::CONFIG_DOMAIN . 'apiUrl', $salesChannelId) ?? '');
-        $url = $url !== '' ? $url : 'https://api.tackquote.com/v1';
+        $url = $url !== '' ? $url : self::DEFAULT_API_URL;
 
         return rtrim($url, '/');
     }
@@ -61,19 +69,11 @@ class TackQuoteApiClient
         return $key !== null && $key !== '' ? (string) $key : null;
     }
 
-    public function isButtonEnabled(?string $salesChannelId = null): bool
-    {
-        $value = $this->systemConfig->get(self::CONFIG_DOMAIN . 'enableButton', $salesChannelId);
-
-        return $value === null ? true : (bool) $value;
-    }
-
-    public function getButtonLabel(?string $salesChannelId = null): string
-    {
-        $label = (string) ($this->systemConfig->get(self::CONFIG_DOMAIN . 'buttonLabel', $salesChannelId) ?? '');
-
-        return $label !== '' ? $label : 'Request a Quote';
-    }
+    // NOTE: there is deliberately no isButtonEnabled()/getButtonLabel() here. Both
+    // existed, were called from nowhere, and re-read `enableButton` / `buttonLabel` with
+    // their own hardcoded PHP defaults — while the Twig template reads the same two
+    // settings straight from config(). That is two sources of truth for one setting, and
+    // the PHP copy would silently disagree the moment config.xml's default changed.
 
     public function isConfigured(?string $salesChannelId = null): bool
     {
@@ -85,11 +85,20 @@ class TackQuoteApiClient
      *
      * @param array{firstName?: string, lastName?: string, email: string, company?: string, phone?: string} $buyer
      * @param array<int, array{name: string, sku?: string, quantity: int, unitPrice?: float, productUrl?: string}> $items
+     * @param string|null $currency ISO 4217 alpha-3 code of the sales channel (e.g. "EUR").
+     *                              Omitted from the payload when null/unrecognised, in which
+     *                              case TackQuote falls back to the tenant's configured
+     *                              currency and only then to USD.
      *
      * @return array<string, mixed>
      */
-    public function submitQuoteRequest(array $buyer, array $items, string $message, ?string $salesChannelId = null): array
-    {
+    public function submitQuoteRequest(
+        array $buyer,
+        array $items,
+        string $message,
+        ?string $salesChannelId = null,
+        ?string $currency = null,
+    ): array {
         $tenantSlug = $this->getTenantSlug($salesChannelId);
         if ($tenantSlug === null) {
             throw new \RuntimeException('TackQuote is not configured for this sales channel (missing tenant slug).');
@@ -111,6 +120,15 @@ class TackQuoteApiClient
             'message' => $message,
             'items' => $items,
         ];
+
+        // Without this the quote was created in TackQuote's hardcoded USD regardless of what
+        // this sales channel actually trades in. Send it only when it is a plausible ISO 4217
+        // alpha-3 code, so a misconfigured store falls back to the API's default rather than
+        // pushing junk into the quote's currency column.
+        $currency = strtoupper(trim((string) $currency));
+        if (preg_match('/^[A-Z]{3}$/', $currency) === 1) {
+            $payload['currency'] = $currency;
+        }
 
         try {
             $response = $this->httpClient->request('POST', $this->getApiUrl($salesChannelId) . '/widget/quote-request', [

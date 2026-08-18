@@ -12,6 +12,10 @@
         <service id="TackQuote\TackQuote\Storefront\Controller\QuoteRequestController"
                  public="true">
             <argument type="service" id="TackQuote\TackQuote\Service\TackQuoteApiClient"/>
+            <!-- Sales-channel-scoped, NOT product.repository: it applies this channel's
+                 visibility/availability rules, so a product not published here is simply
+                 not found and cannot be quoted. -->
+            <argument type="service" id="sales_channel.product.repository"/>
             <call method="setContainer">
                 <argument type="service" id="service_container"/>
             </call>

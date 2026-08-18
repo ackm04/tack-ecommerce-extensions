@@ -111,13 +111,34 @@ class Tackquotes extends Controller
             if (!$apiKey) {
                 $json['error'] = $this->language->get('error_not_configured');
             } else {
-                $client = new ApiClient($apiUrl, $apiKey);
-                $result = $client->createQuoteRequest([
+                $payload = [
                     'buyerEmail' => $email,
                     'note' => $note,
                     'source' => 'opencart',
                     'lineItems' => $lineItems,
-                ]);
+                ];
+
+                // The prices in $lineItems are in the store's active currency, so the quote
+                // has to say which one. Without this Tack fell back to a hardcoded 'USD',
+                // so a store selling in EUR produced USD quotes with no error anywhere.
+                //
+                // Resolution order mirrors OpenCart's own Startup\Currency controller:
+                // the session value is the active code (its checkout writes
+                // `currency_code` straight from `$this->session->data['currency']`), and
+                // `config_currency` is the store default when the session has none. Sent
+                // only when it looks like ISO 4217 alpha-3, so a misconfigured store falls
+                // back to the tenant's configured currency instead of receiving junk.
+                $currency = (string) ($this->session->data['currency']
+                    ?? $this->config->get('config_currency')
+                    ?? '');
+                $currency = strtoupper(trim($currency));
+
+                if (preg_match('/^[A-Z]{3}$/', $currency)) {
+                    $payload['currency'] = $currency;
+                }
+
+                $client = new ApiClient($apiUrl, $apiKey);
+                $result = $client->createQuoteRequest($payload);
 
                 if (is_string($result)) {
                     // OpenCartPluginController::quoteRequest() failed (bad

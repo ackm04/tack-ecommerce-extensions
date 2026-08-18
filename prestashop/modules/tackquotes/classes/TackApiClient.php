@@ -1,14 +1,12 @@
 <?php
+
 /**
  * Thin HTTP client for the Tack (TackQuote) API, using cURL.
  *
  * Mirrors Tack_Api_Client in the TackQuote WooCommerce plugin
  * (integrations/wordpress/tack-quotes/includes/class-tack-api-client.php):
  * same headers, same auth scheme (Bearer + X-Api-Key), same JSON contract.
- *
- * @package TackQuotes
  */
-
 if (!defined('_PS_VERSION_')) {
     exit;
 }
@@ -23,7 +21,7 @@ class TackApiClient
 
     /**
      * @param string $baseUrl e.g. https://api.tackquote.com/v1 (no trailing slash).
-     * @param string $apiKey  Tenant's TackQuote API key.
+     * @param string $apiKey tenant's TackQuote API key
      */
     public function __construct($baseUrl, $apiKey)
     {
@@ -34,11 +32,11 @@ class TackApiClient
     /**
      * Perform an authenticated request against the Tack API.
      *
-     * @param string     $method HTTP method.
-     * @param string     $path   Path beginning with '/'.
-     * @param array|null $body   Optional JSON-encodable body.
+     * @param string $method HTTP method
+     * @param string $path path beginning with '/'
+     * @param array|null $body optional JSON-encodable body
      *
-     * @return array|string Decoded response array on 2xx, or an error message string.
+     * @return array|string decoded response array on 2xx, or an error message string
      */
     public function request($method, $path, $body = null)
     {
@@ -48,13 +46,13 @@ class TackApiClient
 
         $url = $this->baseUrl . $path;
 
-        $headers = array(
+        $headers = [
             'Authorization: Bearer ' . $this->apiKey,
             'X-Api-Key: ' . $this->apiKey,
             'Content-Type: application/json',
             'Accept: application/json',
             'User-Agent: TackQuotes-PrestaShop/1.0.0',
-        );
+        ];
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
@@ -87,13 +85,13 @@ class TackApiClient
             return $message;
         }
 
-        return is_array($data) ? $data : array();
+        return is_array($data) ? $data : [];
     }
 
     /**
      * Lightweight connectivity check.
      *
-     * @return true|string True on success, or an error message string.
+     * @return true|string true on success, or an error message string
      */
     public function testConnection()
     {
@@ -118,9 +116,9 @@ class TackApiClient
      * writing that PrestaShop route does not exist on the Tack API yet — see
      * README.md for the exact backend change needed to make this call succeed.
      *
-     * @param array $payload {buyerEmail, note, source, lineItems:[{sku,name,quantity,unitPrice,externalProductId}]}.
+     * @param array $payload {buyerEmail, note, source, lineItems:[{sku,name,quantity,unitPrice,externalProductId}]}
      *
-     * @return array|string Decoded response (expected to include id/quoteNumber/portalUrl), or an error message.
+     * @return array|string decoded response (expected to include id/quoteNumber/portalUrl), or an error message
      */
     public function createQuoteRequest($payload)
     {

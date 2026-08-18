@@ -14,7 +14,13 @@ key, the same way the WooCommerce plugin does.
 
 ## Installation
 
-1. Zip the `tackquotes/` directory itself (not its parent), e.g.:
+Distribution authority: the public GitHub release asset is
+[`tack-prestashop.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-prestashop.zip).
+This monorepo directory is build/source only. No PrestaShop Addons listing is claimed.
+
+1. Download `tack-prestashop.zip` and follow the included README, or zip the
+   `tackquotes/` directory itself (not its parent) if you are packaging from this
+   checkout:
    ```
    cd integrations/prestashop/modules
    zip -r tackquotes.zip tackquotes

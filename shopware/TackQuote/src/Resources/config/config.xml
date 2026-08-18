@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<config xmlns="http://schemas.shopware.com/dca/config.xsd"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://schemas.shopware.com/dca/config.xsd http://schemas.shopware.com/dca/config-1.0.xsd">
+<!--
+  NOTE: no default xmlns, and noNamespaceSchemaLocation rather than schemaLocation.
+  Shopware's own schema (vendor/shopware/core/System/SystemConfig/Schema/config.xsd)
+  declares NO targetNamespace, so putting <config> in a namespace makes libxml report
+  "No matching global declaration available for the validation root" and plugin:install
+  aborts before the plugin can ever be installed.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
 
     <card>
         <title>TackQuote connection</title>

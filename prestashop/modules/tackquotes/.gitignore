@@ -1,0 +1,9 @@
+# Composer dev tooling. These are BUILD-TIME only: php-cs-fixer, php-dev-tools and
+# header-stamp are how the module is checked against PrestaShop's coding standards, and
+# none of them belong in the repository or in the ZIP submitted to Addons — a module ZIP
+# containing a vendor/ full of dev tools is a validation finding, not a feature.
+/vendor/
+/composer.lock
+
+# php-cs-fixer's own cache, machine-local.
+/.php-cs-fixer.cache

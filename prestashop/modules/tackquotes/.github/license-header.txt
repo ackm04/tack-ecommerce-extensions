@@ -1,5 +1,3 @@
-<?php
-
 /**
  * TackQuote for PrestaShop
  *
@@ -19,9 +17,3 @@
  * @copyright Since 2026 TackQuote
  * @license   https://www.gnu.org/licenses/old-licenses/gpl-2.0.html GPL-2.0-or-later
  */
-header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
-header('Pragma: no-cache');
-
-header('Location: ../');
-exit;

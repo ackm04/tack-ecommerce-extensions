@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Registers this plugin's controllers so Symfony discovers their #[Route] attributes.
+
+  Without this file the plugin's bundle still loads, but NO route is created — so
+  `path('frontend.tackquote.quote-request')` throws in the storefront template and the
+  endpoint 404s. Shopware does not scan plugin Controller directories automatically; every
+  plugin that ships a controller must provide this.
+-->
+<routes xmlns="http://symfony.com/schema/routing"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://symfony.com/schema/routing https://symfony.com/schema/routing/routing-1.0.xsd">
+
+    <import resource="../../Storefront/Controller/*Controller.php" type="attribute"/>
+</routes>
