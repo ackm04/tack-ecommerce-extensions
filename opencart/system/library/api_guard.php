@@ -93,7 +93,7 @@ class ApiGuard
 
     /**
      * Authorise a request against the token stored in
-     * `module_tackquote_connector_token`.
+     * `module_tackquotes_connector_token`.
      *
      * Fails CLOSED: with no token configured the feed does not exist at all
      * (503), so a fresh install never serves catalog or order data to an

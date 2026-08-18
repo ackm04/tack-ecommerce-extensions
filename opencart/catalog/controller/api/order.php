@@ -556,7 +556,7 @@ class Order extends Controller
     {
         $check = ApiGuard::check(
             $this->request->server,
-            (string) $this->config->get('module_tackquote_connector_token')
+            (string) $this->config->get('module_tackquotes_connector_token')
         );
 
         if ($check['ok']) {

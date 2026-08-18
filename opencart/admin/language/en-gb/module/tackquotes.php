@@ -33,5 +33,5 @@ $_['button_cancel'] = 'Cancel';
 // Error
 $_['error_permission'] = 'Warning: You do not have permission to modify TackQuote!';
 $_['error_api_url'] = 'Please enter a valid TackQuote API URL (e.g. https://api.tackquote.com/v1).';
-$_['error_api_key'] = 'Please enter a TackQuote API key before testing the connection.';
+$_['error_api_key'] = 'Enter or save a TackQuote API key before testing the connection.';
 $_['error_test_connection'] = 'Could not connect to TackQuote: %s';

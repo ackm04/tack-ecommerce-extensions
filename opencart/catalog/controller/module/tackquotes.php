@@ -32,10 +32,10 @@ class Tackquotes extends Controller
      */
     public function index(array $setting = []): string
     {
-        if (!$this->config->get('module_tackquote_status')) {
+        if (!$this->config->get('module_tackquotes_status')) {
             return '';
         }
-        if (!$this->config->get('module_tackquote_api_key')) {
+        if (!$this->config->get('module_tackquotes_api_key')) {
             // Not configured yet — don't show a button that can't work.
             return '';
         }
@@ -54,7 +54,7 @@ class Tackquotes extends Controller
         }
 
         $data['tackquote_product_id'] = $productId;
-        $data['tackquote_button_label'] = $this->config->get('module_tackquote_button_label')
+        $data['tackquote_button_label'] = $this->config->get('module_tackquotes_button_label')
             ?: $this->language->get('button_default_label');
         $data['tackquote_ajax_url'] = $this->url->link('extension/tack/module/tackquotes.quote', '', true);
         $data['text_email'] = $this->language->get('text_email');
@@ -105,8 +105,8 @@ class Tackquotes extends Controller
         }
 
         if (!$json) {
-            $apiUrl = (string) $this->config->get('module_tackquote_api_url');
-            $apiKey = (string) $this->config->get('module_tackquote_api_key');
+            $apiUrl = (string) $this->config->get('module_tackquotes_api_url');
+            $apiKey = (string) $this->config->get('module_tackquotes_api_key');
 
             if (!$apiKey) {
                 $json['error'] = $this->language->get('error_not_configured');
@@ -166,6 +166,6 @@ class Tackquotes extends Controller
     public function uninstall(): void
     {
         // Handled by the admin controller's uninstall(), which owns the
-        // shared `module_tackquote` setting group.
+        // shared `module_tackquotes` setting group.
     }
 }

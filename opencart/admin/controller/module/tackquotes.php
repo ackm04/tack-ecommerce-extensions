@@ -53,8 +53,22 @@ class Tackquotes extends Controller
 
         $json = [];
 
-        $apiUrl = (string) $this->request->post['module_tackquote_api_url'];
-        $apiKey = (string) $this->request->post['module_tackquote_api_key'];
+        // Both fields fall back to what is already stored, for the same reason the save
+        // path has keepOrReplace(): the API key input is rendered EMPTY on purpose (the
+        // stored secret is only ever shown masked), so a merchant who saves a key and then
+        // clicks Test connection posts a blank key. Reading the POST value alone made the
+        // button permanently answer "Please enter a TackQuote API key" on every configured
+        // store — it could only ever succeed in the one moment before the first save.
+        // Verified in OpenCart 4.1.0.4 before fixing.
+        $apiUrl = trim((string) ($this->request->post['module_tackquotes_api_url'] ?? ''));
+        if ($apiUrl === '') {
+            $apiUrl = (string) $this->config->get('module_tackquotes_api_url');
+        }
+
+        $apiKey = trim((string) ($this->request->post['module_tackquotes_api_key'] ?? ''));
+        if ($apiKey === '') {
+            $apiKey = (string) $this->config->get('module_tackquotes_api_key');
+        }
 
         if ($apiKey === '') {
             $json['error'] = $this->language->get('error_api_key');
@@ -84,7 +98,7 @@ class Tackquotes extends Controller
     public function uninstall(): void
     {
         $this->load->model('setting/setting');
-        $this->model_setting_setting->deleteSetting('module_tackquote');
+        $this->model_setting_setting->deleteSetting('module_tackquotes');
     }
 
     private function buildFormData(): array
@@ -123,17 +137,17 @@ class Tackquotes extends Controller
         }
 
         $fields = [
-            'module_tackquote_status' => 0,
-            'module_tackquote_api_url' => 'https://api.tackquote.com/v1',
-            'module_tackquote_api_key' => '',
-            'module_tackquote_button_label' => 'Request a Quote',
+            'module_tackquotes_status' => 0,
+            'module_tackquotes_api_url' => 'https://api.tackquote.com/v1',
+            'module_tackquotes_api_key' => '',
+            'module_tackquotes_button_label' => 'Request a Quote',
             // Bearer token for the INBOUND direction (TackQuote -> this store),
             // i.e. the catalog/order feed served by
             // catalog/controller/api/{product,order}.php. It is a different
-            // secret from module_tackquote_api_key, which authenticates this
+            // secret from module_tackquotes_api_key, which authenticates this
             // store when it calls OUT to the TackQuote API. Empty = the feed is
             // switched off entirely (see Api\Product::list()).
-            'module_tackquote_connector_token' => '',
+            'module_tackquotes_connector_token' => '',
         ];
 
         foreach ($fields as $key => $default) {
@@ -149,16 +163,16 @@ class Tackquotes extends Controller
         // Never echo the real stored key back into the HTML value attribute;
         // show a masked placeholder instead, same convention as the
         // PrestaShop module's maskedApiKey().
-        $storedKey = (string) $this->config->get('module_tackquote_api_key');
-        $data['module_tackquote_api_key_masked'] = self::mask($storedKey);
+        $storedKey = (string) $this->config->get('module_tackquotes_api_key');
+        $data['module_tackquotes_api_key_masked'] = self::mask($storedKey);
 
-        $storedToken = (string) $this->config->get('module_tackquote_connector_token');
-        $data['module_tackquote_connector_token_masked'] = self::mask($storedToken);
-        $data['module_tackquote_connector_url'] = HTTP_CATALOG . 'index.php?route=extension/tack/api/product.list';
+        $storedToken = (string) $this->config->get('module_tackquotes_connector_token');
+        $data['module_tackquotes_connector_token_masked'] = self::mask($storedToken);
+        $data['module_tackquotes_connector_url'] = HTTP_CATALOG . 'index.php?route=extension/tack/api/product.list';
 
         if (($this->request->server['REQUEST_METHOD'] ?? '') !== 'POST') {
-            $data['module_tackquote_api_key'] = '';
-            $data['module_tackquote_connector_token'] = '';
+            $data['module_tackquotes_api_key'] = '';
+            $data['module_tackquotes_connector_token'] = '';
         }
 
         $data['header'] = $this->load->controller('common/header');
@@ -174,7 +188,7 @@ class Tackquotes extends Controller
             $this->error['warning'] = $this->language->get('error_permission');
         }
 
-        $apiUrl = trim((string) ($this->request->post['module_tackquote_api_url'] ?? ''));
+        $apiUrl = trim((string) ($this->request->post['module_tackquotes_api_url'] ?? ''));
         if ($apiUrl === '' || !filter_var($apiUrl, FILTER_VALIDATE_URL)) {
             $this->error['warning'] = $this->language->get('error_api_url');
         }
@@ -187,19 +201,37 @@ class Tackquotes extends Controller
      * (model_setting_setting::editSetting), keeping the previously stored API
      * key when the (masked) field is submitted unchanged.
      */
+    /**
+     * The setting group is `module_tackquotes` — matching the module CODE, with the `s`.
+     *
+     * This is not cosmetic. OpenCart builds the module list in Design > Layouts from
+     * installed extensions, and includes a single-instance module only when a setting
+     * named `module_<code>_status` exists:
+     *
+     *   if ($this->config->has('module_' . $extension['code'] . '_status') || $module_data)
+     *   — admin/controller/design/layout.php:262 (4.1.0.4)
+     *
+     * The code here is `tackquotes` (from this controller's filename), so the group must be
+     * `module_tackquotes`. Until 1.1.1 it was `module_tackquote`, and the consequence was
+     * invisible from the admin: the extension installed, the module installed, the settings
+     * screen saved and reported success, `Status = Enabled` persisted — and the module
+     * never appeared in Design > Layouts, so the storefront button could not be placed at
+     * all. Renaming this group without renaming the controller (or vice versa) reintroduces
+     * exactly that failure.
+     */
     private function model_setting_setting_save(): void
     {
         $this->load->model('setting/setting');
 
-        $apiKey = $this->keepOrReplace('module_tackquote_api_key');
-        $connectorToken = $this->keepOrReplace('module_tackquote_connector_token');
+        $apiKey = $this->keepOrReplace('module_tackquotes_api_key');
+        $connectorToken = $this->keepOrReplace('module_tackquotes_connector_token');
 
-        $this->model_setting_setting->editSetting('module_tackquote', [
-            'module_tackquote_status' => (int) ($this->request->post['module_tackquote_status'] ?? 0),
-            'module_tackquote_api_url' => rtrim((string) ($this->request->post['module_tackquote_api_url'] ?? ''), '/'),
-            'module_tackquote_api_key' => $apiKey,
-            'module_tackquote_button_label' => (string) ($this->request->post['module_tackquote_button_label'] ?? 'Request a Quote'),
-            'module_tackquote_connector_token' => $connectorToken,
+        $this->model_setting_setting->editSetting('module_tackquotes', [
+            'module_tackquotes_status' => (int) ($this->request->post['module_tackquotes_status'] ?? 0),
+            'module_tackquotes_api_url' => rtrim((string) ($this->request->post['module_tackquotes_api_url'] ?? ''), '/'),
+            'module_tackquotes_api_key' => $apiKey,
+            'module_tackquotes_button_label' => (string) ($this->request->post['module_tackquotes_button_label'] ?? 'Request a Quote'),
+            'module_tackquotes_connector_token' => $connectorToken,
         ]);
     }
 

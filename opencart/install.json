@@ -1,7 +1,7 @@
 {
   "name": "TackQuote",
   "code": "tack",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "TackQuote",
   "link": "https://tackquote.com",
   "description": "Add a \"Request a Quote\" button to your product pages, and let TackQuote read this store's catalog and orders and place quote-accepted orders.",

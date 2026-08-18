@@ -16,6 +16,19 @@ Distribution authority: the public GitHub release asset is
 It is a source archive. Extract it and follow the build instructions below to create the
 load-bearing `tack.ocmod.zip` installer; do not upload `tack-opencart.zip` to OpenCart.
 
+> **Fixed in 1.1.1 — the storefront button could not be placed at all.** The settings
+> group was `module_tackquote_*` while the module code is `tackquotes`. OpenCart's
+> Design > Layouts form lists a single-instance module only when a setting named
+> `module_<code>_status` exists (`admin/controller/design/layout.php:262`), so TackQuote
+> was missing from every layout position picker. Nothing in the admin hinted at it: the
+> extension installed, the module installed, the settings screen saved successfully and
+> `Status = Enabled` persisted. Only the storefront half was affected; the catalog/order
+> feed routes were reachable throughout. Found by installing the extension into a real
+> OpenCart 4.1.0.4 store rather than by reading the code.
+>
+> If you installed 1.1.0, re-save the settings screen after upgrading — the old
+> `module_tackquote_*` rows are ignored, and 1.1.1 writes the correctly named ones.
+
 > **New in 1.1.0.** The feed half did not exist before. `OpenCartService` had
 > always called `extension/tack/api/*`, but TackQuote published nothing that
 > answered there, so every catalog/order sync 404'd and the docs told merchants

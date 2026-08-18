@@ -34,26 +34,26 @@
           <div class="mb-3 row">
             <label class="col-sm-2 col-form-label" for="input-status">{{ entry_status }}</label>
             <div class="col-sm-10">
-              <select name="module_tackquote_status" id="input-status" class="form-select">
-                <option value="1" {% if module_tackquote_status %}selected{% endif %}>{{ text_enabled }}</option>
-                <option value="0" {% if not module_tackquote_status %}selected{% endif %}>{{ text_disabled }}</option>
+              <select name="module_tackquotes_status" id="input-status" class="form-select">
+                <option value="1" {% if module_tackquotes_status %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not module_tackquotes_status %}selected{% endif %}>{{ text_disabled }}</option>
               </select>
             </div>
           </div>
           <div class="mb-3 row">
             <label class="col-sm-2 col-form-label" for="input-api-url">{{ entry_api_url }}</label>
             <div class="col-sm-10">
-              <input type="text" name="module_tackquote_api_url" value="{{ module_tackquote_api_url }}" id="input-api-url" class="form-control">
+              <input type="text" name="module_tackquotes_api_url" value="{{ module_tackquotes_api_url }}" id="input-api-url" class="form-control">
               <div class="form-text">{{ entry_api_url_help }}</div>
             </div>
           </div>
           <div class="mb-3 row">
             <label class="col-sm-2 col-form-label" for="input-api-key">{{ entry_api_key }}</label>
             <div class="col-sm-10">
-              <input type="password" name="module_tackquote_api_key" value="" id="input-api-key" class="form-control" autocomplete="new-password">
+              <input type="password" name="module_tackquotes_api_key" value="" id="input-api-key" class="form-control" autocomplete="new-password">
               <div class="form-text">
-                {% if module_tackquote_api_key_masked %}
-                  {{ entry_api_key_saved|replace({'%s': module_tackquote_api_key_masked}) }}
+                {% if module_tackquotes_api_key_masked %}
+                  {{ entry_api_key_saved|replace({'%s': module_tackquotes_api_key_masked}) }}
                 {% else %}
                   {{ entry_api_key_help }}
                 {% endif %}
@@ -63,21 +63,21 @@
           <div class="mb-3 row">
             <label class="col-sm-2 col-form-label" for="input-connector-token">{{ entry_connector_token }}</label>
             <div class="col-sm-10">
-              <input type="password" name="module_tackquote_connector_token" value="" id="input-connector-token" class="form-control" autocomplete="new-password">
+              <input type="password" name="module_tackquotes_connector_token" value="" id="input-connector-token" class="form-control" autocomplete="new-password">
               <div class="form-text">
-                {% if module_tackquote_connector_token_masked %}
-                  {{ entry_connector_token_saved|replace({'%s': module_tackquote_connector_token_masked}) }}
+                {% if module_tackquotes_connector_token_masked %}
+                  {{ entry_connector_token_saved|replace({'%s': module_tackquotes_connector_token_masked}) }}
                 {% else %}
                   {{ entry_connector_token_help }}
                 {% endif %}
               </div>
-              <div class="form-text"><code>{{ module_tackquote_connector_url }}</code></div>
+              <div class="form-text"><code>{{ module_tackquotes_connector_url }}</code></div>
             </div>
           </div>
           <div class="mb-3 row">
             <label class="col-sm-2 col-form-label" for="input-button-label">{{ entry_button_label }}</label>
             <div class="col-sm-10">
-              <input type="text" name="module_tackquote_button_label" value="{{ module_tackquote_button_label }}" id="input-button-label" class="form-control">
+              <input type="text" name="module_tackquotes_button_label" value="{{ module_tackquotes_button_label }}" id="input-button-label" class="form-control">
               <div class="form-text">{{ entry_button_label_help }}</div>
             </div>
           </div>
@@ -98,8 +98,8 @@ document.getElementById('button-test').addEventListener('click', function () {
   resultEl.innerHTML = '';
 
   var body = new URLSearchParams();
-  body.set('module_tackquote_api_url', document.getElementById('input-api-url').value);
-  body.set('module_tackquote_api_key', document.getElementById('input-api-key').value);
+  body.set('module_tackquotes_api_url', document.getElementById('input-api-url').value);
+  body.set('module_tackquotes_api_key', document.getElementById('input-api-key').value);
 
   fetch('{{ test_action }}', {
     method: 'post',
