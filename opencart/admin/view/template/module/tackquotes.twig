@@ -15,22 +15,19 @@
     </div>
   </div>
   <div class="container-fluid">
-    {% if success %}
-      <div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check"></i> {{ success }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    {% endif %}
-    {% if error_warning %}
-      <div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> {{ error_warning }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    {% endif %}
+    {# Save success / failure is rendered by OpenCart's own common.js into the
+       `#alert` container that common/header.twig provides, from the JSON that
+       `…tackquotes.save` returns. There is deliberately no `{% if success %}` /
+       `{% if error_warning %}` block here any more: those read controller keys
+       that did not match what validate() wrote, so the error banner was
+       structurally unreachable and a permission denial showed the merchant
+       nothing at all. One key path, and it is the vendor's. #}
     <div id="tackquote-test-result"></div>
 
     <div class="card">
       <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
       <div class="card-body">
-        <form id="form-tackquote" action="{{ action }}" method="post" data-oc-toggle="ajax">
+        <form id="form-tackquote" action="{{ save }}" method="post" data-oc-toggle="ajax">
           <div class="mb-3 row">
             <label class="col-sm-2 col-form-label" for="input-status">{{ entry_status }}</label>
             <div class="col-sm-10">
@@ -44,6 +41,10 @@
             <label class="col-sm-2 col-form-label" for="input-api-url">{{ entry_api_url }}</label>
             <div class="col-sm-10">
               <input type="text" name="module_tackquotes_api_url" value="{{ module_tackquotes_api_url }}" id="input-api-url" class="form-control">
+              {# common.js fills `#error-<key>` from `$json['error']['<key>']`, mapping
+                 underscores to dashes — so save()'s `api_url` key lands here. Without
+                 this element an invalid URL was rejected completely silently. #}
+              <div id="error-api-url" class="invalid-feedback"></div>
               <div class="form-text">{{ entry_api_url_help }}</div>
             </div>
           </div>
@@ -82,8 +83,51 @@
             </div>
           </div>
           <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-add-label">{{ entry_add_label }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="module_tackquotes_add_label" value="{{ module_tackquotes_add_label }}" id="input-add-label" class="form-control">
+              <div class="form-text">{{ entry_add_label_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-inline-button">{{ entry_inline_button }}</label>
+            <div class="col-sm-10">
+              <select name="module_tackquotes_inline_button" id="input-inline-button" class="form-select">
+                <option value="1" {% if module_tackquotes_inline_button %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not module_tackquotes_inline_button %}selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+              <div class="form-text">{{ entry_inline_button_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-quote-list">{{ entry_quote_list }}</label>
+            <div class="col-sm-10">
+              <select name="module_tackquotes_quote_list" id="input-quote-list" class="form-select">
+                <option value="1" {% if module_tackquotes_quote_list %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not module_tackquotes_quote_list %}selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+              <div class="form-text">{{ entry_quote_list_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-listing-button">{{ entry_listing_button }}</label>
+            <div class="col-sm-10">
+              <select name="module_tackquotes_listing_button" id="input-listing-button" class="form-select">
+                <option value="1" {% if module_tackquotes_listing_button %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not module_tackquotes_listing_button %}selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+              <div class="form-text">{{ entry_listing_button_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
             <div class="col-sm-10 offset-sm-2">
-              <button type="button" id="button-test" data-oc-toggle="ajax" data-oc-target="#tackquote-test-result" class="btn btn-secondary">{{ button_test }}</button>
+              {# No `data-oc-toggle="ajax"` / `data-oc-target` here: common.js only honours those
+                 from its `submit` handler, and this is a type="button", so they never did
+                 anything. Removed rather than left as a misleading hint that the framework
+                 drives this button — the fetch() below does. The error text rides in a data
+                 attribute so it goes through Twig's HTML escaping instead of being
+                 interpolated into a JS string literal, where an apostrophe would break out. #}
+              <button type="button" id="button-test" class="btn btn-secondary" data-tack-ajax-error="{{ error_ajax }}">{{ button_test }}</button>
               <div class="form-text">{{ entry_button_help }}</div>
             </div>
           </div>
@@ -93,30 +137,54 @@
   </div>
 </div>
 <script type="text/javascript"><!--
-document.getElementById('button-test').addEventListener('click', function () {
+(function () {
+  var button = document.getElementById('button-test');
   var resultEl = document.getElementById('tackquote-test-result');
-  resultEl.innerHTML = '';
 
-  var body = new URLSearchParams();
-  body.set('module_tackquotes_api_url', document.getElementById('input-api-url').value);
-  body.set('module_tackquotes_api_key', document.getElementById('input-api-key').value);
+  /**
+   * Render the test-connection outcome.
+   *
+   * textContent, never innerHTML. On the failure path `message` is built from
+   * whatever the host in "TackQuote API URL" returned, and that field is
+   * merchant-editable — so a response body containing `<img src=x onerror=...>`
+   * used to be parsed as markup and executed inside the authenticated admin
+   * session. The alert is assembled with createElement and the untrusted string
+   * is assigned to textContent, so no markup is ever parsed from a value.
+   */
+  function showResult(variant, message) {
+    var alertEl = document.createElement('div');
+    alertEl.className = 'alert alert-' + variant;
+    alertEl.textContent = message;
 
-  fetch('{{ test_action }}', {
-    method: 'post',
-    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  })
-    .then(function (res) { return res.json(); })
-    .then(function (json) {
-      if (json.error) {
-        resultEl.innerHTML = '<div class="alert alert-danger">' + json.error + '</div>';
-      } else if (json.success) {
-        resultEl.innerHTML = '<div class="alert alert-success">' + json.success + '</div>';
-      }
+    // Clears every existing child without parsing markup.
+    resultEl.textContent = '';
+    resultEl.appendChild(alertEl);
+  }
+
+  button.addEventListener('click', function () {
+    resultEl.textContent = '';
+
+    var body = new URLSearchParams();
+    body.set('module_tackquotes_api_url', document.getElementById('input-api-url').value);
+    body.set('module_tackquotes_api_key', document.getElementById('input-api-key').value);
+
+    fetch('{{ test_action }}', {
+      method: 'post',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
     })
-    .catch(function () {
-      resultEl.innerHTML = '<div class="alert alert-danger">Could not reach the admin ajax endpoint.</div>';
-    });
-});
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (json.error) {
+          showResult('danger', json.error);
+        } else if (json.success) {
+          showResult('success', json.success);
+        }
+      })
+      .catch(function () {
+        showResult('danger', button.dataset.tackAjaxError);
+      });
+  });
+})();
 //--></script>
 {{ footer }}

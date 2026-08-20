@@ -16,6 +16,47 @@ Distribution authority: the public GitHub release asset is
 It is a source archive. Extract it and follow the build instructions below to create the
 load-bearing `tack.ocmod.zip` installer; do not upload `tack-opencart.zip` to OpenCart.
 
+> ## ⚠️ The package MUST be named `tack.ocmod.zip`
+>
+> OpenCart derives the extension code from the **zip filename** — "a folder will be
+> created into the `extension/` directory based on the name of your file"
+> ([developer guide](https://docs.opencart.com/developer-guide/extensions)). **Nothing
+> inside the package pins it.** `install.json`'s `"code": "tack"` is not one of the
+> documented keys and drives nothing.
+>
+> Every namespace in this extension hard-codes `…\Extension\Tack\…`, and the event
+> actions registered at install time are `extension/tack/event/quote.productPage` and
+> `…quote.footer`. So a zip named anything else — `tackquote.ocmod.zip`,
+> `tack-opencart.zip`, `tack.ocmod (1).zip` from a browser re-download — **installs
+> cleanly, reports success, and then 404s on every single route**: no quote button, no
+> settings screen, no catalog feed, and nothing in the error log pointing at the cause.
+>
+> `scripts/package-integrations.sh` now reads the required code out of the admin
+> controller's own namespace and refuses to emit an artifact whose name disagrees, so
+> this can no longer drift silently.
+
+> **New in 1.2.0 — the button is where buyers look for it, and one quote can hold many
+> products.** Three changes, matching what the WooCommerce and Magento extensions already do:
+>
+> 1. **Beside Add to Cart, not under the description.** A `catalog/view/product/product/after`
+>    view event injects the controls immediately after core's Add to Cart button
+>    (`id="button-cart"`). No theme file is edited and no OCMOD patch is applied. If a theme
+>    has renamed that button the event injects nothing and leaves the page untouched — the
+>    layout-module placement remains as a fallback.
+> 2. **A multi-product quote list.** "Add to Quote" collects products — from product pages and
+>    from category/search tiles — into a list held in `localStorage`, shown in a floating
+>    launcher and a three-step panel (items → your details → done). The list **never touches
+>    the OpenCart cart**: quoting is not buying, and a buyer pricing twelve items must not have
+>    their cart, shipping estimate or abandoned-cart email disturbed.
+> 3. **Prices come from the catalog, never the browser.** The panel posts only product ids and
+>    quantities; `Tackquotes::quoteList()` re-reads every name, model and price server-side. A
+>    request forging `unitPrice=0.01`, a SKU and a product name was stored at the real
+>    2000.00 with the real SKU (verified against a live store, quote TK-2026-001076).
+>
+> Also in 1.2.0: a session-scoped submission throttle (5 per 10 minutes — the sixth request is
+> refused), a 50-line cap per quote, and four new settings covering the labels and each
+> placement.
+
 > **Fixed in 1.1.1 — the storefront button could not be placed at all.** The settings
 > group was `module_tackquote_*` while the module code is `tackquotes`. OpenCart's
 > Design > Layouts form lists a single-instance module only when a setting named
@@ -164,6 +205,31 @@ cd integrations/opencart
 zip -r ../../dist/extensions/tack.ocmod.zip install.json admin catalog system
 ```
 
+## Tests
+
+```
+php integrations/opencart/tests/run.php
+```
+
+No composer, no phpunit, no database, no store — OpenCart is not a composer
+package and this extension ships no dependency manifest, so the runner is
+self-contained and stubs only the slice of OpenCart 4's engine the admin
+controller touches (`Controller::__get()` resolving out of a Registry).
+
+It covers the **save path**, because that is where the 1.2.1 defects lived and
+every one of them was invisible to manual clicking: the setting persisted
+correctly each time, and the bug was in what came *back*. So the assertions are
+about the response and about whether anything was written at all — a permission
+denial must produce `error.warning` and write nothing, a bad URL must produce
+`error.api_url` and write nothing, a good save must return `success` as JSON and
+not a redirect. It also guards the invariants that are easy to undo by accident:
+no `innerHTML` sink in the admin template, no stored secret reaching the view,
+the `module_tackquotes` setting group, and the namespace-derived extension code
+still matching `tack.ocmod.zip`.
+
+Checked against the pre-fix tree: 13 of the 15 fail on it. A suite that passes
+both before and after is not testing anything.
+
 ## Install
 
 1. **Extensions > Installer** → upload `tack.ocmod.zip`, then click Install.
@@ -199,13 +265,23 @@ with `hash_equals()`.
                   "name": "Widget", "description": "…", "price": "100.0000",
                   "special": "80.0000", "image": "catalog/demo/widget.jpg",
                   "status": "1", "quantity": 7 } ],
-  "total": 1, "page": 1, "limit": 0 }
+  "total": 1, "page": 1, "limit": 0,
+  "truncated": false, "next_page": null, "next_limit": null }
 ```
 
-- **Unpaginated by default.** TackQuote's `syncProducts()` makes one call with
-  no paging, so a default page size here would silently import the first page
-  and report success. `page`/`limit` are honoured if sent. Very large catalogs
-  may need a higher PHP `memory_limit`.
+- **Unpaginated by default, and still complete.** TackQuote's `syncProducts()`
+  makes one call with no paging, so a default page size here would silently
+  import the first page and report success. `page`/`limit` are honoured if sent.
+- **Bounded internally.** The default path reads that complete catalog in
+  250-row chunks rather than one unbounded statement, so neither the buffered
+  result set nor the correlated `special` subquery is evaluated against the whole
+  table at once. It stops early only past 5,000 products, and then says so:
+  `truncated: true` with `next_page`/`next_limit` giving the exact request that
+  resumes the walk, and `total` giving what remains. `truncated` is `false` on
+  every normal response — a caller never has to compare `products.length`
+  against `total` to find out it was handed a partial catalog.
+- `next_page` is always paired with `next_limit`, because a page number is
+  meaningless without the size it is counted in.
 - Scoped to the connected store via `product_to_store`.
 - **Disabled products are included** with `status: "0"` so TackQuote deactivates
   its copy instead of leaving a stale product live.

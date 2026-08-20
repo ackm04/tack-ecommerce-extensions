@@ -1,15 +1,13 @@
 # TackQuote for WooCommerce
 
-> **Status: Partial** — companion plugin lives in this monorepo at
-> `integrations/wordpress/tack-quotes/`. Packaging / WordPress.org distribution
-> polish may still be incomplete; the plugin is **not** Missing.
-
 Add a **Request a Quote** button to your WooCommerce store and sync orders with your [TackQuote](https://tackquote.com) B2B quoting account.
 
-- 🧾 "Request a Quote" button on product pages and the cart
-- 🔁 Automatic order sync to TackQuote (on creation and status change)
+- 🧾 "Add to Quote" and "Request a Quote" buttons on product pages, plus a floating quote list with "Checkout as Quote"
+- 🔁 Optional one-way order sync to TackQuote (on creation and status change), queued through Action Scheduler so it never runs inside checkout
 - 🔑 Simple setup: paste your TackQuote API key
-- 🛡️ HPOS-compatible, nonce + capability protected, no data left behind on uninstall
+- 🛡️ HPOS- and Cart/Checkout-blocks-compatible; nonce, capability and rate-limit protected; removes its own options and transients on uninstall
+
+See the `== Privacy ==` section of [`readme.txt`](readme.txt) for exactly which fields are sent to TackQuote, and what the plugin stores locally.
 
 ## Installation
 
@@ -37,7 +35,10 @@ The plugin talks to your TackQuote account over HTTPS using your API key (Bearer
 ## Development
 
 ```bash
-# Lint
+# Lint (PHP syntax)
+find . -name '*.php' -print0 | xargs -0 -n1 php -l
+
+# Lint (WordPress Coding Standards)
 composer install && ./vendor/bin/phpcs --standard=WordPress .
 
 # Build a distributable zip

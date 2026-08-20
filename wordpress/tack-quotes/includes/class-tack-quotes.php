@@ -20,11 +20,15 @@ require_once TACK_QUOTES_DIR . 'includes/class-tack-order-sync.php';
 final class Tack_Quotes {
 
 	/**
+	 * The single instance of this class.
+	 *
 	 * @var Tack_Quotes|null
 	 */
 	private static $instance = null;
 
 	/**
+	 * The settings screen handler.
+	 *
 	 * @var Tack_Settings
 	 */
 	public $settings;
@@ -53,15 +57,62 @@ final class Tack_Quotes {
 			( new Tack_Widget() )->init();
 		}
 
-		// Order sync to the Tack API.
-		if ( 'yes' === get_option( 'tack_quotes_enable_order_sync', 'yes' ) ) {
-			( new Tack_Order_Sync() )->init();
+		// Order sync to the Tack API. The deferred worker is registered unconditionally — see
+		// Tack_Order_Sync::register_worker() — while the order hooks that queue work are only
+		// attached when the merchant has switched sync on.
+		$order_sync = new Tack_Order_Sync();
+		$order_sync->register_worker();
+		if ( Tack_Order_Sync::is_enabled() ) {
+			$order_sync->init();
 		}
 
 		// Settings action link on the plugins list.
 		add_filter( 'plugin_action_links_' . plugin_basename( TACK_QUOTES_FILE ), array( $this, 'action_links' ) );
 
-		load_plugin_textdomain( 'tack-quotes', false, dirname( plugin_basename( TACK_QUOTES_FILE ) ) . '/languages' );
+		// Suggested privacy policy text. `wp_add_privacy_policy_content()` must be called on
+		// admin_init or later — it errors out otherwise — which is why this is a separate
+		// hook rather than an inline call here on plugins_loaded.
+		add_action( 'admin_init', array( $this, 'add_privacy_policy_content' ) );
+
+		// There is deliberately NO manual textdomain load here — see
+		// https://make.wordpress.org/core/2016/07/06/i18n-improvements-in-4-6/
+		// WordPress.org serves translations for hosted plugins automatically from the
+		// plugin slug as of WP 4.6, Plugin Check flags the manual call as a discouraged
+		// function, and this plugin ships no /languages directory — so the call was
+		// loading nothing anyway.
+	}
+
+	/**
+	 * Register suggested privacy policy text on the Privacy Settings screen.
+	 *
+	 * This plugin sends personal data to a third party, so a merchant needs to be able to
+	 * disclose exactly what and to where. Enumerating the fields rather than gesturing at
+	 * "order data" is the point: a policy that says less than the plugin sends is not a
+	 * policy.
+	 */
+	public function add_privacy_policy_content() {
+		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
+			return;
+		}
+
+		$api_url = (string) get_option( 'tack_quotes_api_url', 'https://api.tackquote.com/v1' );
+
+		$content =
+			'<p class="privacy-policy-tutorial">'
+			. esc_html__( 'Suggested text for stores using TackQuote for WooCommerce. Edit it to match how your store actually uses the plugin.', 'tack-quotes' )
+			. '</p><p><strong>' . esc_html__( 'Quote requests', 'tack-quotes' ) . '</strong><br />'
+			. esc_html__( 'When you request a quote, we send the details you enter in the quote form to our quoting provider, TackQuote: your email address, first and last name, phone number, and — if you are buying on behalf of a company — your company name and any company details the form asks for, together with any note you write. We also send the products, quantities, prices and currency you are asking to be quoted.', 'tack-quotes' )
+			. '</p><p><strong>' . esc_html__( 'Order sync (only if the store owner has switched it on)', 'tack-quotes' ) . '</strong><br />'
+			. esc_html__( 'When an order is placed or its status changes, we send that order to TackQuote: the order number and internal order ID, its status, currency and total, the billing email address, billing first and last name, billing company name, the order line items (product name, SKU, quantity and line total), and the date the order was created.', 'tack-quotes' )
+			. '</p><p><strong>' . esc_html__( 'Where it goes', 'tack-quotes' ) . '</strong><br />'
+			. sprintf(
+				/* translators: %s: the configured TackQuote API base URL. */
+				esc_html__( 'Data is sent over HTTPS to the TackQuote API at %s. No payment card data is sent. Nothing is shared with any other third party by this plugin.', 'tack-quotes' ),
+				'<code>' . esc_html( $api_url ) . '</code>'
+			)
+			. '</p>';
+
+		wp_add_privacy_policy_content( __( 'TackQuote for WooCommerce', 'tack-quotes' ), $content );
 	}
 
 	/**
@@ -83,7 +134,9 @@ final class Tack_Quotes {
 	public static function activate() {
 		add_option( 'tack_quotes_api_url', 'https://api.tackquote.com/v1' );
 		add_option( 'tack_quotes_enable_widget', 'yes' );
-		add_option( 'tack_quotes_enable_order_sync', 'yes' );
+		// Order sync ships OFF. It sends personal data to a third party, so it is the
+		// merchant's decision to make, not a default to be discovered later.
+		add_option( 'tack_quotes_enable_order_sync', 'no' );
 		add_option( 'tack_quotes_button_label', __( 'Add to Quote', 'tack-quotes' ) );
 		add_option( 'tack_quotes_request_button_label', __( 'Request a Quote', 'tack-quotes' ) );
 		add_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tack-quotes' ) );

@@ -538,15 +538,16 @@ footer a:hover { border-bottom-color: var(--accent); }
         <article class="card">
           <div class="card__top">
             <h3>WooCommerce</h3>
-            <span class="chip">Package</span>
+            <span class="chip chip--verified">Verified on WP 7.1 / WC 11.0.1</span>
           </div>
           <p class="card__mech">
             Hooks <code>woocommerce_after_add_to_cart_button</code> for the button and
             <code>wp_footer</code> for the quote drawer, so placement follows the theme instead of a
-            shortcode. Orders sync back over the WooCommerce REST API.
+            shortcode. Order sync is handed to Action Scheduler, so a slow or unreachable TackQuote
+            cannot sit inside a shopper's checkout.
           </p>
           <p class="card__pkg">WordPress plugin — tack-quotes</p>
-          <p class="card__note">Needs WooCommerce itself; inert on a plain WordPress site.</p>
+          <p class="card__note">Needs WooCommerce itself; inert on a plain WordPress site. Passes <code>wp plugin check</code> and <code>phpcs --standard=WordPress</code> with nothing outstanding.</p>
           <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/wordpress">Source →</a>
         </article>
 
@@ -690,9 +691,11 @@ footer a:hover { border-bottom-color: var(--accent); }
         <p class="eyebrow">OpenCart 4 · in detail</p>
         <h2>What a buyer does, and what the store does about it</h2>
         <p>
-          The OpenCart extension is the one that has been installed, configured and exercised on a
-          real 4.1.0.4 store end to end, so it is documented here in full. The other packages follow
-          the same contract.
+          The OpenCart extension has been installed, configured and exercised on a real 4.1.0.4
+          store end to end, so it is documented here in full. WooCommerce has since had the same
+          treatment on WordPress 7.1 with WooCommerce 11.0.1 — installed from the built zip, a
+          quote request carried through to a real quote record, and order sync observed leaving
+          checkout untouched. The remaining packages follow the same contract.
         </p>
       </div>
 

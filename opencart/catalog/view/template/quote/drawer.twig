@@ -1,0 +1,111 @@
+{#
+  Site-wide quote list + multi-step request form, injected once per page by
+  catalog/controller/event/quote.php::footer().
+
+  Structure mirrors the Magento module's quote-list.phtml (drawer + three-step form) and the
+  WooCommerce plugin's footer drawer, so the three storefronts behave the same way for a
+  buyer who shops across platforms.
+
+  The config block is JSON in a data attribute rather than an inline <script> so the page
+  keeps working under a Content-Security-Policy that forbids inline script — the app file is
+  a real asset request. Only the SUBMIT URL and display strings live here; prices never do,
+  because the server re-resolves every line from the catalog.
+#}
+<link rel="stylesheet" href="{{ tackquote_asset_base }}stylesheet/tack/quote.css">
+
+<div id="tackquote-app"
+     data-config='{{ {
+       "submitUrl": tackquote_submit_url,
+       "listEnabled": tackquote_quote_list,
+       "listingButtons": tackquote_listing_buttons,
+       "addLabel": tackquote_add_label,
+       "requestLabel": tackquote_request_label,
+       "customer": tackquote_customer,
+       "text": {
+         "added": text_added,
+         "itemsCount": text_items_count,
+         "emptyList": text_drawer_empty,
+         "priceOnRequest": text_price_on_request,
+         "errorEmail": error_email,
+         "errorEmptyList": error_empty_list
+       }
+     }|json_encode|e('html_attr') }}'>
+
+  {# Floating launcher. Hidden until the list has something in it, like a mini-cart. #}
+  <button type="button" class="tackquote-fab" data-tackquote-open hidden>
+    <span class="tackquote-fab__label">{{ text_drawer_title }}</span>
+    <span class="tackquote-fab__count" data-tackquote-count>0</span>
+  </button>
+
+  <div class="tackquote-overlay" data-tackquote-overlay hidden>
+    <div class="tackquote-panel" role="dialog" aria-modal="true" aria-labelledby="tackquote-heading">
+      <div class="tackquote-panel__head">
+        <h2 class="tackquote-panel__title" id="tackquote-heading">{{ text_drawer_title }}</h2>
+        <button type="button" class="tackquote-close" data-tackquote-close aria-label="{{ button_close }}">&times;</button>
+      </div>
+
+      <ol class="tackquote-steps" data-tackquote-steps>
+        <li class="is-current" data-step-label="1">{{ text_step_items }}</li>
+        <li data-step-label="2">{{ text_step_details }}</li>
+        <li data-step-label="3">{{ text_step_done }}</li>
+      </ol>
+
+      <div class="tackquote-panel__body">
+        {# ── Step 1: the items ── #}
+        <section class="tackquote-step is-current" data-tackquote-step="1">
+          <p class="tackquote-empty" data-tackquote-empty>{{ text_drawer_empty }}</p>
+          <ul class="tackquote-items" data-tackquote-items></ul>
+          <p class="tackquote-hint">{{ text_review_hint }}</p>
+        </section>
+
+        {# ── Step 2: who is asking ── #}
+        <section class="tackquote-step" data-tackquote-step="2" hidden>
+          <div class="tackquote-field">
+            <label for="tackquote-email">{{ text_email }} <span aria-hidden="true">*</span></label>
+            <input type="email" id="tackquote-email" name="email" required autocomplete="email">
+          </div>
+          <div class="tackquote-field-row">
+            <div class="tackquote-field">
+              <label for="tackquote-first-name">{{ text_first_name }}</label>
+              <input type="text" id="tackquote-first-name" name="firstName" autocomplete="given-name">
+            </div>
+            <div class="tackquote-field">
+              <label for="tackquote-last-name">{{ text_last_name }}</label>
+              <input type="text" id="tackquote-last-name" name="lastName" autocomplete="family-name">
+            </div>
+          </div>
+          <div class="tackquote-field-row">
+            <div class="tackquote-field">
+              <label for="tackquote-company">{{ text_company }}</label>
+              <input type="text" id="tackquote-company" name="company" autocomplete="organization">
+            </div>
+            <div class="tackquote-field">
+              <label for="tackquote-telephone">{{ text_telephone }}</label>
+              <input type="tel" id="tackquote-telephone" name="telephone" autocomplete="tel">
+            </div>
+          </div>
+          <div class="tackquote-field">
+            <label for="tackquote-note">{{ text_note }}</label>
+            <textarea id="tackquote-note" name="note" rows="3"></textarea>
+          </div>
+        </section>
+
+        {# ── Step 3: what happened ── #}
+        <section class="tackquote-step" data-tackquote-step="3" hidden>
+          <div class="tackquote-done" data-tackquote-done></div>
+        </section>
+
+        <div class="tackquote-alert" data-tackquote-error hidden></div>
+      </div>
+
+      <div class="tackquote-panel__foot">
+        <button type="button" class="tackquote-btn tackquote-btn--ghost" data-tackquote-back hidden>{{ button_back }}</button>
+        <button type="button" class="tackquote-btn tackquote-btn--primary" data-tackquote-next>{{ button_next }}</button>
+        <button type="button" class="tackquote-btn tackquote-btn--primary" data-tackquote-submit hidden>{{ button_send }}</button>
+        <a class="tackquote-btn tackquote-btn--primary" data-tackquote-portal href="#" hidden target="_blank" rel="noopener">{{ button_view_quote }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ tackquote_asset_base }}javascript/tack/quote-app.js" defer></script>

@@ -119,15 +119,33 @@
     return TackQuotes.registration || null;
   }
 
+  // Company field keys come off the wire, so they are allowlisted here with the SAME charset
+  // the PHP handler applies to them on the way in
+  // (class-tack-widget.php: /^[A-Za-z0-9_]{1,40}$/ over $_POST['company']).
+  //
+  // Note the asymmetry that existed before this: PHP allowlisted on the way IN, the JS did
+  // not allowlist on the way OUT. `TackQuotes.registration.requiredCompanyFields` is the JSON
+  // body of GET /integrations/woocommerce/registration-config, and the API base URL is a
+  // plugin setting, so these keys are server-controlled, not ours.
+  var SAFE_FIELD_KEY = /^[A-Za-z0-9_]{1,40}$/;
+
+  function isSafeFieldKey(key) {
+    return typeof key === 'string' && SAFE_FIELD_KEY.test(key);
+  }
+
+  // `id` and `name` are escaped for the same reason `label` and `placeholder` always were.
+  // They used to be interpolated raw, which let a policy field named
+  // `x" autofocus onfocus="…` close the attribute and execute — in every shopper's browser,
+  // and in any administrator's browser on a page that renders this form.
   function field(id, name, label, opts) {
     var o = opts || {};
     return (
       '<div class="tack-quote-field' + (o.half ? ' tack-quote-field-half' : '') + '">' +
-      '<label for="' + id + '">' +
+      '<label for="' + escapeHtml(id) + '">' +
       escapeHtml(label) +
       (o.required ? '' : ' <span class="tack-quote-optional">' + escapeHtml(TackQuotes.i18n.optional) + '</span>') +
       '</label>' +
-      '<input type="' + (o.type || 'text') + '" id="' + id + '" name="' + name + '"' +
+      '<input type="' + escapeHtml(o.type || 'text') + '" id="' + escapeHtml(id) + '" name="' + escapeHtml(name) + '"' +
       (o.placeholder ? ' placeholder="' + escapeHtml(o.placeholder) + '"' : '') +
       (o.required ? ' required' : '') +
       ' />' +
@@ -205,6 +223,13 @@
       if (key === 'companyName' || key === 'name') {
         continue;
       }
+      // Second half of the defence in depth: escaping makes a hostile key inert, the
+      // allowlist means it is never rendered at all. A key outside the charset could not have
+      // survived the PHP handler's own filter on submit anyway, so dropping it here loses
+      // nothing a shopper could have used.
+      if (!isSafeFieldKey(key)) {
+        continue;
+      }
       html += field('tack-quote-company-' + key, 'company[' + key + ']', companyFieldLabel(key), {
         required: true,
       });
@@ -277,7 +302,7 @@
     $note.val('');
     $error.hide().text('');
     $success.hide().text('');
-    $submit.prop('disabled', false).text(TackQuotes.i18n.submit);
+    $submit.off('click.tackReload').prop('disabled', false).text(TackQuotes.i18n.submit);
     $form.show();
 
     modal.removeAttribute('hidden');
@@ -397,15 +422,16 @@
       );
     } else {
       // "Request a Quote" — a single product, submitted immediately.
+      var $scope = context.$scope && context.$scope.length ? context.$scope : $();
       payload.product_id = context.productId || 0;
-      payload.quantity = $('input.qty').val() || 1;
+      payload.quantity = $scope.find('input.qty').val() || 1;
       // On a variable product the button can only carry the PARENT id, so the shopper's
       // chosen variation has to be read from WooCommerce's own variation form, which keeps
       // the selected id in a hidden input[name="variation_id"] (0 when nothing is chosen
       // yet). Without this a quote for "X-Large" was recorded against the parent — wrong
       // SKU, and the parent's cheapest price. The server re-validates that this variation
       // really belongs to product_id before using it.
-      var variationId = Number($('input[name="variation_id"]').val()) || 0;
+      var variationId = Number($scope.find('input[name="variation_id"]').val()) || 0;
       if (variationId) {
         payload.variation_id = variationId;
       }
@@ -439,16 +465,49 @@
         }
       })
       .fail(function (xhr) {
-        var msg = TackQuotes.i18n.error;
-        if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
-          msg = xhr.responseJSON.data.message;
+        var data = (xhr && xhr.responseJSON && xhr.responseJSON.data) || null;
+        $error.text((data && data.message) || TackQuotes.i18n.error).show();
+
+        // An expired or cache-stale nonce is the one failure the shopper can fix, and
+        // retrying the same submit can never fix it. Offer the action that does. Without
+        // this the button just re-enabled itself and invited a retry that was guaranteed to
+        // fail again — forever, on a full-page-cached store.
+        if (data && data.reload) {
+          $submit
+            .prop('disabled', false)
+            .text(TackQuotes.i18n.reload)
+            .off('click.tackReload')
+            .on('click.tackReload', function (ev) {
+              ev.preventDefault();
+              window.location.reload();
+            });
+          return;
         }
-        $error.text(msg).show();
+
         $submit.prop('disabled', false).text(TackQuotes.i18n.submit);
       });
   }
 
   // ─── Event wiring ──────────────────────────────────────────────────────────
+
+  // The form the clicked button actually belongs to.
+  //
+  // Quantity and variation used to be read with page-global selectors — $('input.qty') and
+  // $('input[name="variation_id"]') — which take the FIRST match in the document. On a
+  // grouped product, an archive with quick-add, a related-products row, or a theme's sticky
+  // add-to-cart bar, that is routinely a different product's input. The failure was worse
+  // than wrong-quantity: the server correctly rejects a variation that does not belong to
+  // the product being quoted, so the shopper was told to "choose the product options" they
+  // had already chosen, with no way to make it pass.
+  //
+  // `form.cart` and `form.variations_form` are WooCommerce's own add-to-cart form classes,
+  // and the buttons are printed by woocommerce_after_add_to_cart_button, i.e. inside that
+  // form. Falling back to any enclosing form, then to nothing, keeps a theme that has moved
+  // the button working rather than silently picking up a stranger's values.
+  function scopeFor($btn) {
+    var $scoped = $btn.closest('form.cart, form.variations_form');
+    return $scoped.length ? $scoped : $btn.closest('form');
+  }
 
   // ─── Variable products: mirror WooCommerce's own button gating ──────────────
   //
@@ -488,7 +547,7 @@
   $(document).on('click', '.tack-quote-btn', function (e) {
     e.preventDefault();
     var $btn = $(this);
-    openModal({ productId: $btn.data('product-id') || 0 });
+    openModal({ productId: $btn.data('product-id') || 0, $scope: scopeFor($btn) });
   });
 
   // "Add to Quote" (product page) — adds to the browser-side quote list.
@@ -497,12 +556,12 @@
   $(document).on('click', '.tack-add-to-quote-btn', function (e) {
     e.preventDefault();
     var $btn = $(this);
-    var quantity = Number($('input.qty').val()) || 1;
+    var $form = scopeFor($btn);
+    var quantity = Number($form.find('input.qty').val()) || 1;
 
     // On a variable product the button carries the PARENT's id/name/sku/price, so the
     // chosen variation has to come from WooCommerce's own hidden input. The server
     // re-derives every value from these ids; the rest is only what the drawer displays.
-    var $form = $btn.closest('form.variations_form');
     var variationId = Number($form.find('input[name="variation_id"]').val()) || 0;
     var variationLabel = $form
       .find('select[name^="attribute_"]')

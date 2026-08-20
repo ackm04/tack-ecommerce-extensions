@@ -66,20 +66,59 @@ use Opencart\System\Library\Extension\Tack\ApiGuard;
 class Product extends Controller
 {
     /**
+     * Rows read per SQL round trip when the caller asks for no page size.
+     *
+     * Bounds the RESULT SET, which is the part that was genuinely unbounded:
+     * OpenCart's DB layer buffers `$query->rows` as one PHP array, and the
+     * `special` subquery below is correlated, so it was evaluated once per row
+     * of the whole table in a single statement.
+     */
+    private const UNPAGED_CHUNK_SIZE = ApiGuard::MAX_LIMIT;
+
+    /**
+     * Hard ceiling on how many products one unpaged request will accumulate.
+     *
+     * Deliberately far above any catalog we have seen, so the default path keeps
+     * returning the COMPLETE catalog for real stores and the existing
+     * single-call `syncProducts()` behaviour is unchanged. It exists so that a
+     * pathological catalog degrades into a well-formed, explicitly-flagged
+     * partial response instead of exhausting PHP's memory_limit mid-body.
+     */
+    private const UNPAGED_MAX_PRODUCTS = 5000;
+
+    /**
      * GET index.php?route=extension/tack/api/product.list[&page=&limit=]
      *
-     * Response (exactly the shape OpenCartService.syncProducts reads):
+     * Response (a superset of what OpenCartService.syncProducts reads — the
+     * original keys are unchanged):
      *   { "products": [ { product_id, model, sku, name, description, price,
      *                     special, image, status, quantity } ], "total": n,
-     *     "page": n, "limit": n }
+     *     "page": n, "limit": n, "truncated": bool,
+     *     "next_page": n|null, "next_limit": n|null }
      *
-     * `limit` is optional and defaults to "everything". TackQuote's
-     * `syncProducts()` issues ONE unpaginated call, so a default page size here
-     * would silently drop the rest of the catalog — a loud out-of-memory error
-     * on a very large catalog is preferable to a sync that quietly imports the
-     * first 50 products and reports success. Merchants with very large catalogs
-     * should raise PHP's `memory_limit`; the `page`/`limit` parameters are
-     * honoured if a future client sends them.
+     * PAGING, AND WHY IT IS NOT SILENT TRUNCATION.
+     *
+     * `limit` is optional and still defaults to "everything". That default is
+     * load-bearing: TackQuote's `syncProducts()` issues ONE unpaginated call and
+     * does not loop, so imposing a page size here would import the first page and
+     * report success — the silent-truncation shape, and the worst of the options.
+     *
+     * What was actually wrong is that "everything" was fetched in a SINGLE
+     * statement with no LIMIT at all (`paging()` defaults `limit` to 0 and this
+     * method only appended `LIMIT` when it was > 0), so `ApiGuard::MAX_LIMIT` was
+     * bypassed on the only path anyone uses, and one authenticated request pulled
+     * every product row plus a correlated special-price subquery into memory.
+     *
+     * So the default path now reads the same complete catalog in
+     * UNPAGED_CHUNK_SIZE-row chunks — identical response, bounded per-query work
+     * — and only stops early at UNPAGED_MAX_PRODUCTS, in which case it says so
+     * out loud: `truncated: true` plus `next_page`/`next_limit` telling the caller
+     * exactly what to request to resume, and `total` telling it how much is left.
+     * A caller that ignores those fields is no worse off than before; a caller
+     * that reads them can complete the walk. Nothing is dropped without saying so.
+     *
+     * `next_page` is always paired with `next_limit` because "page 21" is
+     * meaningless without the size it is counted in.
      */
     public function list(): void
     {
@@ -141,20 +180,64 @@ class Product extends Controller
         $totalQuery = $this->db->query("SELECT COUNT(*) AS `total`" . $from);
         $total = (int) ($totalQuery->row['total'] ?? 0);
 
+        // ORDER BY product_id ASC, and every chunk below reuses it, so the window
+        // cannot shift between round trips the way an unordered read could.
         $sql = "SELECT `p`.`product_id`, `p`.`model`, `p`.`sku`, `p`.`image`, `p`.`price`,"
             . " `p`.`quantity`, `p`.`status`, `pd`.`name`, `pd`.`description`, " . $special
             . $from
             . " ORDER BY `p`.`product_id` ASC";
 
-        if ($paging['limit'] > 0) {
-            $sql .= " LIMIT " . (int) $paging['start'] . "," . (int) $paging['limit'];
-        }
+        $truncated = false;
+        $nextPage = null;
+        $nextLimit = null;
 
-        $query = $this->db->query($sql);
+        if ($paging['limit'] > 0) {
+            // The caller named a page size. Serving exactly that page is what it
+            // asked for, so it is not truncation — but it still needs to know
+            // whether another page exists.
+            $rows = $this->fetchChunk($sql, (int) $paging['start'], (int) $paging['limit']);
+
+            if ($paging['start'] + count($rows) < $total) {
+                $nextPage = $paging['page'] + 1;
+                $nextLimit = $paging['limit'];
+            }
+        } else {
+            // No page size asked for: return the whole catalog, read in bounded
+            // chunks rather than one unbounded statement.
+            $rows = [];
+            $offset = 0;
+
+            while (count($rows) < self::UNPAGED_MAX_PRODUCTS) {
+                $chunk = $this->fetchChunk($sql, $offset, self::UNPAGED_CHUNK_SIZE);
+
+                if (!$chunk) {
+                    break;
+                }
+
+                foreach ($chunk as $row) {
+                    $rows[] = $row;
+                }
+
+                $offset += count($chunk);
+
+                // A short chunk means the table is exhausted.
+                if (count($chunk) < self::UNPAGED_CHUNK_SIZE) {
+                    break;
+                }
+            }
+
+            if (count($rows) >= self::UNPAGED_MAX_PRODUCTS && count($rows) < $total) {
+                $truncated = true;
+                // Expressed in UNPAGED_CHUNK_SIZE pages, which is what the caller
+                // should loop on from here.
+                $nextPage = (int) (count($rows) / self::UNPAGED_CHUNK_SIZE) + 1;
+                $nextLimit = self::UNPAGED_CHUNK_SIZE;
+            }
+        }
 
         $products = [];
 
-        foreach ($query->rows as $row) {
+        foreach ($rows as $row) {
             $products[] = [
                 'product_id'  => (int) $row['product_id'],
                 'model'       => (string) $row['model'],
@@ -183,6 +266,27 @@ class Product extends Controller
             'total'    => $total,
             'page'     => $paging['page'],
             'limit'    => $paging['limit'],
+            // Explicit rather than inferable: a caller must not have to compare
+            // count(products) against total to discover it was given a partial
+            // catalog. False on every normal response.
+            'truncated'  => $truncated,
+            'next_page'  => $nextPage,
+            'next_limit' => $nextLimit,
         ]);
+    }
+
+    /**
+     * One bounded read of the product window.
+     *
+     * `$offset` and `$limit` are cast to int at the call sites and again here;
+     * no string from the request reaches SQL on this route.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchChunk(string $sql, int $offset, int $limit): array
+    {
+        $query = $this->db->query($sql . " LIMIT " . (int) $offset . "," . (int) $limit);
+
+        return $query->rows;
     }
 }

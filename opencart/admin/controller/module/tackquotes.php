@@ -12,6 +12,18 @@
  * TackQuotes::getContent()/renderForm() in the PrestaShop module
  * (integrations/prestashop/modules/tackquotes/tackquotes.php) and
  * Tack_Settings in the WooCommerce plugin.
+ *
+ * REQUIRED PACKAGE FILENAME: `tack.ocmod.zip`. Every namespace below hard-codes
+ * `…\Extension\Tack\…` and the event actions use `extension/tack/event/…`, but
+ * the installer derives the folder under `extension/` from the ZIP FILENAME, not
+ * from install.json — "a folder will be created into the extension/ directory
+ * based on the name of your file"
+ * (<https://docs.opencart.com/developer-guide/extensions>). A zip named anything
+ * else installs cleanly and then 404s on every route with no error at all. See
+ * README.md § Packaging.
+ *
+ * ADMIN FORM CONTRACT (verified against OpenCart 4.1.0.4's own
+ * admin/view/javascript/common.js, not assumed — see save() below).
  */
 
 namespace Opencart\Admin\Controller\Extension\Tack\Module;
@@ -21,37 +33,121 @@ use Opencart\System\Library\Extension\Tack\ApiClient;
 
 class Tackquotes extends Controller
 {
-    /** @var array */
-    private array $error = [];
+    /** Permission required to read or change this extension's settings. */
+    private const PERMISSION = 'extension/tack/module/tackquotes';
 
+    /**
+     * Renders the settings page. GET only.
+     *
+     * This method deliberately does NOT handle POST any more. Until 1.2.1 it
+     * did: it validated, saved, and then answered with
+     * `$this->response->redirect(...)` or a full HTML re-render. Meanwhile the
+     * form carries `data-oc-toggle="ajax"`, and OpenCart 4's common.js submits
+     * such a form with `$.ajax({… dataType: 'json' …})` — so BOTH answers were
+     * fed to a JSON parser, failed, and landed in the `error:` callback, whose
+     * entire body is `console.log`. The setting persisted, so clicking around by
+     * hand looked fine, and the merchant saw absolutely nothing: no success
+     * confirmation, no permission error, no invalid-URL error. Saving now lives
+     * in save(), which speaks JSON.
+     */
     public function index(): void
     {
         $this->load->language('extension/tack/module/tackquotes');
 
         $this->document->setTitle($this->language->get('heading_title'));
 
-        if (($this->request->server['REQUEST_METHOD'] ?? '') === 'POST' && $this->validate()) {
-            $this->model_setting_setting_save();
+        $this->response->setOutput($this->load->view('extension/tack/module/tackquotes', $this->buildFormData()));
+    }
 
-            $this->session->data['success'] = $this->language->get('text_success');
+    /**
+     * Persists the settings and answers JSON. Route:
+     * extension/tack/module/tackquotes.save
+     *
+     * This is OpenCart 4's documented save pattern — a separate `.save` method
+     * returning `json_encode($json)`, with the permission check first:
+     * <https://docs.opencart.com/developer-guide/extensions> § "Create the Admin
+     * Controller". The response KEYS below are not a local convention either;
+     * they are what 4.1.0.4's common.js actually reads (verified by reading the
+     * file, which outranks the prose):
+     *
+     *   - `$json['error']['warning']`  → prepended to `#alert` as a red banner.
+     *   - `$json['error']['<field>']`  → marks `#input-<field>` invalid and fills
+     *                                    `#error-<field>` (underscores become
+     *                                    dashes), hence the key `api_url` for
+     *                                    `#input-api-url` / `#error-api-url`.
+     *   - `$json['success']`           → prepended to `#alert` as a green banner.
+     *
+     * `#alert` is supplied by the stock admin header this page already loads
+     * (admin/view/template/common/header.twig:33 in 4.1.0.4), so the template
+     * needs no alert container of its own.
+     *
+     * WHY THE KEYS MATTER. The previous code wrote `$this->error['warning']`,
+     * the controller read `$this->error['error_warning']`, and the template
+     * rendered `{% if error_warning %}` — three different keys, so the banner
+     * was structurally unreachable. A staff user without `modify` permission
+     * clicked Save, nothing was written, and they were told NOTHING. Same for an
+     * invalid API URL. There is now exactly one key path, and it is the vendor's.
+     */
+    public function save(): void
+    {
+        $this->load->language('extension/tack/module/tackquotes');
 
-            $this->response->redirect($this->url->link('extension/tack/module/tackquotes', 'user_token=' . $this->session->data['user_token'], true));
+        $json = [];
+
+        if (!$this->user->hasPermission('modify', self::PERMISSION)) {
+            $json['error']['warning'] = $this->language->get('error_permission');
         }
 
-        $data = $this->buildFormData();
+        $apiUrl = trim((string) ($this->request->post['module_tackquotes_api_url'] ?? ''));
 
-        $this->response->setOutput($this->load->view('extension/tack/module/tackquotes', $data));
+        if ($apiUrl === '' || !filter_var($apiUrl, FILTER_VALIDATE_URL)) {
+            $json['error']['api_url'] = $this->language->get('error_api_url');
+        }
+
+        if (!$json) {
+            $this->model_setting_setting_save();
+
+            $json['success'] = $this->language->get('text_success');
+        }
+
+        $this->response->addHeader('Content-Type: application/json');
+        $this->response->setOutput((string) json_encode($json));
     }
 
     /**
      * AJAX action: "Test connection" button. Route:
      * extension/tack/module/tackquotes.test
+     *
+     * PERMISSION-GUARDED, and it must be: this action spends the store's own
+     * TackQuote API key on an outbound call and reports back whether the
+     * credential works. Until 1.2.1 the only permission check in this file lived
+     * in validate(), which was reached from index() alone — so ANY authenticated
+     * admin, including one with no rights whatsoever on this extension, could
+     * exercise the store's credential and read connection state back out.
+     * OpenCart's own guidance is explicit ("Security: Validate inputs, check
+     * permissions ($this->user->hasPermission())",
+     * <https://docs.opencart.com/developer-guide/extensions> § Best Practices),
+     * and its worked save() example opens with exactly this guard.
+     *
+     * `modify` rather than `access` is deliberate: reading back whether a secret
+     * is valid is a use of that secret, not a view of a settings page.
      */
     public function test(): void
     {
         $this->load->language('extension/tack/module/tackquotes');
 
         $json = [];
+
+        if (!$this->user->hasPermission('modify', self::PERMISSION)) {
+            // A flat string, which is the shape the button's own handler in
+            // admin/view/template/module/tackquotes.twig already renders.
+            $json['error'] = $this->language->get('error_permission');
+
+            $this->response->addHeader('Content-Type: application/json');
+            $this->response->setOutput((string) json_encode($json));
+
+            return;
+        }
 
         // Both fields fall back to what is already stored, for the same reason the save
         // path has keepOrReplace(): the API key input is rendered EMPTY on purpose (the
@@ -84,21 +180,109 @@ class Tackquotes extends Controller
         }
 
         $this->response->addHeader('Content-Type: application/json');
-        $this->response->setOutput(json_encode($json));
+        $this->response->setOutput((string) json_encode($json));
     }
 
+    /**
+     * Registers the two storefront view events this extension needs.
+     *
+     * WHY EVENTS. OpenCart's layout positions are page-level, so a module can only put the
+     * quote button above or below the whole product page — in practice under the
+     * description. WooCommerce has `woocommerce_after_add_to_cart_button` and Magento has
+     * `after="product.info.addtocart"`; OpenCart's equivalent is a `view/<route>/after`
+     * event, which receives the rendered HTML by reference
+     * (`system/engine/loader.php:192`).
+     *
+     * The trigger MUST keep its `catalog/` prefix: `catalog/controller/startup/event.php`
+     * strips that prefix and registers the remainder, so a row saved without it is loaded
+     * for no application and the feature is silently dead.
+     *
+     * Idempotent: OpenCart calls install() again when a merchant re-enables the module from
+     * Extensions > Extensions, and duplicate rows would inject the buttons twice.
+     */
     public function install(): void
     {
-        // Nothing to seed beyond defaults handled by getSetting() fallbacks
-        // in buildFormData(). Present for parity with OpenCart's extension
-        // lifecycle (some OpenCart versions call install()/uninstall() when
-        // enabling/disabling from Extensions > Extensions).
+        $this->seedPlacementDefaults();
+
+        $this->load->model('setting/event');
+
+        foreach (self::events() as $event) {
+            if ($this->model_setting_event->getEventByCode($event['code'])) {
+                continue;
+            }
+
+            $this->model_setting_event->addEvent($event);
+        }
     }
 
     public function uninstall(): void
     {
         $this->load->model('setting/setting');
         $this->model_setting_setting->deleteSetting('module_tackquotes');
+
+        // Leaving these behind would keep calling a controller whose files the Extension
+        // Installer has just deleted, which is a fatal error on every product page.
+        $this->load->model('setting/event');
+
+        foreach (self::events() as $event) {
+            $this->model_setting_event->deleteEventByCode($event['code']);
+        }
+    }
+
+    /**
+     * Writes the placement defaults on first install, and only then.
+     *
+     * Without this, a fresh install has no `module_tackquotes_inline_button` row at all, so
+     * `$this->config->get()` returns null, the event handlers bail out, and the merchant
+     * sees no quote button anywhere until they happen to open and save the settings screen.
+     * That is the same failure shape as the 1.1.0 prefix bug — everything reports success
+     * and nothing appears — so the defaults are seeded rather than left implicit.
+     *
+     * Existing values are preserved: OpenCart calls install() again when a module is
+     * re-enabled, and a merchant who deliberately turned the tile buttons off must not have
+     * that decision reverted by a re-enable.
+     */
+    private function seedPlacementDefaults(): void
+    {
+        $this->load->model('setting/setting');
+
+        $existing = $this->model_setting_setting->getSetting('module_tackquotes');
+
+        if (array_key_exists('module_tackquotes_inline_button', $existing)) {
+            return;
+        }
+
+        $this->model_setting_setting->editSetting('module_tackquotes', array_merge([
+            'module_tackquotes_add_label' => 'Add to Quote',
+            'module_tackquotes_inline_button' => 1,
+            'module_tackquotes_quote_list' => 1,
+            'module_tackquotes_listing_button' => 1,
+        ], $existing));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function events(): array
+    {
+        return [
+            [
+                'code' => 'tackquotes_product_button',
+                'description' => 'TackQuote: quote buttons beside Add to Cart',
+                'trigger' => 'catalog/view/product/product/after',
+                'action' => 'extension/tack/event/quote.productPage',
+                'status' => 1,
+                'sort_order' => 1,
+            ],
+            [
+                'code' => 'tackquotes_footer',
+                'description' => 'TackQuote: quote list and request form',
+                'trigger' => 'catalog/view/common/footer/after',
+                'action' => 'extension/tack/event/quote.footer',
+                'status' => 1,
+                'sort_order' => 1,
+            ],
+        ];
     }
 
     private function buildFormData(): array
@@ -120,27 +304,34 @@ class Tackquotes extends Controller
             ],
         ];
 
-        $data['action'] = $this->url->link('extension/tack/module/tackquotes', 'user_token=' . $this->session->data['user_token'], true);
+        // `save`, not `action`: the form posts to the `.save` method, and calling
+        // the variable `action` is part of how the redirect-vs-ajax mismatch hid
+        // for so long — it read as "this page's own URL", which is what it was.
+        $data['save'] = $this->url->link('extension/tack/module/tackquotes.save', 'user_token=' . $this->session->data['user_token'], true);
         $data['test_action'] = $this->url->link('extension/tack/module/tackquotes.test', 'user_token=' . $this->session->data['user_token'], true);
         $data['back'] = $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=module', true);
         $data['user_token'] = $this->session->data['user_token'];
 
-        foreach (['error_warning'] as $key) {
-            $data[$key] = $this->error[$key] ?? '';
-        }
-
-        if (isset($this->session->data['success'])) {
-            $data['success'] = $this->session->data['success'];
-            unset($this->session->data['success']);
-        } else {
-            $data['success'] = '';
-        }
+        // No `success` / `error_warning` keys are built here on purpose. Both
+        // outcomes now arrive over the save() JSON response and are rendered by
+        // OpenCart's own common.js into the header's `#alert` container, so a
+        // template-side copy could only ever drift out of sync with the
+        // controller again — which is exactly the bug that made denials silent.
 
         $fields = [
             'module_tackquotes_status' => 0,
             'module_tackquotes_api_url' => 'https://api.tackquote.com/v1',
             'module_tackquotes_api_key' => '',
             'module_tackquotes_button_label' => 'Request a Quote',
+            'module_tackquotes_add_label' => 'Add to Quote',
+            // Placement. Defaults to ON because the layout-module path puts the button under
+            // the product description, which is not where a buyer looks for it.
+            'module_tackquotes_inline_button' => 1,
+            // The multi-product quote list (WooCommerce drawer / Magento quote list). With
+            // it off the extension still works, one product per request.
+            'module_tackquotes_quote_list' => 1,
+            // Add-to-quote buttons on category and search tiles.
+            'module_tackquotes_listing_button' => 1,
             // Bearer token for the INBOUND direction (TackQuote -> this store),
             // i.e. the catalog/order feed served by
             // catalog/controller/api/{product,order}.php. It is a different
@@ -151,13 +342,9 @@ class Tackquotes extends Controller
         ];
 
         foreach ($fields as $key => $default) {
-            if (($this->request->server['REQUEST_METHOD'] ?? '') === 'POST' && isset($this->request->post[$key])) {
-                $data[$key] = $this->request->post[$key];
-            } else {
-                $data[$key] = $this->config->get($key) !== null && $this->config->get($key) !== ''
-                    ? $this->config->get($key)
-                    : $default;
-            }
+            $data[$key] = $this->config->get($key) !== null && $this->config->get($key) !== ''
+                ? $this->config->get($key)
+                : $default;
         }
 
         // Never echo the real stored key back into the HTML value attribute;
@@ -170,30 +357,20 @@ class Tackquotes extends Controller
         $data['module_tackquotes_connector_token_masked'] = self::mask($storedToken);
         $data['module_tackquotes_connector_url'] = HTTP_CATALOG . 'index.php?route=extension/tack/api/product.list';
 
-        if (($this->request->server['REQUEST_METHOD'] ?? '') !== 'POST') {
-            $data['module_tackquotes_api_key'] = '';
-            $data['module_tackquotes_connector_token'] = '';
-        }
+        // UNCONDITIONAL now that this method only ever serves a GET render. The
+        // $fields loop above reads both secrets out of config, and neither may
+        // reach the view: the template renders `value=""` literally for both
+        // password inputs and shows only the masked forms above. Blanking them
+        // here keeps that invariant true even if someone later binds these keys
+        // in the template by mistake.
+        $data['module_tackquotes_api_key'] = '';
+        $data['module_tackquotes_connector_token'] = '';
 
         $data['header'] = $this->load->controller('common/header');
         $data['column_left'] = $this->load->controller('common/column_left');
         $data['footer'] = $this->load->controller('common/footer');
 
         return $data;
-    }
-
-    private function validate(): bool
-    {
-        if (!$this->user->hasPermission('modify', 'extension/tack/module/tackquotes')) {
-            $this->error['warning'] = $this->language->get('error_permission');
-        }
-
-        $apiUrl = trim((string) ($this->request->post['module_tackquotes_api_url'] ?? ''));
-        if ($apiUrl === '' || !filter_var($apiUrl, FILTER_VALIDATE_URL)) {
-            $this->error['warning'] = $this->language->get('error_api_url');
-        }
-
-        return !$this->error;
     }
 
     /**
@@ -231,6 +408,10 @@ class Tackquotes extends Controller
             'module_tackquotes_api_url' => rtrim((string) ($this->request->post['module_tackquotes_api_url'] ?? ''), '/'),
             'module_tackquotes_api_key' => $apiKey,
             'module_tackquotes_button_label' => (string) ($this->request->post['module_tackquotes_button_label'] ?? 'Request a Quote'),
+            'module_tackquotes_add_label' => (string) ($this->request->post['module_tackquotes_add_label'] ?? 'Add to Quote'),
+            'module_tackquotes_inline_button' => (int) ($this->request->post['module_tackquotes_inline_button'] ?? 0),
+            'module_tackquotes_quote_list' => (int) ($this->request->post['module_tackquotes_quote_list'] ?? 0),
+            'module_tackquotes_listing_button' => (int) ($this->request->post['module_tackquotes_listing_button'] ?? 0),
             'module_tackquotes_connector_token' => $connectorToken,
         ]);
     }

@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Tack_Api_Client {
 
 	/**
+	 * The configured API base URL.
+	 *
 	 * @return string API base URL without trailing slash.
 	 */
 	private function base_url() {
@@ -22,6 +24,8 @@ class Tack_Api_Client {
 	}
 
 	/**
+	 * The stored API key.
+	 *
 	 * @return string The stored API key.
 	 */
 	private function api_key() {
@@ -29,14 +33,30 @@ class Tack_Api_Client {
 	}
 
 	/**
+	 * Default timeout, in seconds, for calls that are not on a visitor's critical path.
+	 */
+	const DEFAULT_TIMEOUT = 20;
+
+	/**
+	 * Timeout, in seconds, for calls made inside a request a visitor is waiting on.
+	 *
+	 * A front-end request holds a PHP-FPM worker for as long as this call takes, so the
+	 * ceiling here is a capacity decision, not a patience decision: at 20s a handful of
+	 * concurrent quote submissions can occupy every worker on a small host.
+	 */
+	const INTERACTIVE_TIMEOUT = 5;
+
+	/**
 	 * Perform a request.
 	 *
-	 * @param string $method HTTP method.
-	 * @param string $path   Path beginning with '/'.
-	 * @param array  $body   Optional JSON body.
+	 * @param string     $method  HTTP method.
+	 * @param string     $path    Path beginning with '/'.
+	 * @param array|null $body    Optional JSON body.
+	 * @param int|null   $timeout Optional timeout override, in seconds.
+	 * @param array      $headers Optional extra request headers.
 	 * @return array|WP_Error Decoded response array, or WP_Error.
 	 */
-	public function request( $method, $path, $body = null ) {
+	public function request( $method, $path, $body = null, $timeout = null, $headers = array() ) {
 		$key = $this->api_key();
 		if ( '' === $key ) {
 			return new WP_Error( 'tack_no_key', __( 'No TackQuote API key configured.', 'tack-quotes' ) );
@@ -44,13 +64,16 @@ class Tack_Api_Client {
 
 		$args = array(
 			'method'  => $method,
-			'timeout' => 20,
-			'headers' => array(
-				'Authorization' => 'Bearer ' . $key,
-				'X-Api-Key'     => $key,
-				'Content-Type'  => 'application/json',
-				'Accept'        => 'application/json',
-				'User-Agent'    => 'TackQuotes-WooCommerce/' . TACK_QUOTES_VERSION,
+			'timeout' => null === $timeout ? self::DEFAULT_TIMEOUT : max( 1, (int) $timeout ),
+			'headers' => array_merge(
+				array(
+					'Authorization' => 'Bearer ' . $key,
+					'X-Api-Key'     => $key,
+					'Content-Type'  => 'application/json',
+					'Accept'        => 'application/json',
+					'User-Agent'    => 'TackQuotes-WooCommerce/' . TACK_QUOTES_VERSION,
+				),
+				is_array( $headers ) ? $headers : array()
 			),
 		);
 		if ( null !== $body ) {
@@ -126,7 +149,10 @@ class Tack_Api_Client {
 			}
 		}
 
-		$result = $this->request( 'GET', '/integrations/woocommerce/registration-config' );
+		// Fetched while rendering a storefront page, so it uses the interactive timeout: a slow
+		// TackQuote must not turn every uncached page view into a 20s wait. The negative cache
+		// below is the other half of that.
+		$result = $this->request( 'GET', '/integrations/woocommerce/registration-config', null, self::INTERACTIVE_TIMEOUT );
 
 		if ( is_wp_error( $result ) || ! is_array( $result ) || empty( $result ) ) {
 			set_transient( $key, 'unavailable', 60 );
@@ -140,20 +166,31 @@ class Tack_Api_Client {
 	/**
 	 * Create a quote request from cart/product line items.
 	 *
+	 * Uses the interactive timeout: this runs inside an admin-ajax request the shopper is
+	 * watching a spinner for, and every second of it is a PHP worker held open by an
+	 * endpoint any visitor can call.
+	 *
 	 * @param array $payload {buyerEmail, note, lineItems:[{sku,name,quantity,unitPrice}]}.
 	 * @return array|WP_Error Response — expected to include a portalUrl/quoteUrl.
 	 */
 	public function create_quote_request( $payload ) {
-		return $this->request( 'POST', '/integrations/woocommerce/quote-requests', $payload );
+		return $this->request( 'POST', '/integrations/woocommerce/quote-requests', $payload, self::INTERACTIVE_TIMEOUT );
 	}
 
 	/**
 	 * Push a WooCommerce order to Tack.
 	 *
-	 * @param array $order_payload Normalized order data.
+	 * Keeps the full timeout: this runs on a background Action Scheduler request, never
+	 * inside a customer's checkout, so waiting is cheap and giving up early is not.
+	 *
+	 * @param array  $order_payload    Normalized order data.
+	 * @param string $idempotency_key  Optional key echoed as an Idempotency-Key header.
 	 * @return array|WP_Error
 	 */
-	public function sync_order( $order_payload ) {
-		return $this->request( 'POST', '/integrations/woocommerce/order-sync', $order_payload );
+	public function sync_order( $order_payload, $idempotency_key = '' ) {
+		$headers = '' !== (string) $idempotency_key
+			? array( 'Idempotency-Key' => (string) $idempotency_key )
+			: array();
+		return $this->request( 'POST', '/integrations/woocommerce/order-sync', $order_payload, self::DEFAULT_TIMEOUT, $headers );
 	}
 }

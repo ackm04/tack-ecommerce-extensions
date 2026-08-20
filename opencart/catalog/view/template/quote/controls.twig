@@ -1,0 +1,28 @@
+{#
+  Product-page quote controls, injected after Add to Cart by
+  catalog/controller/event/quote.php.
+
+  Renders TRIGGERS ONLY. The form itself is rendered once per page by the drawer template,
+  because a buyer can add products from category and search pages too — a second copy here
+  would duplicate every field and validation rule.
+
+  Classes are OpenCart's own Bootstrap 5 button classes so the controls inherit whatever
+  theme the store runs instead of imposing their own chrome. The quote button is `secondary`
+  when it sits beside Add to Cart so it reads as the alternative action, not a competitor.
+#}
+<div class="tackquote-actions d-grid gap-2 mt-2"
+     data-tackquote-product
+     data-product-id="{{ tackquote_product_id }}"
+     data-sku="{{ tackquote_sku }}"
+     data-name="{{ tackquote_name }}">
+  {% if tackquote_show_add %}
+    <button type="button" class="btn btn-outline-secondary btn-lg tackquote-add" data-tackquote-add>
+      {{ tackquote_add_label }}
+    </button>
+  {% endif %}
+  <button type="button" class="btn btn-secondary btn-lg tackquote-request" data-tackquote-request
+          aria-haspopup="dialog">
+    {{ tackquote_request_label }}
+  </button>
+  <div class="tackquote-inline-note" data-tackquote-note hidden></div>
+</div>

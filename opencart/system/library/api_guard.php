@@ -154,6 +154,13 @@ class ApiGuard
      * silently truncate the catalog rather than fail loudly. Order pulls DO
      * page, and pass both parameters.
      *
+     * NOTE: a 0 here means "no page size was REQUESTED", not "issue an unbounded
+     * query". `Api\Product::list()` reads that complete catalog in bounded
+     * chunks of MAX_LIMIT rows and flags `truncated` if it hits its own ceiling;
+     * it used to append no LIMIT clause at all, which bypassed MAX_LIMIT on the
+     * default path. Do not reintroduce a non-zero default here to "fix" that —
+     * that is the silent truncation this comment exists to prevent.
+     *
      * @param array<string, mixed> $get $this->request->get.
      *
      * @return array{page: int, limit: int, start: int}

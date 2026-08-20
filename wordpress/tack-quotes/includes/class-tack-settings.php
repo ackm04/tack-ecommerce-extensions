@@ -27,12 +27,27 @@ class Tack_Settings {
 
 	/**
 	 * Add the top-level admin menu page.
+	 *
+	 * `manage_options`, not the shop-manager capability, and deliberately so.
+	 *
+	 * The form on this page posts to `options.php`, and `options.php` requires
+	 * `manage_options` for every registered option group unless the
+	 * `option_page_capability_{$option_page}` filter says otherwise — WordPress documents
+	 * that filter as "required to change the capability required for a certain options page".
+	 * No such filter was registered here, so a shop_manager could see the page, fill it in,
+	 * press save, and be told "Sorry, you are not allowed to access this page."
+	 *
+	 * Of the two ways to close that gap — filter the requirement down to the shop-manager
+	 * capability, or raise the page to `manage_options` — this page holds the TackQuote API
+	 * key, which authenticates the whole store to TackQuote. A secret of that blast radius
+	 * belongs behind the administrator capability, so the page is raised rather than the
+	 * requirement lowered.
 	 */
 	public function add_menu() {
 		add_menu_page(
 			__( 'TackQuote', 'tack-quotes' ),
 			__( 'TackQuote', 'tack-quotes' ),
-			'manage_woocommerce',
+			'manage_options',
 			self::PAGE_SLUG,
 			array( $this, 'render_page' ),
 			'dashicons-money-alt',
@@ -86,14 +101,30 @@ class Tack_Settings {
 	// ── Sanitizers ────────────────────────────────────────────────────────────
 
 	/**
+	 * Sanitize the API key, treating an empty submission as "keep what is stored".
+	 *
+	 * The field renders with an EMPTY value on purpose — see field_api_key() — so an
+	 * untouched form posts nothing for it. Without this, saving any other setting on the page
+	 * would silently wipe the key and disconnect the store, with the only symptom being
+	 * "No TackQuote API key configured" on the next quote request.
+	 *
+	 * Clearing the key is still possible, explicitly, through the "Remove saved API key"
+	 * button on the settings page.
+	 *
 	 * @param mixed $value Raw option value.
 	 * @return string
 	 */
 	public function sanitize_api_key( $value ) {
-		return preg_replace( '/[^A-Za-z0-9._\-]/', '', (string) $value );
+		$clean = preg_replace( '/[^A-Za-z0-9._\-]/', '', (string) $value );
+		if ( '' === $clean ) {
+			return (string) get_option( 'tack_quotes_api_key', '' );
+		}
+		return $clean;
 	}
 
 	/**
+	 * Sanitize the API base URL, falling back to the default when it is unusable.
+	 *
 	 * @param mixed $value Raw option value.
 	 * @return string
 	 */
@@ -114,35 +145,64 @@ class Tack_Settings {
 
 	// ── Section intros ────────────────────────────────────────────────────────
 
+	/**
+	 * Intro copy for the Connection section.
+	 */
 	public function section_connection() {
 		echo '<p>' . esc_html__( 'Connect this WooCommerce store to your TackQuote account. Create an API key in TackQuote under Settings → Developer → API Keys.', 'tack-quotes' ) . '</p>';
 	}
 
+	/**
+	 * Intro copy for the storefront-buttons section.
+	 */
 	public function section_storefront() {
 		echo '<p>' . esc_html__( 'A floating “quote list” — separate from the WooCommerce cart — appears once a shopper adds a product, letting them review it and click “Checkout as Quote” to submit everything as one TackQuote request. On product pages, choose below whether shoppers see “Add to Quote” (adds the product to that quote list — never the WooCommerce cart, so it never touches stock or checkout), “Request a Quote” (submits a quote for just that product immediately), both, or neither.', 'tack-quotes' ) . '</p>';
 	}
 
+	/**
+	 * Intro copy for the order-sync section, including what data leaves the store.
+	 */
 	public function section_sync() {
-		echo '<p>' . esc_html__( 'When enabled, this plugin pushes order data one-way to TackQuote when an order is created or its status changes. It does not import orders, sync the product catalog, or update inventory. Failed pushes are logged under WooCommerce → Status → Logs (source: tack-quotes) and never block checkout.', 'tack-quotes' ) . '</p>';
+		echo '<p>' . esc_html__( 'Off by default. When enabled, this plugin pushes order data one-way to TackQuote when an order is created or its status changes. It does not import orders, sync the product catalog, or update inventory.', 'tack-quotes' ) . '</p>';
+		echo '<p>' . esc_html__( 'Each push is queued and sent on a background request through WooCommerce\'s Action Scheduler, so it never blocks checkout — queued jobs are visible under WooCommerce → Status → Scheduled Actions, and failures are logged under WooCommerce → Status → Logs (source: tack-quotes).', 'tack-quotes' ) . '</p>';
+		echo '<p>' . esc_html__( 'Personal data leaves your store when this is on. Each order sends: order number and ID, status, currency, total, billing email, billing first and last name, billing company, line items (name, SKU, quantity, line total) and the created date. No payment card data is sent.', 'tack-quotes' ) . '</p>';
 	}
 
 	// ── Field renderers (escape all output) ─────────────────────────────────────
 
+	/**
+	 * The API key field. Renders EMPTY — never the stored key.
+	 *
+	 * `type="password"` only hides characters on screen. The value still sits in the page
+	 * source, so the key leaked into browser "save page" output, password-manager autofill,
+	 * screen shares and recordings, proxy caches, and anything able to read the DOM of an
+	 * admin page. A masked hint in the description gives an administrator the one thing they
+	 * actually need — confirmation of WHICH key is stored — without shipping the secret.
+	 */
 	public function field_api_key() {
 		$value  = (string) get_option( 'tack_quotes_api_key', '' );
-		$masked = $value ? str_repeat( '•', 8 ) . substr( $value, -4 ) : '';
+		$masked = '' !== $value ? str_repeat( '•', 8 ) . substr( $value, -4 ) : '';
 		printf(
-			'<input type="password" name="tack_quotes_api_key" value="%s" class="regular-text" autocomplete="off" placeholder="%s" />',
-			esc_attr( $value ),
-			esc_attr__( 'Paste your TackQuote API key', 'tack-quotes' )
+			'<input type="password" name="tack_quotes_api_key" value="" class="regular-text" autocomplete="new-password" placeholder="%s" />',
+			esc_attr(
+				'' !== $masked
+					? __( 'Leave blank to keep the saved key', 'tack-quotes' )
+					: __( 'Paste your TackQuote API key', 'tack-quotes' )
+			)
 		);
-		if ( $masked ) {
-			echo '<p class="description">' . esc_html__( 'Saved key:', 'tack-quotes' ) . ' <code>' . esc_html( $masked ) . '</code></p>';
+		if ( '' !== $masked ) {
+			echo '<p class="description">'
+				. esc_html__( 'A key is saved:', 'tack-quotes' ) . ' <code>' . esc_html( $masked ) . '</code>. '
+				. esc_html__( 'Leave this field blank to keep it. Paste a new key to replace it.', 'tack-quotes' )
+				. '</p>';
 		} else {
 			echo '<p class="description">' . esc_html__( 'Required for quote requests and order sync. Leave blank only while configuring the store.', 'tack-quotes' ) . '</p>';
 		}
 	}
 
+	/**
+	 * The API base URL field.
+	 */
 	public function field_api_url() {
 		printf(
 			'<input type="url" name="tack_quotes_api_url" value="%s" class="regular-text" placeholder="https://api.tackquote.com/v1" />',
@@ -172,6 +232,9 @@ class Tack_Settings {
 		echo '<p class="description">' . esc_html__( 'Both can be shown at once, or either alone. If neither is checked, product pages show no quote button (the cart page\'s "Checkout as Quote" is unaffected).', 'tack-quotes' ) . '</p>';
 	}
 
+	/**
+	 * The "Add to Quote" button label field.
+	 */
 	public function field_button_label() {
 		printf(
 			'<input type="text" name="tack_quotes_button_label" value="%s" class="regular-text" />',
@@ -180,6 +243,9 @@ class Tack_Settings {
 		echo '<p class="description">' . esc_html__( 'Shown next to Add to Cart on product pages. Clicking it adds the product to a separate quote list — never the WooCommerce cart — and does not submit a quote by itself.', 'tack-quotes' ) . '</p>';
 	}
 
+	/**
+	 * The "Request a Quote" button label field.
+	 */
 	public function field_request_button_label() {
 		printf(
 			'<input type="text" name="tack_quotes_request_button_label" value="%s" class="regular-text" />',
@@ -188,6 +254,9 @@ class Tack_Settings {
 		echo '<p class="description">' . esc_html__( 'Shown on product pages when enabled above. Clicking it immediately submits a quote request for just that product (does not add it to the cart).', 'tack-quotes' ) . '</p>';
 	}
 
+	/**
+	 * The "Checkout as Quote" button label field.
+	 */
 	public function field_checkout_button_label() {
 		printf(
 			'<input type="text" name="tack_quotes_checkout_button_label" value="%s" class="regular-text" />',
@@ -196,6 +265,9 @@ class Tack_Settings {
 		echo '<p class="description">' . esc_html__( 'Shown in the floating quote-list drawer (bottom-right of every page, once at least one product is added). Clicking it submits every item in the quote list as a single TackQuote quote request.', 'tack-quotes' ) . '</p>';
 	}
 
+	/**
+	 * The master on/off switch for the storefront quote buttons.
+	 */
 	public function field_enable_widget() {
 		$this->checkbox(
 			'tack_quotes_enable_widget',
@@ -203,6 +275,9 @@ class Tack_Settings {
 		);
 	}
 
+	/**
+	 * The order-sync on/off switch.
+	 */
 	public function field_enable_order_sync() {
 		$this->checkbox(
 			'tack_quotes_enable_order_sync',
@@ -230,15 +305,20 @@ class Tack_Settings {
 
 	// ── Page ────────────────────────────────────────────────────────────────────
 
+	/**
+	 * Render the settings screen.
+	 */
 	public function render_page() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		// Must match add_menu()'s capability and options.php's own requirement — see the note
+		// on add_menu() for why that is manage_options.
+		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'tack-quotes' ) );
 		}
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'TackQuote', 'tack-quotes' ); ?></h1>
 			<p class="description"><?php esc_html_e( 'TackQuote for WooCommerce — request-a-quote buttons and one-way order sync for B2B quoting.', 'tack-quotes' ); ?></p>
-			<?php $this->maybe_show_test_result(); ?>
+			<?php $this->maybe_handle_post_actions(); ?>
 			<form method="post" action="options.php">
 				<?php
 				settings_fields( self::OPTION_GROUP );
@@ -254,22 +334,55 @@ class Tack_Settings {
 				<input type="hidden" name="tack_quotes_action" value="test_connection" />
 				<?php submit_button( __( 'Test TackQuote connection', 'tack-quotes' ), 'secondary', 'submit', false ); ?>
 			</form>
+			<?php if ( '' !== (string) get_option( 'tack_quotes_api_key', '' ) ) : ?>
+				<hr />
+				<h2><?php esc_html_e( 'Remove saved API key', 'tack-quotes' ); ?></h2>
+				<p class="description">
+					<?php esc_html_e( 'Deletes the stored key from this site. Quote requests and order sync stop working until a new key is saved. Nothing in your TackQuote account is deleted.', 'tack-quotes' ); ?>
+				</p>
+				<form method="post">
+					<?php wp_nonce_field( 'tack_quotes_remove_key', 'tack_quotes_remove_key_nonce' ); ?>
+					<input type="hidden" name="tack_quotes_action" value="remove_api_key" />
+					<?php submit_button( __( 'Remove saved API key', 'tack-quotes' ), 'delete', 'submit', false ); ?>
+				</form>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Handle the "Test connection" POST (nonce + capability enforced).
+	 * Handle the page's own POST buttons: "Test connection" and "Remove saved API key".
+	 *
+	 * Capability first, then the nonce, then the submitted action — in that order. Reading
+	 * `$_POST['tack_quotes_action']` before the nonce check (as this did) is not exploitable
+	 * by itself, but it is the read order that lets an unverified value decide what runs next,
+	 * and it is what WordPress' coding standards flag.
 	 */
-	private function maybe_show_test_result() {
-		if ( ! isset( $_POST['tack_quotes_action'] ) || 'test_connection' !== $_POST['tack_quotes_action'] ) {
+	private function maybe_handle_post_actions() {
+		if ( ! current_user_can( 'manage_options' ) || ! isset( $_POST['tack_quotes_action'] ) ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' )
-			|| ! isset( $_POST['tack_quotes_test_nonce'] )
-			|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['tack_quotes_test_nonce'] ) ), 'tack_quotes_test' ) ) {
+
+		if ( isset( $_POST['tack_quotes_test_nonce'] )
+			&& wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['tack_quotes_test_nonce'] ) ), 'tack_quotes_test' )
+			&& 'test_connection' === sanitize_key( wp_unslash( $_POST['tack_quotes_action'] ) ) ) {
+			$this->render_test_result();
 			return;
 		}
+
+		if ( isset( $_POST['tack_quotes_remove_key_nonce'] )
+			&& wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['tack_quotes_remove_key_nonce'] ) ), 'tack_quotes_remove_key' )
+			&& 'remove_api_key' === sanitize_key( wp_unslash( $_POST['tack_quotes_action'] ) ) ) {
+			delete_option( 'tack_quotes_api_key' );
+			delete_transient( 'tack_quotes_registration_config' );
+			echo '<div class="notice notice-success"><p>' . esc_html__( 'The saved TackQuote API key has been removed.', 'tack-quotes' ) . '</p></div>';
+		}
+	}
+
+	/**
+	 * Call TackQuote with the saved credentials and print the outcome.
+	 */
+	private function render_test_result() {
 		$client = new Tack_Api_Client();
 		$result = $client->test_connection();
 		if ( is_wp_error( $result ) ) {

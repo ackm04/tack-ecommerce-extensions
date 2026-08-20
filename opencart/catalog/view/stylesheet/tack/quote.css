@@ -1,0 +1,313 @@
+/*
+ * TackQuote for OpenCart — quote list and request form.
+ *
+ * Scoped entirely under .tackquote-* and #tackquote-app. Nothing here targets a core or
+ * theme selector, so the extension cannot restyle a store it was installed into. Colours
+ * come from CSS custom properties so a merchant can match their theme by overriding four
+ * values in their own stylesheet rather than editing this file (which an update overwrites).
+ *
+ * The product-page buttons deliberately have NO styling here beyond spacing: they use
+ * OpenCart's own Bootstrap classes (btn btn-secondary / btn-outline-secondary) so they
+ * inherit the theme's button shape, radius and hover states.
+ */
+
+#tackquote-app {
+  --tq-accent: #1f2937;
+  --tq-accent-contrast: #ffffff;
+  --tq-surface: #ffffff;
+  --tq-border: #e2e5ea;
+  --tq-muted: #6b7280;
+  --tq-danger: #b42318;
+  --tq-radius: 10px;
+}
+
+/* ── Floating launcher ─────────────────────────────────────────────────────────────── */
+.tackquote-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1040;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tq-accent);
+  color: var(--tq-accent-contrast);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
+  cursor: pointer;
+}
+
+.tackquote-fab:hover { filter: brightness(1.1); }
+
+.tackquote-fab__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--tq-accent-contrast);
+  color: var(--tq-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────────────────────── */
+.tackquote-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px;
+  background: rgba(15, 23, 42, 0.55);
+  overflow-y: auto;
+}
+
+.tackquote-overlay[hidden] { display: none; }
+
+body.tackquote-locked { overflow: hidden; }
+
+.tackquote-panel {
+  width: 100%;
+  max-width: 640px;
+  background: var(--tq-surface);
+  border-radius: var(--tq-radius);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.tackquote-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--tq-border);
+}
+
+.tackquote-panel__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.tackquote-close {
+  border: 0;
+  background: none;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--tq-muted);
+  cursor: pointer;
+}
+
+/* ── Step rail ─────────────────────────────────────────────────────────────────────── */
+.tackquote-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 20px 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--tq-muted);
+}
+
+.tackquote-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tackquote-steps li::before {
+  content: attr(data-step-label);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--tq-border);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tackquote-steps li + li::after {
+  /* Separator drawn on the FOLLOWING item so the last step has no trailing dash. */
+  content: '';
+}
+
+.tackquote-steps li.is-current { color: var(--tq-accent); font-weight: 650; }
+.tackquote-steps li.is-current::before { border-color: var(--tq-accent); }
+.tackquote-steps li.is-done::before {
+  content: '\2713';
+  background: var(--tq-accent);
+  border-color: var(--tq-accent);
+  color: var(--tq-accent-contrast);
+}
+
+.tackquote-panel__body { padding: 16px 20px 4px; }
+
+/* ── Items ─────────────────────────────────────────────────────────────────────────── */
+.tackquote-items {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.tackquote-item {
+  display: grid;
+  grid-template-columns: 1fr auto 76px 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--tq-border);
+}
+
+.tackquote-item__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.tackquote-item__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tackquote-item__meta { font-size: 12px; color: var(--tq-muted); }
+.tackquote-item__price { font-size: 14px; color: var(--tq-muted); white-space: nowrap; }
+
+.tackquote-item__qty {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--tq-border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.tackquote-item__remove {
+  border: 0;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--tq-muted);
+  cursor: pointer;
+}
+
+.tackquote-item__remove:hover { color: var(--tq-danger); }
+
+.tackquote-empty, .tackquote-hint {
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--tq-muted);
+}
+
+/* ── Form ──────────────────────────────────────────────────────────────────────────── */
+.tackquote-field { margin-bottom: 12px; }
+.tackquote-field-row { display: flex; gap: 12px; }
+.tackquote-field-row .tackquote-field { flex: 1 1 0; }
+
+.tackquote-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tackquote-field input,
+.tackquote-field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--tq-border);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.tackquote-field input:focus,
+.tackquote-field textarea:focus {
+  outline: 2px solid var(--tq-accent);
+  outline-offset: 1px;
+}
+
+.tackquote-alert {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fdf2f0;
+  color: var(--tq-danger);
+  font-size: 14px;
+}
+
+.tackquote-alert[hidden] { display: none; }
+
+/* ── Done ──────────────────────────────────────────────────────────────────────────── */
+.tackquote-done { padding: 8px 0 4px; text-align: center; }
+.tackquote-done__lead { margin: 0 0 6px; font-size: 15px; }
+.tackquote-done__ref {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* ── Footer actions ────────────────────────────────────────────────────────────────── */
+.tackquote-panel__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px 18px;
+}
+
+.tackquote-btn {
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tackquote-btn[hidden] { display: none; }
+.tackquote-btn--primary { background: var(--tq-accent); color: var(--tq-accent-contrast); }
+.tackquote-btn--primary:hover { filter: brightness(1.1); }
+.tackquote-btn--ghost { background: none; border-color: var(--tq-border); color: inherit; }
+
+/* ── Product page + tiles ──────────────────────────────────────────────────────────── */
+.tackquote-actions { margin-top: 10px; }
+
+.tackquote-inline-note {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #157347;
+}
+
+.tackquote-inline-note[hidden] { display: none; }
+
+.tackquote-tile-btn {
+  border: 1px solid var(--tq-border);
+  background: #fff;
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 34px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.tackquote-tile-btn.is-added { background: #157347; border-color: #157347; color: #fff; }
+
+@media (max-width: 520px) {
+  .tackquote-item { grid-template-columns: 1fr 64px 28px; }
+  .tackquote-item__price { display: none; }
+  .tackquote-field-row { flex-direction: column; gap: 0; }
+  .tackquote-fab { right: 12px; bottom: 12px; }
+}

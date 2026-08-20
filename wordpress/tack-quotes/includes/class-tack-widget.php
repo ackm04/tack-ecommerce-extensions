@@ -24,6 +24,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Tack_Widget {
 
 	/**
+	 * Quote requests allowed per client per RATE_LIMIT_WINDOW seconds.
+	 */
+	const RATE_LIMIT_MAX = 5;
+
+	/**
+	 * Length of the rate-limit window, in seconds.
+	 */
+	const RATE_LIMIT_WINDOW = 300;
+
+	/**
+	 * Hard ceiling on the free-text note, in characters.
+	 */
+	const NOTE_MAX_LENGTH = 2000;
+
+	/**
+	 * Hard ceiling on line items accepted from one quote-list submission.
+	 */
+	const ITEMS_MAX = 100;
+
+	/**
+	 * Hard ceiling on the raw `items` JSON, in bytes, checked before json_decode().
+	 */
+	const ITEMS_MAX_BYTES = 65536;
+
+	/**
 	 * Hook registration.
 	 */
 	public function init() {
@@ -51,8 +76,8 @@ class Tack_Widget {
 		// applied to the JS looked like a fix that did not work, which cost real debugging
 		// time. Production behaviour is unchanged: released versions still bust the cache
 		// through the version bump.
-		$css = TACK_QUOTES_DIR . 'assets/css/tack-quotes.css';
-		$js  = TACK_QUOTES_DIR . 'assets/js/tack-quotes.js';
+		$css     = TACK_QUOTES_DIR . 'assets/css/tack-quotes.css';
+		$js      = TACK_QUOTES_DIR . 'assets/js/tack-quotes.js';
 		$css_ver = ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( $css ) )
 			? (string) filemtime( $css )
 			: TACK_QUOTES_VERSION;
@@ -66,65 +91,66 @@ class Tack_Widget {
 			'tack-quotes',
 			'TackQuotes',
 			array(
-				'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-				'nonce'         => wp_create_nonce( 'tack_request_quote' ),
-				'customerEmail' => $this->current_customer_email(),
+				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
+				'nonce'               => wp_create_nonce( 'tack_request_quote' ),
+				'customerEmail'       => $this->current_customer_email(),
 				'checkoutButtonLabel' => (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tack-quotes' ) ),
 				// The seller's registration policy drives which fields the form renders. Null
 				// when Tack is unreachable, in which case the JS falls back to a minimal
 				// name+email form rather than rendering nothing — a shopper must still be able
 				// to ask for a quote when our own API is having a bad day.
-				'registration'  => $this->registration_config(),
-				'i18n'          => array(
-					'modalTitle'        => __( 'Request a Quote', 'tack-quotes' ),
-					'firstNameLabel'    => __( 'First name', 'tack-quotes' ),
-					'lastNameLabel'     => __( 'Last name', 'tack-quotes' ),
-					'emailLabel'        => __( 'Email address', 'tack-quotes' ),
-					'phoneLabel'        => __( 'Phone', 'tack-quotes' ),
-					'companyHeading'    => __( 'Company details', 'tack-quotes' ),
-					'companyNameLabel'  => __( 'Company name', 'tack-quotes' ),
-					'buyingAsLabel'     => __( 'I am buying as', 'tack-quotes' ),
+				'registration'        => $this->registration_config(),
+				'i18n'                => array(
+					'modalTitle'         => __( 'Request a Quote', 'tack-quotes' ),
+					'firstNameLabel'     => __( 'First name', 'tack-quotes' ),
+					'lastNameLabel'      => __( 'Last name', 'tack-quotes' ),
+					'emailLabel'         => __( 'Email address', 'tack-quotes' ),
+					'phoneLabel'         => __( 'Phone', 'tack-quotes' ),
+					'companyHeading'     => __( 'Company details', 'tack-quotes' ),
+					'companyNameLabel'   => __( 'Company name', 'tack-quotes' ),
+					'buyingAsLabel'      => __( 'I am buying as', 'tack-quotes' ),
 					'buyingAsIndividual' => __( 'An individual', 'tack-quotes' ),
-					'buyingAsCompany'   => __( 'A company', 'tack-quotes' ),
-					'optional'          => __( '(optional)', 'tack-quotes' ),
-					'firstNameRequired' => __( 'Please enter your first name.', 'tack-quotes' ),
-					'companyRequired'   => __( 'Please complete the required company details.', 'tack-quotes' ),
-					'awaitingApproval'  => __( 'Quote requested. Your company registration is awaiting approval by the seller.', 'tack-quotes' ),
+					'buyingAsCompany'    => __( 'A company', 'tack-quotes' ),
+					'optional'           => __( '(optional)', 'tack-quotes' ),
+					'firstNameRequired'  => __( 'Please enter your first name.', 'tack-quotes' ),
+					'companyRequired'    => __( 'Please complete the required company details.', 'tack-quotes' ),
+					'awaitingApproval'   => __( 'Quote requested. Your company registration is awaiting approval by the seller.', 'tack-quotes' ),
 					// Company field labels, keyed by the field names the API's
 					// requiredCompanyFields returns. Anything not listed here falls back to a
 					// humanised version of the key, so a new policy field still renders.
-					'companyFields'     => array(
-						'legalName'      => __( 'Legal name', 'tack-quotes' ),
-						'taxId'          => __( 'Tax / VAT ID', 'tack-quotes' ),
+					'companyFields'      => array(
+						'legalName'          => __( 'Legal name', 'tack-quotes' ),
+						'taxId'              => __( 'Tax / VAT ID', 'tack-quotes' ),
 						'registrationNumber' => __( 'Registration number', 'tack-quotes' ),
-						'website'        => __( 'Website', 'tack-quotes' ),
-						'addressLine1'   => __( 'Address', 'tack-quotes' ),
-						'addressLine2'   => __( 'Address line 2', 'tack-quotes' ),
-						'city'           => __( 'City', 'tack-quotes' ),
-						'state'          => __( 'State / Province', 'tack-quotes' ),
-						'postalCode'     => __( 'Postal code', 'tack-quotes' ),
-						'country'        => __( 'Country', 'tack-quotes' ),
-						'phone'          => __( 'Company phone', 'tack-quotes' ),
-						'industry'       => __( 'Industry', 'tack-quotes' ),
-						'employeeCount'  => __( 'Number of employees', 'tack-quotes' ),
+						'website'            => __( 'Website', 'tack-quotes' ),
+						'addressLine1'       => __( 'Address', 'tack-quotes' ),
+						'addressLine2'       => __( 'Address line 2', 'tack-quotes' ),
+						'city'               => __( 'City', 'tack-quotes' ),
+						'state'              => __( 'State / Province', 'tack-quotes' ),
+						'postalCode'         => __( 'Postal code', 'tack-quotes' ),
+						'country'            => __( 'Country', 'tack-quotes' ),
+						'phone'              => __( 'Company phone', 'tack-quotes' ),
+						'industry'           => __( 'Industry', 'tack-quotes' ),
+						'employeeCount'      => __( 'Number of employees', 'tack-quotes' ),
 					),
-					'emailPlaceholder'  => __( 'you@example.com', 'tack-quotes' ),
+					'emailPlaceholder'   => __( 'you@example.com', 'tack-quotes' ),
 					// Just "Note": the optional marker is appended generically by the form
 					// builder now, and leaving it in the string rendered "Note (optional) (optional)".
-					'noteLabel'         => __( 'Note', 'tack-quotes' ),
-					'notePlaceholder'   => __( 'Anything the seller should know about this request…', 'tack-quotes' ),
-					'submit'            => __( 'Send request', 'tack-quotes' ),
-					'sending'           => __( 'Sending…', 'tack-quotes' ),
-					'cancel'            => __( 'Cancel', 'tack-quotes' ),
-					'close'             => __( 'Close', 'tack-quotes' ),
-					'error'             => __( 'Could not create the quote. Please try again.', 'tack-quotes' ),
-					'emailRequired'     => __( 'Please enter a valid email address.', 'tack-quotes' ),
-					'success'           => __( 'Quote requested! Redirecting you to it now…', 'tack-quotes' ),
-					'added'             => __( 'Added ✓', 'tack-quotes' ),
-					'quoteListTitle'    => __( 'Your quote list', 'tack-quotes' ),
-					'quoteListEmpty'    => __( 'No products added yet.', 'tack-quotes' ),
-					'quoteListCount'    => __( 'Quote list', 'tack-quotes' ),
-					'remove'            => __( 'Remove', 'tack-quotes' ),
+					'noteLabel'          => __( 'Note', 'tack-quotes' ),
+					'notePlaceholder'    => __( 'Anything the seller should know about this request…', 'tack-quotes' ),
+					'submit'             => __( 'Send request', 'tack-quotes' ),
+					'sending'            => __( 'Sending…', 'tack-quotes' ),
+					'cancel'             => __( 'Cancel', 'tack-quotes' ),
+					'close'              => __( 'Close', 'tack-quotes' ),
+					'error'              => __( 'Could not create the quote. Please try again.', 'tack-quotes' ),
+					'reload'             => __( 'Reload page', 'tack-quotes' ),
+					'emailRequired'      => __( 'Please enter a valid email address.', 'tack-quotes' ),
+					'success'            => __( 'Quote requested! Redirecting you to it now…', 'tack-quotes' ),
+					'added'              => __( 'Added ✓', 'tack-quotes' ),
+					'quoteListTitle'     => __( 'Your quote list', 'tack-quotes' ),
+					'quoteListEmpty'     => __( 'No products added yet.', 'tack-quotes' ),
+					'quoteListCount'     => __( 'Quote list', 'tack-quotes' ),
+					'remove'             => __( 'Remove', 'tack-quotes' ),
 				),
 			)
 		);
@@ -245,21 +271,96 @@ class Tack_Widget {
 	/**
 	 * Output button markup with data attributes.
 	 *
-	 * @param array  $data  Data attributes (key is used verbatim as data-{key}).
-	 * @param string $class CSS class selector the JS binds its click handler to.
-	 * @param string $label Visible button text.
+	 * @param array  $data      Data attributes (key is used verbatim as data-{key}).
+	 * @param string $css_class CSS class selector the JS binds its click handler to.
+	 * @param string $label     Visible button text.
 	 */
-	private function button( $data, $class, $label ) {
+	private function button( $data, $css_class, $label ) {
 		$attrs = '';
 		foreach ( $data as $k => $v ) {
 			$attrs .= sprintf( ' data-%s="%s"', esc_attr( $k ), esc_attr( $v ) );
 		}
 		printf(
 			'<button type="button" class="button %s"%s>%s</button>',
-			esc_attr( $class ),
+			esc_attr( $css_class ),
 			$attrs, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from esc_attr above.
 			esc_html( $label )
 		);
+	}
+
+	/**
+	 * Count this caller's recent quote requests and say whether they are over the limit.
+	 *
+	 * Deliberately coarse. It exists to make flooding expensive, not to be an authorization
+	 * boundary: the client address is only ever a hint (behind a CDN or load balancer it is
+	 * whatever the proxy chain reports, and that chain is forgeable unless the host is
+	 * configured to trust it), so a determined attacker rotates addresses. What it does buy
+	 * is that a single script cannot hold every PHP worker on the site with a loop.
+	 *
+	 * The counter is keyed on a SALTED HASH of the address rather than the address itself: an
+	 * IP is personal data, transients live in the options table or a shared object cache, and
+	 * a counter does not need to be able to name anybody.
+	 *
+	 * @return bool True when the caller is over the limit.
+	 */
+	private function rate_limit_exceeded() {
+		$max = $this->rate_limit_max();
+		if ( $max <= 0 ) {
+			return false;
+		}
+		return (int) get_transient( $this->rate_limit_key() ) >= $max;
+	}
+
+	/**
+	 * Count one quote request against this caller's allowance.
+	 *
+	 * Called immediately before the outbound API call, not at the top of the handler, and
+	 * deliberately so. The expensive and abusable thing here is the request to TackQuote —
+	 * it is what holds a worker open and what creates a lead — while a submission that fails
+	 * validation returns in milliseconds with no outbound call at all. Charging quota for
+	 * those would mean a shopper who mistypes their email address a few times locks
+	 * themselves out of a form they are actively trying to use.
+	 */
+	private function record_rate_limit_hit() {
+		if ( $this->rate_limit_max() <= 0 ) {
+			return;
+		}
+		$key = $this->rate_limit_key();
+		set_transient( $key, (int) get_transient( $key ) + 1, self::RATE_LIMIT_WINDOW );
+	}
+
+	/**
+	 * The configured allowance.
+	 *
+	 * @return int Maximum requests per window. Zero or less disables the limit.
+	 */
+	private function rate_limit_max() {
+		/**
+		 * Filter the number of quote requests allowed per client per window.
+		 *
+		 * @param int $max Maximum requests. Zero or less disables the limit.
+		 */
+		return (int) apply_filters( 'tack_quotes_rate_limit_max', self::RATE_LIMIT_MAX );
+	}
+
+	/**
+	 * Transient key identifying this caller's counter.
+	 *
+	 * @return string
+	 */
+	private function rate_limit_key() {
+		// WC_Geolocation::get_ip_address() is WooCommerce's own client-address resolution, so
+		// this agrees with how the rest of the store identifies a visitor instead of inventing
+		// a second answer.
+		$ip = '';
+		if ( class_exists( 'WC_Geolocation' ) ) {
+			$ip = (string) WC_Geolocation::get_ip_address();
+		}
+		if ( '' === $ip && isset( $_SERVER['REMOTE_ADDR'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		}
+
+		return 'tack_qr_' . substr( wp_hash( 'quote-request|' . $ip ), 0, 20 );
 	}
 
 	/**
@@ -267,28 +368,93 @@ class Tack_Widget {
 	 * quote list, then call the Tack API.
 	 */
 	public function handle_request() {
-		check_ajax_referer( 'tack_request_quote', 'nonce' );
+		/*
+		 * `$die` is passed as false deliberately.
+		 *
+		 * At its default of true, `check_ajax_referer()` answers a failed check with
+		 * `wp_die( -1, 403 )` — HTTP 403 and a body of literally `-1`, no JSON. The storefront
+		 * JS has nothing to read there, so it fell back to its generic "Could not create the
+		 * quote. Please try again." — advice that can never work, for the one failure the
+		 * shopper could actually fix.
+		 *
+		 * And this is not an edge case. The nonce is printed into the page by
+		 * wp_localize_script(), so on any store with full-page caching it is baked into cached
+		 * HTML and stops verifying once it ages past the nonce lifetime (24h by default). From
+		 * then on every quote request from that cached page fails identically and permanently,
+		 * with no signal to the shopper or the merchant that a cache purge is the fix.
+		 *
+		 * A distinguishable, actionable answer does not make the cached-nonce problem go away
+		 * — the real cure is to stop baking the nonce into cacheable HTML — but it turns
+		 * "silently broken forever" into "reload the page".
+		 */
+		if ( ! check_ajax_referer( 'tack_request_quote', 'nonce', false ) ) {
+			wp_send_json_error(
+				array(
+					'code'    => 'tack_nonce_expired',
+					'message' => __( 'This page has been open too long, or was served from a cache. Reload it and request the quote again.', 'tack-quotes' ),
+					'reload'  => true,
+				),
+				403
+			);
+		}
 
-		$email      = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
-		$note       = isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '';
-		$first_name = isset( $_POST['first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['first_name'] ) ) : '';
-		$last_name  = isset( $_POST['last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['last_name'] ) ) : '';
-		$phone      = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
+		/*
+		 * A nonce prevents CSRF. It does not prevent abuse.
+		 *
+		 * This handler is registered for `wp_ajax_nopriv_tack_request_quote` and the nonce it
+		 * checks is printed into every page a logged-out visitor can load, so anybody can
+		 * obtain one and replay this endpoint as fast as they like. Each hit holds a PHP-FPM
+		 * worker open for the length of an outbound HTTP call — which is a store-wide denial
+		 * of service on a small host, and an open channel for flooding the seller's TackQuote
+		 * account with fake leads. Neither is a CSRF problem, so no nonce could have stopped
+		 * either.
+		 */
+		if ( $this->rate_limit_exceeded() ) {
+			wp_send_json_error(
+				array(
+					'code'    => 'tack_rate_limited',
+					'message' => __( 'Too many quote requests from this connection. Please wait a few minutes and try again.', 'tack-quotes' ),
+				),
+				429
+			);
+		}
+
+		$email        = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+		$note         = isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '';
+		$first_name   = isset( $_POST['first_name'] ) ? sanitize_text_field( wp_unslash( $_POST['first_name'] ) ) : '';
+		$last_name    = isset( $_POST['last_name'] ) ? sanitize_text_field( wp_unslash( $_POST['last_name'] ) ) : '';
+		$phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
 		$company_name = isset( $_POST['company_name'] ) ? sanitize_text_field( wp_unslash( $_POST['company_name'] ) ) : '';
-		// Company details arrive as company[key]=value. Sanitised per-value and keys
-		// restricted to a safe charset, so a crafted key cannot inject anything downstream.
+
+		/*
+		 * Company details arrive as company[key]=value.
+		 *
+		 * Values are sanitised as the array is read — `map_deep()` applies
+		 * `sanitize_text_field()` to every leaf — rather than one at a time inside the loop.
+		 * Same result, but the raw superglobal is never the thing being iterated, which is
+		 * what the coding standards are asking for and what makes it obvious by inspection
+		 * that no unsanitised value can escape this block.
+		 *
+		 * Keys are then restricted to a safe charset. That allowlist is mirrored in the
+		 * storefront JS, which renders these same names into HTML attributes.
+		 */
 		$company = array();
 		if ( isset( $_POST['company'] ) && is_array( $_POST['company'] ) ) {
-			foreach ( wp_unslash( $_POST['company'] ) as $key => $value ) {
+			$raw_company = map_deep( wp_unslash( (array) $_POST['company'] ), 'sanitize_text_field' );
+			foreach ( $raw_company as $key => $value ) {
 				if ( ! is_string( $key ) || ! preg_match( '/^[A-Za-z0-9_]{1,40}$/', $key ) ) {
 					continue;
 				}
 				if ( is_scalar( $value ) ) {
-					$company[ $key ] = sanitize_text_field( (string) $value );
+					$company[ $key ] = (string) $value;
 				}
 			}
 		}
-		$items_json = isset( $_POST['items'] ) ? wp_unslash( $_POST['items'] ) : '';
+		// The quote list, as JSON. sanitize_textarea_field() is safe to apply to it — the
+		// payload is a flat array of integers keyed by product_id/variation_id/quantity, so
+		// there is nothing in a well-formed body for it to strip — and a body that it does
+		// alter would not have decoded into usable rows anyway.
+		$items_json = isset( $_POST['items'] ) ? sanitize_textarea_field( wp_unslash( $_POST['items'] ) ) : '';
 		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
 		$quantity   = isset( $_POST['quantity'] ) ? max( 1, absint( wp_unslash( $_POST['quantity'] ) ) ) : 1;
 		// Which VARIATION the shopper chose. A variable product's button carries the parent
@@ -296,6 +462,12 @@ class Tack_Widget {
 		// SKU and the parent's (cheapest) price. Validated against the parent below, so it
 		// cannot be used to quote some unrelated product.
 		$variation_id = isset( $_POST['variation_id'] ) ? absint( wp_unslash( $_POST['variation_id'] ) ) : 0;
+
+		// Free text from an unauthenticated endpoint needs a ceiling, or a single request can
+		// post megabytes that we then forward to TackQuote and it stores. `mb_substr()` is
+		// safe to call unconditionally: WordPress polyfills it in wp-includes/compat.php when
+		// the mbstring extension is missing.
+		$note = mb_substr( $note, 0, self::NOTE_MAX_LENGTH );
 
 		if ( '' === $email || ! is_email( $email ) ) {
 			wp_send_json_error( array( 'message' => __( 'A valid email address is required.', 'tack-quotes' ) ), 400 );
@@ -311,7 +483,7 @@ class Tack_Widget {
 			// Distinguish "you have not chosen options yet" from "there is nothing here".
 			// Both produce no line items, but only one is the shopper's to fix, and the
 			// generic message left them re-clicking a button that could never succeed.
-			$parent = $product_id ? wc_get_product( $product_id ) : null;
+			$parent          = $product_id ? wc_get_product( $product_id ) : null;
 			$needs_variation = ! $items_json
 				&& $parent instanceof WC_Product_Variable;
 
@@ -370,6 +542,8 @@ class Tack_Widget {
 			}
 		}
 
+		$this->record_rate_limit_hit();
+
 		$client = new Tack_Api_Client();
 		$result = $client->create_quote_request( $payload );
 
@@ -379,14 +553,14 @@ class Tack_Widget {
 
 		wp_send_json_success(
 			array(
-				'quoteId'  => isset( $result['id'] ) ? $result['id'] : null,
-				'quoteNumber' => isset( $result['quoteNumber'] ) ? sanitize_text_field( (string) $result['quoteNumber'] ) : null,
-				'portalUrl' => isset( $result['portalUrl'] ) ? esc_url_raw( $result['portalUrl'] ) : ( isset( $result['quoteUrl'] ) ? esc_url_raw( $result['quoteUrl'] ) : '' ),
+				'quoteId'          => isset( $result['id'] ) ? $result['id'] : null,
+				'quoteNumber'      => isset( $result['quoteNumber'] ) ? sanitize_text_field( (string) $result['quoteNumber'] ) : null,
+				'portalUrl'        => isset( $result['portalUrl'] ) ? esc_url_raw( $result['portalUrl'] ) : ( isset( $result['quoteUrl'] ) ? esc_url_raw( $result['quoteUrl'] ) : '' ),
 				// Forwarded so the storefront can say "awaiting approval" instead of implying
 				// the buyer portal is ready to use. Without this the shopper is redirected to a
 				// login they cannot pass yet.
 				'awaitingApproval' => ! empty( $result['awaitingApproval'] ),
-				'company'  => isset( $result['company'] ) && is_array( $result['company'] )
+				'company'          => isset( $result['company'] ) && is_array( $result['company'] )
 					? array(
 						'name'   => isset( $result['company']['name'] ) ? sanitize_text_field( (string) $result['company']['name'] ) : '',
 						'status' => isset( $result['company']['status'] ) ? sanitize_text_field( (string) $result['company']['status'] ) : '',
@@ -474,11 +648,11 @@ class Tack_Widget {
 
 		return array(
 			array(
-				'sku'                => $product->get_sku(),
-				'name'               => $product->get_name(),
-				'quantity'           => $quantity,
-				'unitPrice'          => (float) wc_get_price_excluding_tax( $product ),
-				'externalProductId'  => (string) $product->get_id(),
+				'sku'               => $product->get_sku(),
+				'name'              => $product->get_name(),
+				'quantity'          => $quantity,
+				'unitPrice'         => (float) wc_get_price_excluding_tax( $product ),
+				'externalProductId' => (string) $product->get_id(),
 			),
 		);
 	}
@@ -494,6 +668,13 @@ class Tack_Widget {
 	 * @return array
 	 */
 	private function quote_list_line_items( $items_json ) {
+		// Bounded before decoding, because json_decode() on an unbounded string from an
+		// unauthenticated endpoint is the cheap half of the attack; the expensive half is the
+		// wc_get_product() call this does per row.
+		if ( strlen( (string) $items_json ) > self::ITEMS_MAX_BYTES ) {
+			return array();
+		}
+
 		$decoded = json_decode( $items_json, true );
 		if ( ! is_array( $decoded ) ) {
 			return array();
@@ -501,6 +682,9 @@ class Tack_Widget {
 
 		$items = array();
 		foreach ( $decoded as $row ) {
+			if ( count( $items ) >= self::ITEMS_MAX ) {
+				break;
+			}
 			if ( ! is_array( $row ) || empty( $row['product_id'] ) ) {
 				continue;
 			}
