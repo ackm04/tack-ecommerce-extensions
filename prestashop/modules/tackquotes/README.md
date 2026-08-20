@@ -64,55 +64,59 @@ This monorepo directory is build/source only. No PrestaShop Addons listing is cl
   `ApiKeyGuard` on the Tack API accepts credentials
   (`apps/api/src/common/guards/api-key.guard.ts`).
 
-## What still needs a new Nest endpoint to fully complete
+## The Tack API endpoints this module calls
 
-The Tack API has **no PrestaShop equivalent of the WooCommerce plugin
-controller**. Compare:
+`PrestaShopPluginController`
+(`apps/api/src/modules/integrations/prestashop/prestashop-plugin.controller.ts`) serves all
+of them, behind `ApiKeyGuard` — the tenant is resolved from the API key, not a seller JWT.
 
-- WooCommerce: `apps/api/src/modules/integrations/woocommerce/woocommerce-plugin.controller.ts`
-  exposes `GET /integrations/woocommerce/ping`, `POST /integrations/woocommerce/quote-requests`,
-  and `POST /integrations/woocommerce/order-sync`, all behind `ApiKeyGuard` (tenant
-  resolved from the API key, not a seller JWT) — this is exactly what the
-  WooCommerce plugin's `Tack_Api_Client` calls.
-- PrestaShop: **no such controller exists.** The only PrestaShop-related code
-  server-side is `PrestaShopService` / `PrestaShopPlatformAdapter`, which are
-  JWT-authenticated (seller-portal-driven) and call *out* to the store's own
-  PrestaShop Webservice API — they don't accept inbound calls from a
-  storefront module at all.
+This section previously said "**Neither route exists yet**" and listed the controller as
+work still to do. That was stale: the controller shipped, and "Test connection" and the
+storefront button both work against a current Tack API.
 
-Concretely, this module's `TackApiClient` calls:
+- `GET /integrations/prestashop/ping` → `{ ok: true, tenantId }`. Used by "Test
+  connection", which falls back to `GET /health` only for a Tack deployment older than that
+  route (a `/health` success proves the URL is reachable, not that the key is valid for a
+  tenant).
+- `POST /integrations/prestashop/quote-requests` → upserts the referenced products, then
+  registers the buyer and creates a draft quote through the canonical pipeline.
 
-- `GET /integrations/prestashop/ping` (falls back to `GET /health`) for the
-  "Test connection" button.
-- `POST /integrations/prestashop/quote-requests` for the storefront quote
-  button, with the same JSON contract the WooCommerce plugin's endpoint uses:
-  `{ buyerEmail, note, source: "prestashop", lineItems: [{ sku, name, quantity, unitPrice, externalProductId }] }`,
-  expecting back `{ id, quoteNumber, portalUrl }`.
+  Request:
+  `{ buyerEmail, note, source: "prestashop", currency?, firstName?, lastName?, phone?,
+  companyName?, lineItems: [{ sku, name, quantity, unitPrice, externalProductId }] }`
 
-**Neither route exists yet.** Until they're added, "Test connection" will
-report an error (after falling back to `/health`, which will succeed if the
-key/URL are otherwise valid but doesn't prove PrestaShop-specific wiring) and
-the storefront "Request a Quote" button will fail with a `502` surfaced from
-`TackApiClient::createQuoteRequest()` (the JSON error message is shown to the
-shopper, not swallowed).
+  Response: `{ id, quoteNumber, portalUrl, company, awaitingApproval }`
+- `POST /integrations/prestashop/order-sync` → exists, but this module does not push orders
+  (no order hook is wired up, unlike the WooCommerce plugin's `Tack_Order_Sync`), so it is
+  only relevant if order-push-from-storefront is wanted later.
 
-To finish the integration, add a `PrestaShopPluginController` under
-`apps/api/src/modules/integrations/prestashop/` mirroring
-`woocommerce-plugin.controller.ts` line for line:
-- `@UseGuards(ApiKeyGuard, PlanGuard)` on `@Controller('integrations/prestashop')`
-- `GET ping` → `{ ok: true, tenantId }`
-- `POST quote-requests` → upsert referenced products via
-  `IntegrationsService.upsertProduct(tenantId, 'prestashop', ...)`, then create
-  a draft quote via the same canonical pipeline `WooCommerceService.createQuoteFromPluginRequest`
-  uses (a `PrestaShopService.createQuoteFromPluginRequest` equivalent, or a
-  shared helper), returning `{ id, quoteNumber, portalUrl }`.
-- `POST order-sync` → optional; this module does not push orders today (no
-  order-sync hook is wired up, unlike the WooCommerce plugin's
-  `Tack_Order_Sync`), so it isn't required for the button to work, only if
-  order-push-from-storefront is wanted later.
+### Buyer identity
 
-No other changes to this module should be needed once that controller exists
-— the request/response shapes already match.
+`firstName` and `lastName` are collected by the product-page modal and sent as fields.
+
+They did not exist before, and the endpoint — knowing only an email address — wrote its
+local part into `buyers.first_name`. A shopper at `ps-probe@example.com` became a buyer
+literally named **"ps-probe"**, which a seller could not tell apart from a name somebody
+typed. Nothing failed: the request answered `201`. Confirmed against the live API, quote
+`TK-2026-001085`.
+
+- **Both fields are optional and stay empty when blank.** Every already-installed copy of
+  this module posts email/note/quantity/product_id and nothing else, and those submissions
+  still answer `201` — the buyer is created with no name rather than an invented one. A
+  blank input is omitted from the payload, never sent as `""`.
+- **Validated with `Validate::isName()`**, not `Validate::isCustomerName()`: the latter is
+  what PrestaShop uses for `customers.firstname`/`lastname` but only exists from 1.7.6, and
+  this module declares `ps_versions_compliancy` min `1.7.0.0`.
+- **Prefilled from the signed-in customer** (`$this->context->customer`, only once
+  `isLogged()`), the same source the OpenCart drawer uses. Guests get empty inputs; nothing
+  is guessed.
+- `companyName` and `phone` are accepted by the endpoint but **not collected by this
+  module**. Adding a company input is a separate decision, because a company name resolves
+  to a real company record and applies the seller's TackQuote registration policy — a
+  tenant set to `company_only`, or requiring a business email or particular company
+  details, would then refuse submissions this modal cannot collect the answers for.
+  `GET /v1/integrations/woocommerce/registration-config` is the endpoint that exists to
+  drive that rendering.
 
 ## Not implemented (out of scope for this scaffold)
 

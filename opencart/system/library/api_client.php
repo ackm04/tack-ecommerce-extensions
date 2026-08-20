@@ -127,8 +127,20 @@ class ApiClient
      * Calls `POST /integrations/opencart/quote-requests`
      * (`OpenCartPluginController::quoteRequest`), the same JSON contract used
      * by the WooCommerce/PrestaShop plugin endpoints:
-     * `{ buyerEmail, note, source: "opencart", lineItems: [{ sku, name, quantity, unitPrice, externalProductId }] }`,
-     * expecting back `{ id, quoteNumber, portalUrl }`.
+     * `{ buyerEmail, note, source: "opencart", currency?,
+     *    firstName?, lastName?, companyName?, phone?,
+     *    lineItems: [{ sku, name, quantity, unitPrice, externalProductId }] }`,
+     * expecting back `{ id, quoteNumber, portalUrl, company, awaitingApproval }`.
+     *
+     * The identity fields are OPTIONAL and must be OMITTED rather than sent
+     * empty: Tack treats a blank as "the shopper supplied nothing" and leaves
+     * the buyer's name columns NULL, which is the honest record. It no longer
+     * invents a first name from the email local part when they are absent.
+     *
+     * `companyName` is not just a label — the endpoint resolves it to a real
+     * company and applies the seller's registration policy, so a store whose
+     * TackQuote tenant requires company details (or a business email address)
+     * can refuse a submission that carries a company name without them.
      *
      * @param array $payload
      *

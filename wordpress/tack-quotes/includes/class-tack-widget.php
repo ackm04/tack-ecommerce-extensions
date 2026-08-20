@@ -59,6 +59,64 @@ class Tack_Widget {
 		// AJAX (logged-in and guest).
 		add_action( 'wp_ajax_tack_request_quote', array( $this, 'handle_request' ) );
 		add_action( 'wp_ajax_nopriv_tack_request_quote', array( $this, 'handle_request' ) );
+
+		/*
+		 * Nonce refresh, on WooCommerce's own `?wc-ajax=` endpoint rather than
+		 * admin-ajax.php.
+		 *
+		 * This is the actual cure for the cached-nonce failure. The submit nonce is printed
+		 * into the page by wp_localize_script(), so on a full-page-cached store it is baked
+		 * into cached HTML and stops verifying once it ages past the nonce lifetime — after
+		 * which every quote request from that cached page failed identically and forever.
+		 *
+		 * `WC_AJAX::do_wc_ajax()` sends `wc_nocache_headers()` before firing
+		 * `wc_ajax_{action}` (woocommerce/includes/class-wc-ajax.php), which is why the
+		 * refresh itself cannot be served from the same cache that staled the nonce.
+		 * admin-ajax.php would usually work too, but page caches are configured to bypass
+		 * wc-ajax specifically, and this plugin already requires WooCommerce.
+		 */
+		add_action( 'wc_ajax_tack_quote_nonce', array( $this, 'handle_nonce_refresh' ) );
+		// Same handler on admin-ajax, so the fallback URL below is a real route rather
+		// than a 400 waiting to happen.
+		add_action( 'wp_ajax_tack_quote_nonce', array( $this, 'handle_nonce_refresh' ) );
+		add_action( 'wp_ajax_nopriv_tack_quote_nonce', array( $this, 'handle_nonce_refresh' ) );
+	}
+
+	/**
+	 * URL that issues a fresh submit nonce.
+	 *
+	 * Prefers WooCommerce's `?wc-ajax=` endpoint because page caches are configured to
+	 * bypass it. Falls back to admin-ajax.php if `WC_AJAX` is somehow unavailable — the
+	 * plugin already refuses to load without WooCommerce, so that is defence in depth
+	 * rather than a supported configuration.
+	 *
+	 * @return string
+	 */
+	private function nonce_endpoint() {
+		if ( class_exists( 'WC_AJAX' ) ) {
+			return WC_AJAX::get_endpoint( 'tack_quote_nonce' );
+		}
+		return add_query_arg( 'action', 'tack_quote_nonce', admin_url( 'admin-ajax.php' ) );
+	}
+
+	/**
+	 * Issue a fresh `tack_request_quote` nonce.
+	 *
+	 * Deliberately NOT nonce-protected: this endpoint exists to hand out a nonce, so
+	 * requiring one would be circular. It is safe because a nonce is bound to the
+	 * requester's own session and user id, so a token fetched here is only usable by
+	 * whoever asked for it — handing one to an attacker gains them nothing they could not
+	 * mint by loading the page.
+	 *
+	 * @return void
+	 */
+	public function handle_nonce_refresh() {
+		if ( class_exists( 'WC_Cache_Helper' ) ) {
+			WC_Cache_Helper::set_nocache_constants();
+		}
+		nocache_headers();
+
+		wp_send_json_success( array( 'nonce' => wp_create_nonce( 'tack_request_quote' ) ) );
 	}
 
 	/**
@@ -93,6 +151,10 @@ class Tack_Widget {
 			array(
 				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
 				'nonce'               => wp_create_nonce( 'tack_request_quote' ),
+				// Where to get a FRESH nonce when the one above has been cached past its
+				// lifetime. Only the URL is baked into the page, never a token, so this
+				// stays valid no matter how long the HTML sits in a cache.
+				'nonceUrl'            => $this->nonce_endpoint(),
 				'customerEmail'       => $this->current_customer_email(),
 				'checkoutButtonLabel' => (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tack-quotes' ) ),
 				// The seller's registration policy drives which fields the form renders. Null

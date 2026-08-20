@@ -335,10 +335,25 @@ class TackQuotes extends Module
             return '';
         }
 
+        // Prefill the name fields for a signed-in customer from the shop's own record.
+        // `$this->context->customer` is always a Customer object in a front-office
+        // context, but it is only a REAL person once isLogged() is true — a guest gets an
+        // empty object whose firstname/lastname would render as ''. Guests therefore get
+        // empty inputs, which is the point: nothing about the buyer is guessed.
+        $customerFirstName = '';
+        $customerLastName = '';
+
+        if (isset($this->context->customer) && $this->context->customer->isLogged()) {
+            $customerFirstName = (string) $this->context->customer->firstname;
+            $customerLastName = (string) $this->context->customer->lastname;
+        }
+
         $this->context->smarty->assign([
             'tackquotes_product_id' => $productId,
             'tackquotes_button_label' => Configuration::get(self::CONFIG_BUTTON_LABEL) ?: self::DEFAULT_BUTTON_LABEL,
             'tackquotes_ajax_url' => $this->context->link->getModuleLink('tackquotes', 'quoterequest', [], true),
+            'tackquotes_customer_firstname' => $customerFirstName,
+            'tackquotes_customer_lastname' => $customerLastName,
         ]);
 
         return $this->fetch('module:tackquotes/views/templates/hook/quote_button.tpl');

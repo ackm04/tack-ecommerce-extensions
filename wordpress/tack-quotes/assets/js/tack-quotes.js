@@ -439,7 +439,22 @@
 
     $submit.prop('disabled', true).text(TackQuotes.i18n.sending);
 
-    $.post(TackQuotes.ajaxUrl, payload)
+    send(payload, true);
+
+    /**
+     * POST the quote request, refreshing the nonce and retrying ONCE if the nonce is
+     * rejected.
+     *
+     * The nonce is printed into the page, so on a full-page-cached store it is baked into
+     * cached HTML and stops verifying once it ages past the nonce lifetime. Previously the
+     * shopper was shown a "reload" button — honest, but it put the fix on the person least
+     * equipped to understand why a form that looks fine cannot be submitted.
+     *
+     * `allowRetry` guarantees exactly one extra attempt, so a genuinely invalid nonce can
+     * never become a loop.
+     */
+    function send(body, allowRetry) {
+      $.post(TackQuotes.ajaxUrl, body)
       .done(function (res) {
         if (res && res.success) {
           $form.hide();
@@ -466,26 +481,57 @@
       })
       .fail(function (xhr) {
         var data = (xhr && xhr.responseJSON && xhr.responseJSON.data) || null;
-        $error.text((data && data.message) || TackQuotes.i18n.error).show();
 
-        // An expired or cache-stale nonce is the one failure the shopper can fix, and
-        // retrying the same submit can never fix it. Offer the action that does. Without
-        // this the button just re-enabled itself and invited a retry that was guaranteed to
-        // fail again — forever, on a full-page-cached store.
-        if (data && data.reload) {
-          $submit
-            .prop('disabled', false)
-            .text(TackQuotes.i18n.reload)
-            .off('click.tackReload')
-            .on('click.tackReload', function (ev) {
-              ev.preventDefault();
-              window.location.reload();
+        // Cache-stale nonce: fetch a fresh one from the no-cache endpoint and resubmit,
+        // once. The shopper never sees this happen, which is the point — the previous
+        // behaviour put the fix (reload the page) on the person least able to know why a
+        // form that looks fine will not submit.
+        if (allowRetry && data && 'tack_nonce_expired' === data.code && TackQuotes.nonceUrl) {
+          $.get(TackQuotes.nonceUrl)
+            .done(function (fresh) {
+              var refreshed = fresh && fresh.data && fresh.data.nonce;
+              if (!refreshed) {
+                showFailure(data);
+                return;
+              }
+              TackQuotes.nonce = refreshed;
+              body.nonce = refreshed;
+              send(body, false);
+            })
+            .fail(function () {
+              showFailure(data);
             });
           return;
         }
 
-        $submit.prop('disabled', false).text(TackQuotes.i18n.submit);
+        showFailure(data);
       });
+    }
+
+    /**
+     * Surface a failure the retry could not resolve.
+     *
+     * The reload affordance is kept for the case where even a freshly minted nonce is
+     * rejected — that is no longer "the cache staled it" but something about the session
+     * itself, and reloading is still the only move available to the shopper.
+     */
+    function showFailure(data) {
+      $error.text((data && data.message) || TackQuotes.i18n.error).show();
+
+      if (data && data.reload) {
+        $submit
+          .prop('disabled', false)
+          .text(TackQuotes.i18n.reload)
+          .off('click.tackReload')
+          .on('click.tackReload', function (ev) {
+            ev.preventDefault();
+            window.location.reload();
+          });
+        return;
+      }
+
+      $submit.prop('disabled', false).text(TackQuotes.i18n.submit);
+    }
   }
 
   // ─── Event wiring ──────────────────────────────────────────────────────────

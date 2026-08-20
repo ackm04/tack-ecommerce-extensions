@@ -25,6 +25,31 @@
                 <label for="tackquotes-email">{l s='Email' d='Modules.Tackquotes.Shop'}</label>
                 <input type="email" id="tackquotes-email" required>
             </div>
+            {*
+              First and last name.
+
+              Optional on purpose. The endpoint stores what is typed here and leaves the
+              buyer's name columns EMPTY when nothing is — it used to invent a first name
+              from the email local part instead, so a shopper at ps-probe@example.com
+              became a buyer literally named "ps-probe" and the seller had no way to tell
+              that from a name somebody supplied. Marking these required would also break
+              every already-installed copy of this module, which posts email/note/quantity
+              and nothing else.
+
+              Prefilled for a signed-in customer, exactly as the OpenCart drawer does from
+              the same source (the shop's own customer record). Guests get empty fields;
+              nothing is guessed.
+            *}
+            <div class="tackquotes-field">
+                <label for="tackquotes-firstname">{l s='First name (optional)' d='Modules.Tackquotes.Shop'}</label>
+                <input type="text" id="tackquotes-firstname" autocomplete="given-name"
+                       value="{$tackquotes_customer_firstname|escape:'html':'UTF-8'}">
+            </div>
+            <div class="tackquotes-field">
+                <label for="tackquotes-lastname">{l s='Last name (optional)' d='Modules.Tackquotes.Shop'}</label>
+                <input type="text" id="tackquotes-lastname" autocomplete="family-name"
+                       value="{$tackquotes_customer_lastname|escape:'html':'UTF-8'}">
+            </div>
             <div class="tackquotes-field">
                 <label for="tackquotes-quantity">{l s='Quantity' d='Modules.Tackquotes.Shop'}</label>
                 <input type="number" id="tackquotes-quantity" value="1" min="1">

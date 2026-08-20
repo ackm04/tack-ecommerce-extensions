@@ -95,10 +95,11 @@ class TackApiClient
      */
     public function testConnection()
     {
-        // NOTE: unlike the WooCommerce plugin, there is currently no
-        // /integrations/prestashop/ping (API-key authenticated) endpoint on the
-        // Tack API. This falls back straight to the generic /health endpoint.
-        // See README.md "What still needs a backend endpoint" for details.
+        // `GET /integrations/prestashop/ping` DOES exist (PrestaShopPluginController) and
+        // is API-key authenticated, so it is tried first: it proves the key is valid for
+        // this tenant, which /health cannot. The /health fallback is kept only for a Tack
+        // deployment older than that route. The note that used to sit here — "there is
+        // currently no /integrations/prestashop/ping endpoint" — was stale.
         $result = $this->request('GET', '/integrations/prestashop/ping');
         if (is_string($result)) {
             $result = $this->request('GET', '/health');
@@ -110,15 +111,24 @@ class TackApiClient
     /**
      * Create a quote request from a product/cart.
      *
-     * NOTE: this calls POST /integrations/prestashop/quote-requests, which
-     * mirrors the WooCommerce plugin's POST /integrations/woocommerce/quote-requests
-     * (see class-tack-api-client.php::create_quote_request()). As of this
-     * writing that PrestaShop route does not exist on the Tack API yet — see
-     * README.md for the exact backend change needed to make this call succeed.
+     * Calls POST /integrations/prestashop/quote-requests, which mirrors the
+     * WooCommerce plugin's POST /integrations/woocommerce/quote-requests (see
+     * class-tack-api-client.php::create_quote_request()). That route EXISTS and
+     * answers 201; the note that used to sit here saying it "does not exist on
+     * the Tack API yet" was stale.
      *
-     * @param array $payload {buyerEmail, note, source, lineItems:[{sku,name,quantity,unitPrice,externalProductId}]}
+     * The identity fields are OPTIONAL and must be OMITTED rather than sent
+     * empty: Tack treats a blank as "the shopper supplied nothing" and leaves
+     * the buyer's name columns NULL, which is the honest record. It no longer
+     * invents a first name from the email local part when they are absent.
      *
-     * @return array|string decoded response (expected to include id/quoteNumber/portalUrl), or an error message
+     * @param array $payload {buyerEmail, note, source, currency?, firstName?, lastName?,
+     *                        phone?, companyName?,
+     *                        lineItems:[{sku,name,quantity,unitPrice,externalProductId}]}
+     *
+     * @return array|string decoded response (expected to include
+     *                      id/quoteNumber/portalUrl/company/awaitingApproval), or an
+     *                      error message
      */
     public function createQuoteRequest($payload)
     {

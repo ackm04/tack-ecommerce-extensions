@@ -207,25 +207,27 @@ class Tackquotes extends Controller
         }
 
         if (!$json) {
-            $noteParts = [];
-
-            // Name, company and phone have no first-class field on the plugin quote-request
-            // contract, so they are carried in the note rather than dropped. Losing a
-            // buyer's company name silently would be worse than a slightly verbose note.
-            if ($firstName !== '' || $lastName !== '') {
-                $noteParts[] = trim($firstName . ' ' . $lastName);
-            }
-            if ($company !== '') {
-                $noteParts[] = $company;
-            }
-            if ($telephone !== '') {
-                $noteParts[] = $telephone;
-            }
-            if ($note !== '') {
-                $noteParts[] = $note;
-            }
-
-            $json = $this->send($email, implode(' | ', $noteParts), $lineItems);
+            // Name, company and phone now have first-class fields on the plugin
+            // quote-request contract, so they travel as themselves.
+            //
+            // They used to be concatenated into the NOTE, with the comment "Name, company
+            // and phone have no first-class field on the plugin quote-request contract, so
+            // they are carried in the note rather than dropped". That was true of the
+            // endpoint at the time and it was still the wrong trade: the API had no name
+            // to store, so it INVENTED one from the email local part, and a shopper who
+            // typed "Grace Hopper" here became a buyer called "oc-probe" while their real
+            // name sat in free text no report could group by. Confirmed on the live API,
+            // not inferred — quote TK-2026-001084 was created with first_name='oc-probe'.
+            //
+            // The note is the note again. Nothing is dropped: the endpoint stores each
+            // field on the buyer record, and leaves it EMPTY when the shopper typed
+            // nothing rather than filling it in for them.
+            $json = $this->send($email, $note, $lineItems, [
+                'firstName' => $firstName,
+                'lastName' => $lastName,
+                'companyName' => $company,
+                'phone' => $telephone,
+            ]);
         }
 
         $this->response->addHeader('Content-Type: application/json');
@@ -236,9 +238,16 @@ class Tackquotes extends Controller
      * Shared submit path for both the single-product modal and the quote list.
      *
      * @param array<int, array<string, mixed>> $lineItems
+     * @param array<string, string>            $identity firstName/lastName/companyName/phone
+     *                                                   as the shopper typed them. Empty
+     *                                                   values are OMITTED, never sent as
+     *                                                   '' — TackQuote treats a blank as
+     *                                                   "not supplied", and the
+     *                                                   single-product modal has no name
+     *                                                   inputs at all, so it passes none.
      * @return array<string, mixed> JSON response body
      */
-    private function send(string $email, string $note, array $lineItems): array
+    private function send(string $email, string $note, array $lineItems, array $identity = []): array
     {
         $apiUrl = (string) $this->config->get('module_tackquotes_api_url');
         $apiKey = (string) $this->config->get('module_tackquotes_api_key');
@@ -254,12 +263,28 @@ class Tackquotes extends Controller
             'lineItems' => $lineItems,
         ];
 
+        // Allow-listed rather than merged wholesale: this array is built from POST data,
+        // and spreading it into the payload would let a crafted form post any field the
+        // endpoint happens to accept.
+        foreach (['firstName', 'lastName', 'companyName', 'phone'] as $field) {
+            $value = trim((string) ($identity[$field] ?? ''));
+
+            if ($value !== '') {
+                // Passed through exactly as typed. Not truncated to fit
+                // `buyers.first_name` (varchar(255)): silently storing half a surname is
+                // the same "quietly wrong data" problem this change exists to remove, and
+                // the endpoint answers an over-long value with a message naming the field
+                // and the limit, which ApiClient surfaces to the shopper verbatim.
+                $payload[$field] = $value;
+            }
+        }
+
         $currency = $this->activeCurrency();
         if ($currency !== '') {
             $payload['currency'] = $currency;
         }
 
-        $client = new ApiClient($apiUrl, $apiKey);
+        $client = $this->apiClient($apiUrl, $apiKey);
         $result = $client->createQuoteRequest($payload);
 
         if (is_string($result)) {
@@ -274,6 +299,19 @@ class Tackquotes extends Controller
             'quoteNumber' => $result['quoteNumber'] ?? '',
             'portalUrl' => $result['portalUrl'] ?? '',
         ];
+    }
+
+    /**
+     * Seam so the outbound request is assertable without a network call.
+     *
+     * The payload this controller builds IS the contract — CLAUDE.md's rule for connectors
+     * is to assert on the request that goes out, not on a mocked response — and
+     * `new ApiClient(...)` inline made that untestable. `integrations/opencart/tests/run.php`
+     * overrides this to record the call. Nothing else should.
+     */
+    protected function apiClient(string $apiUrl, string $apiKey): ApiClient
+    {
+        return new ApiClient($apiUrl, $apiKey);
     }
 
     /**

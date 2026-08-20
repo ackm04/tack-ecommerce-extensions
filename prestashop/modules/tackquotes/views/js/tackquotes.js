@@ -45,6 +45,8 @@
     if (submitBtn) {
       submitBtn.addEventListener('click', function () {
         var email = document.getElementById('tackquotes-email').value;
+        var firstName = document.getElementById('tackquotes-firstname');
+        var lastName = document.getElementById('tackquotes-lastname');
         var quantity = document.getElementById('tackquotes-quantity').value;
         var note = document.getElementById('tackquotes-note').value;
         var ajaxUrl = openBtn.getAttribute('data-ajax-url');
@@ -61,6 +63,13 @@
         body.set('note', note);
         body.set('quantity', quantity);
         body.set('product_id', productId);
+        // Read defensively: a merchant override of quote_button.tpl may not carry the name
+        // inputs, and reading .value off null would throw and take the whole submission
+        // with it. Sent even when blank — the front controller is what decides that a
+        // blank means "not supplied" and drops it from the payload, so that rule lives in
+        // one place rather than being duplicated here.
+        body.set('firstName', firstName ? firstName.value : '');
+        body.set('lastName', lastName ? lastName.value : '');
 
         fetch(ajaxUrl, {
           method: 'POST',

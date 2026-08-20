@@ -42,9 +42,11 @@ require __DIR__ . '/opencart-stubs.php';
 require $root . '/system/library/api_client.php';
 require $root . '/system/library/api_guard.php';
 require $root . '/admin/controller/module/tackquotes.php';
+require $root . '/catalog/controller/module/tackquotes.php';
 require $root . '/catalog/controller/api/product.php';
 
 use Opencart\Admin\Controller\Extension\Tack\Module\Tackquotes;
+use Opencart\Catalog\Controller\Extension\Tack\Module\Tackquotes as CatalogTackquotes;
 use Opencart\System\Engine\Registry;
 use Opencart\Catalog\Controller\Extension\Tack\Api\Product;
 use Tack\Test\Config;
@@ -616,6 +618,215 @@ check('every language key the admin controller and template ask for exists', fun
     foreach (['error_permission', 'error_api_url', 'error_api_key', 'error_test_connection',
               'error_ajax', 'text_success', 'text_test_success', 'heading_title'] as $key) {
         assertTrue($lang->has($key), "language key '$key' is missing, so the UI would show the key itself");
+    }
+});
+
+// ------------------------------------------------ storefront: the outbound payload
+
+echo "\nTackQuote for OpenCart — storefront quote submission\n";
+
+/**
+ * Minimal catalog/product model. Returns a product for any positive id, so a test can
+ * assert on the payload rather than on catalog plumbing.
+ */
+class ProductModel
+{
+    public function getProduct(int $productId): array
+    {
+        if ($productId < 1) {
+            return [];
+        }
+
+        return [
+            'product_id' => $productId,
+            'model' => 'MDL-' . $productId,
+            'name' => 'Product ' . $productId,
+            'price' => '12.5000',
+        ];
+    }
+}
+
+/** Records the outbound request instead of performing it. */
+class RecordingApiClient extends \Opencart\System\Library\Extension\Tack\ApiClient
+{
+    /** @var array<int, array<string, mixed>> */
+    public static array $calls = [];
+
+    public function createQuoteRequest(array $payload)
+    {
+        self::$calls[] = $payload;
+
+        return ['id' => 'q-1', 'quoteNumber' => 'TK-2026-000001', 'portalUrl' => 'https://portal.example/q-1'];
+    }
+}
+
+/**
+ * The controller with its ONE outbound seam replaced.
+ *
+ * Deliberately not a fake `send()`: the payload construction inside `send()` is the whole
+ * subject here — which fields go out, and which are omitted — so overriding it would test
+ * nothing. CLAUDE.md's connector rule is to assert on the request that goes out.
+ */
+class ProbeStorefront extends CatalogTackquotes
+{
+    protected function apiClient(string $apiUrl, string $apiKey): \Opencart\System\Library\Extension\Tack\ApiClient
+    {
+        return new RecordingApiClient($apiUrl, $apiKey);
+    }
+}
+
+/**
+ * @param array<string, mixed> $post
+ * @return array{0: ProbeStorefront, 1: Response}
+ */
+function makeStorefront(array $post): array
+{
+    RecordingApiClient::$calls = [];
+
+    $registry = new Registry();
+
+    $request = new Request();
+    $request->post = $post;
+    $request->server['REQUEST_METHOD'] = 'POST';
+
+    $response = new Response();
+
+    $registry->set('request', $request);
+    $registry->set('response', $response);
+    $registry->set('config', new Config([
+        'module_tackquotes_api_url' => 'https://api.tackquote.com/v1',
+        'module_tackquotes_api_key' => 'sk_live_storefront',
+        'config_currency' => 'EUR',
+    ]));
+    $registry->set('language', new Language());
+    $registry->set('url', new Url());
+    $registry->set('session', new Session());
+    $registry->set('model_catalog_product', new ProductModel());
+    $registry->set(
+        'load',
+        new Loader($registry, dirname(__DIR__) . '/catalog/language/en-gb/module/tackquotes.php')
+    );
+
+    return [new ProbeStorefront($registry), $response];
+}
+
+/** The single payload the controller sent, insisting it sent exactly one. */
+function sentPayload(): array
+{
+    assertSame(1, count(RecordingApiClient::$calls),
+        'expected exactly one outbound quote-request; got ' . count(RecordingApiClient::$calls)
+            . '. Zero means the controller errored before submitting — check $response->output');
+
+    return RecordingApiClient::$calls[0];
+}
+
+check('quoteList() sends the buyer identity AS FIELDS, not smuggled into the note', function () {
+    [$controller] = makeStorefront([
+        'email' => 'grace@acme-example.com',
+        'firstName' => 'Grace',
+        'lastName' => 'Hopper',
+        'company' => 'Acme Industrial',
+        'telephone' => '+1 555 0100',
+        'note' => 'Need this by Friday',
+        'items' => [['product_id' => '7', 'quantity' => '3']],
+    ]);
+
+    $controller->quoteList();
+    $payload = sentPayload();
+
+    assertSame('Grace', $payload['firstName'] ?? null,
+        'firstName must be a field on the payload. It used to be concatenated into the note, '
+            . 'which left the API with no name to store — so it invented one from the email '
+            . 'local part and the seller saw a buyer called "grace"');
+    assertSame('Hopper', $payload['lastName'] ?? null, 'lastName must be a field');
+    assertSame('Acme Industrial', $payload['companyName'] ?? null,
+        'the company must be a field, so it can resolve to a real company record rather than free text');
+    assertSame('+1 555 0100', $payload['phone'] ?? null, 'the phone must be a field');
+
+    assertSame('Need this by Friday', $payload['note'] ?? null,
+        'the note must carry ONLY the shopper note now');
+
+    // The strongest statement available here: the identity must not appear in the note at
+    // all. A refactor that sends the fields AND keeps concatenating them would satisfy
+    // every assertion above and still leave the seller reading names out of free text.
+    foreach (['Grace', 'Hopper', 'Acme Industrial', '+1 555 0100'] as $identity) {
+        assertTrue(
+            strpos((string) $payload['note'], $identity) === false,
+            "'$identity' is still being written into the note"
+        );
+    }
+});
+
+check('quoteList() OMITS an identity field the shopper left blank', function () {
+    [$controller] = makeStorefront([
+        'email' => 'anon@acme-example.com',
+        'firstName' => '',
+        'lastName' => '   ',
+        'company' => '',
+        'telephone' => '',
+        'note' => '',
+        'items' => [['product_id' => '7', 'quantity' => '1']],
+    ]);
+
+    $controller->quoteList();
+    $payload = sentPayload();
+
+    // Omitted rather than sent as ''. TackQuote treats a blank as "not supplied" and
+    // leaves the column NULL; sending '' would be an assertion that the shopper's name
+    // IS the empty string, and identity-merge would happily write it over a real name
+    // supplied on an earlier visit.
+    foreach (['firstName', 'lastName', 'companyName', 'phone'] as $field) {
+        assertTrue(!array_key_exists($field, $payload),
+            "$field was sent as an empty value; it should be omitted entirely");
+    }
+
+    assertSame('anon@acme-example.com', $payload['buyerEmail'] ?? null, 'the email still goes out');
+});
+
+check('quoteList() sends what the shopper typed, without silently reshaping it', function () {
+    // Trimmed, never truncated and never normalised. `buyers.first_name` is varchar(255)
+    // in TackQuote and the endpoint refuses anything longer with a message naming the
+    // field — which is the right place for that line to be drawn. Cutting the value to
+    // fit here would store half a surname and report success, which is the same class of
+    // quietly-wrong data as inventing a name from the email address.
+    $long = str_repeat('a', 400);
+
+    [$controller] = makeStorefront([
+        'email' => 'long@acme-example.com',
+        'firstName' => '  Grace  ',
+        'lastName' => $long,
+        'note' => '',
+        'items' => [['product_id' => '7', 'quantity' => '1']],
+    ]);
+
+    $controller->quoteList();
+    $payload = sentPayload();
+
+    assertSame('Grace', $payload['firstName'] ?? null, 'surrounding whitespace is trimmed');
+    assertSame($long, $payload['lastName'] ?? null,
+        'the value must go out intact; the API decides whether to accept it');
+});
+
+check('the single-product modal still submits with no identity fields at all', function () {
+    // This path has no name inputs (catalog/view/template/module/tackquotes.twig renders
+    // email, quantity and note), and merchants are using it. It must keep working — which
+    // is exactly why firstName is OPTIONAL on the endpoint rather than required.
+    [$controller] = makeStorefront([
+        'email' => 'nameless@acme-example.com',
+        'note' => 'just this one please',
+        'product_id' => '7',
+        'quantity' => '2',
+    ]);
+
+    $controller->quote();
+    $payload = sentPayload();
+
+    assertSame('nameless@acme-example.com', $payload['buyerEmail'] ?? null, 'the email goes out');
+    assertSame('just this one please', $payload['note'] ?? null, 'the note goes out unchanged');
+
+    foreach (['firstName', 'lastName', 'companyName', 'phone'] as $field) {
+        assertTrue(!array_key_exists($field, $payload),
+            "the single-product modal collects no $field, so it must not send one");
     }
 });
 

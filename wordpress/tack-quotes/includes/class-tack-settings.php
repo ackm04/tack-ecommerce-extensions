@@ -18,6 +18,12 @@ class Tack_Settings {
 	const PAGE_SLUG    = 'tack-quotes';
 
 	/**
+	 * Fallback API base URL, used when the option is unset or a submitted value is
+	 * rejected and nothing valid was stored before.
+	 */
+	const DEFAULT_API_URL = 'https://api.tackquote.com/v1';
+
+	/**
 	 * Hook registration.
 	 */
 	public function init() {
@@ -129,8 +135,94 @@ class Tack_Settings {
 	 * @return string
 	 */
 	public function sanitize_url( $value ) {
-		$url = esc_url_raw( rtrim( (string) $value, '/' ) );
-		return $url ? $url : 'https://api.tackquote.com/v1';
+		$stored = (string) get_option( 'tack_quotes_api_url', self::DEFAULT_API_URL );
+		if ( '' === $stored ) {
+			$stored = self::DEFAULT_API_URL;
+		}
+
+		$raw = rtrim( trim( (string) $value ), '/' );
+
+		if ( '' === $raw ) {
+			return $stored;
+		}
+
+		// The scheme must be present in what the administrator actually typed.
+		// `esc_url_raw()` helpfully PREPENDS `http://` to a bare string, so `not-a-url`
+		// became `http://not-a-url` — a single-label host, which the development-host
+		// allowance below then accepted. A typo would have been stored as valid-looking
+		// configuration and only failed later, at request time, with a confusing error.
+		if ( ! preg_match( '#^https?://#i', $raw ) ) {
+			add_settings_error(
+				'tack_quotes_api_url',
+				'tack_quotes_api_url_invalid',
+				__( 'The TackQuote API URL must begin with https:// (or http:// for a local development host). The previous value was kept.', 'tack-quotes' )
+			);
+			return $stored;
+		}
+
+		$candidate = esc_url_raw( $raw, array( 'http', 'https' ) );
+
+		if ( '' === $candidate ) {
+			return $stored;
+		}
+
+		$parts  = wp_parse_url( $candidate );
+		$scheme = isset( $parts['scheme'] ) ? strtolower( $parts['scheme'] ) : '';
+		$host   = isset( $parts['host'] ) ? strtolower( $parts['host'] ) : '';
+
+		if ( '' === $host || ( 'http' !== $scheme && 'https' !== $scheme ) ) {
+			add_settings_error(
+				'tack_quotes_api_url',
+				'tack_quotes_api_url_invalid',
+				__( 'The TackQuote API URL must be a full http:// or https:// address including a host. The previous value was kept.', 'tack-quotes' )
+			);
+			return $stored;
+		}
+
+		if ( 'https' !== $scheme && ! self::is_non_public_host( $host ) ) {
+			add_settings_error(
+				'tack_quotes_api_url',
+				'tack_quotes_api_url_insecure',
+				__( 'The TackQuote API URL must use https:// — your API key and your buyers\' details are sent to it. Plain http:// is accepted only for local development hosts. The previous value was kept.', 'tack-quotes' )
+			);
+			return $stored;
+		}
+
+		return $candidate;
+	}
+
+	/**
+	 * True for hosts unreachable from the public internet, which therefore cannot be
+	 * expected to present a valid TLS certificate.
+	 *
+	 * Covers loopback, RFC1918 and link-local addresses, the reserved development TLDs,
+	 * and single-label names — a container or service name such as `api`, which is how
+	 * this plugin is exercised against a local stack.
+	 *
+	 * @param string $host Lower-cased host component.
+	 * @return bool
+	 */
+	private static function is_non_public_host( $host ) {
+		if ( 'localhost' === $host || false === strpos( $host, '.' ) ) {
+			return true;
+		}
+
+		foreach ( array( '.local', '.localhost', '.test', '.internal' ) as $suffix ) {
+			if ( substr( $host, -strlen( $suffix ) ) === $suffix ) {
+				return true;
+			}
+		}
+
+		if ( false !== filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			// Public routable space fails this check, so a false result means private.
+			return false === filter_var(
+				$host,
+				FILTER_VALIDATE_IP,
+				FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+			);
+		}
+
+		return false;
 	}
 
 	/**
@@ -206,9 +298,9 @@ class Tack_Settings {
 	public function field_api_url() {
 		printf(
 			'<input type="url" name="tack_quotes_api_url" value="%s" class="regular-text" placeholder="https://api.tackquote.com/v1" />',
-			esc_attr( (string) get_option( 'tack_quotes_api_url', 'https://api.tackquote.com/v1' ) )
+			esc_attr( (string) get_option( 'tack_quotes_api_url', self::DEFAULT_API_URL ) )
 		);
-		echo '<p class="description">' . esc_html__( 'Default is https://api.tackquote.com/v1. Change only if TackQuote support gives you a custom or staging API base URL (include the /v1 path, no trailing slash).', 'tack-quotes' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Default is https://api.tackquote.com/v1. Change only if TackQuote support gives you a custom or staging API base URL (include the /v1 path, no trailing slash). Must use https:// — your API key and your buyers\' details are sent to this address.', 'tack-quotes' ) . '</p>';
 	}
 
 	/**
