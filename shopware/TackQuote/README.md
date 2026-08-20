@@ -2,7 +2,7 @@
 
 Store-side companion plugin. Lives at `integrations/shopware/TackQuote/`.
 Distribution authority: the public GitHub release asset is
-[`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-shopware.zip).
+[`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-shopware.zip).
 This monorepo directory is build/source only. No Shopware Store listing is claimed.
 
 > ⚠️ **UNVERIFIED:** the release-asset URL above has not been checked from this
@@ -188,7 +188,7 @@ Shopware Admin → **Extensions → My extensions → TackQuote → Configure**:
 
 ## Install (public release, or Composer path for maintainers)
 
-Download [`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-shopware.zip)
+Download [`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-shopware.zip)
 and follow the included README, or copy the extracted plugin into
 `custom/plugins/TackQuote`. **The directory name must be exactly `TackQuote`** —
 Shopware resolves a plugin by matching the directory to the plugin class

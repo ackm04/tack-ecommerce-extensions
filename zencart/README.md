@@ -23,7 +23,7 @@ store talk to TackQuote; `TACK_CONNECTOR_TOKEN` lets TackQuote talk to this
 store. Neither is usable in the other direction.
 
 Distribution authority: the public GitHub release asset is
-[`tack-zencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-zencart.zip).
+[`tack-zencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-zencart.zip).
 This monorepo directory is build/source only. No Zen Cart plugin-directory listing
 is claimed.
 

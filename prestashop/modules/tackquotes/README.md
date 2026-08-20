@@ -15,7 +15,7 @@ key, the same way the WooCommerce plugin does.
 ## Installation
 
 Distribution authority: the public GitHub release asset is
-[`tack-prestashop.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-prestashop.zip).
+[`tack-prestashop.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-prestashop.zip).
 This monorepo directory is build/source only. No PrestaShop Addons listing is claimed.
 
 1. Download `tack-prestashop.zip` and follow the included README, or zip the

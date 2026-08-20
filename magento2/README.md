@@ -200,7 +200,7 @@ forwarded rather than assumed.
 ## Installation
 
 Distribution authority: the public GitHub release asset is
-[`tack-magento2.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-magento2.zip).
+[`tack-magento2.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-magento2.zip).
 This monorepo directory is build/source only. No Magento Marketplace or Packagist listing
 is claimed.
 

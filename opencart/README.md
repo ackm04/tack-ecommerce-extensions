@@ -12,7 +12,7 @@ store talk to TackQuote; the feed token lets TackQuote talk to this store.
 Neither is usable in the other direction.
 
 Distribution authority: the public GitHub release asset is
-[`tack-opencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.0.0/tack-opencart.zip).
+[`tack-opencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-opencart.zip).
 It is a source archive. Extract it and follow the build instructions below to create the
 load-bearing `tack.ocmod.zip` installer; do not upload `tack-opencart.zip` to OpenCart.
 
