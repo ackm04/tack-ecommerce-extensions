@@ -2,7 +2,7 @@
 # Build a distributable zip of the Tack Quotes plugin.
 set -euo pipefail
 
-PLUGIN_SLUG="tack-quotes"
+PLUGIN_SLUG="tackquote-for-woocommerce"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST="$ROOT/dist"
 STAGE="$DIST/$PLUGIN_SLUG"

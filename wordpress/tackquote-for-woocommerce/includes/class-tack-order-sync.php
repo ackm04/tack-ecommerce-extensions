@@ -30,7 +30,7 @@ class Tack_Order_Sync {
 	 * Action Scheduler group, so these jobs are identifiable in WooCommerce → Status →
 	 * Scheduled Actions.
 	 */
-	const SYNC_GROUP = 'tack-quotes';
+	const SYNC_GROUP = 'tackquote-for-woocommerce';
 
 	/**
 	 * Order meta holding the idempotency key of the last state successfully pushed.
@@ -199,7 +199,7 @@ class Tack_Order_Sync {
 						(int) $order->get_id(),
 						$result->get_error_message()
 					),
-					array( 'source' => 'tack-quotes' )
+					array( 'source' => 'tackquote-for-woocommerce' )
 				);
 			}
 			return;

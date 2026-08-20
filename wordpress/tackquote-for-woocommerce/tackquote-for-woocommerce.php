@@ -10,7 +10,7 @@
  * Author URI:        https://tackquote.com
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       tack-quotes
+ * Text Domain:       tackquote-for-woocommerce
  * Requires Plugins:  woocommerce
  * WC requires at least: 6.0
  * WC tested up to:   11.0
@@ -46,7 +46,7 @@ add_action( 'plugins_loaded', 'tack_quotes_bootstrap' );
  */
 function tack_quotes_missing_wc_notice() {
 	echo '<div class="notice notice-error"><p>';
-	echo esc_html__( 'TackQuote requires WooCommerce to be installed and active.', 'tack-quotes' );
+	echo esc_html__( 'TackQuote requires WooCommerce to be installed and active.', 'tackquote-for-woocommerce' );
 	echo '</p></div>';
 }
 
