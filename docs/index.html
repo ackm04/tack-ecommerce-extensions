@@ -1,866 +1,777 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TackQuote Storefront Extensions — B2B quoting for 10 commerce platforms</title>
-<meta name="description" content="Official TackQuote extensions that add B2B quoting to WooCommerce, Magento 2, OpenCart, PrestaShop, Shopware, Zen Cart, Shopify, BigCommerce, Squarespace and Wix. Packages, install steps, and the evidence behind each claim.">
-<link rel="icon" href="assets/mark.webp" type="image/webp">
-<meta property="og:title" content="TackQuote Storefront Extensions">
-<meta property="og:description" content="B2B quoting for 10 commerce platforms — packages, install steps, and the evidence behind each claim.">
-<meta property="og:type" content="website">
-<meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-/* ──────────────────────────────────────────────────────────────────────────────
-   TackQuote storefront extensions.
-
-   Design brief: an engineering product page. The credibility comes from real
-   screenshots, exact version numbers and named limitations — so the type and
-   colour stay quiet and let that content carry the page. One accent, hairline
-   borders, no gradient chrome, no decorative motion.
-
-   Type: Archivo for headings (a grotesque with enough width contrast to read as
-   a brand rather than a default UI font), IBM Plex Sans for prose, IBM Plex Mono
-   for anything a developer would copy or compare.
-   ────────────────────────────────────────────────────────────────────────────── */
-
-:root {
-  color-scheme: light dark;
-
-  --bg:        #ffffff;
-  --surface:   #ffffff;
-  --surface-2: #f4f8f8;
-  --ink:       #0d1214;
-  --ink-2:     #46545a;
-  --ink-3:     #667679;
-  --line:      #e3ebeb;
-  --line-2:    #c9d8d8;
-  --accent:    #0f7a80;
-  --accent-2:  #0c6268;
-  --accent-bg: #f0fafa;
-  --ok:        #0f7a80;
-  --ok-bg:     #f0fafa;
-
-  --sans:    'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --heading: 'Archivo', 'IBM Plex Sans', system-ui, sans-serif;
-  --mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-
-  --shadow-sm: 0 1px 2px rgba(16, 17, 20, .05);
-  --shadow-lg: 0 24px 60px -24px rgba(16, 17, 20, .28), 0 2px 8px rgba(16, 17, 20, .06);
-
-  --pad: clamp(1.25rem, 5vw, 3.5rem);
-  --max: 76rem;
-  --radius: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:        #0a1214;
-    --surface:   #0f1a1c;
-    --surface-2: #132225;
-    --ink:       #eef5f5;
-    --ink-2:     #a3b4b6;
-    --ink-3:     #7b8c8f;
-    --line:      #1d2e31;
-    --line-2:    #2a3d40;
-    --accent:    #3fb3ac;
-    --accent-2:  #6ecfc7;
-    --accent-bg: #0d2124;
-    --ok:        #3fb3ac;
-    --ok-bg:     #0d2124;
-    --shadow-lg: 0 24px 60px -24px rgba(0, 0, 0, .7), 0 2px 8px rgba(0, 0, 0, .4);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
-  }
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 5rem; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 400 1rem/1.6 var(--sans);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-img { max-width: 100%; height: auto; }
-a { color: inherit; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
-
-h1, h2, h3 { font-family: var(--heading); font-weight: 600; letter-spacing: -0.022em; margin: 0; }
-
-.wrap { max-width: var(--max); margin-inline: auto; padding-inline: var(--pad); }
-
-.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-
-.eyebrow {
-  font: 500 0.7rem/1 var(--mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin: 0 0 0.75rem;
-}
-
-/* ── Nav ─────────────────────────────────────────────────────────────────── */
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: saturate(140%) blur(10px);
-  border-bottom: 1px solid var(--line);
-}
-
-.nav__in { display: flex; align-items: center; gap: 1.5rem; height: 3.5rem; }
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font: 600 0.95rem/1 var(--heading);
-  letter-spacing: -0.01em;
-  text-decoration: none;
-}
-
-.brand img { width: 20px; height: 20px; border-radius: 4px; }
-
-.brand span { color: var(--ink-3); font-weight: 500; }
-
-.nav__links { margin-left: auto; display: flex; align-items: center; gap: 1.5rem; }
-
-.nav__links a {
-  font-size: 0.875rem;
-  color: var(--ink-2);
-  text-decoration: none;
-}
-
-.nav__links a:hover { color: var(--ink); }
-
-@media (max-width: 52rem) { .nav__links a:not(.btn) { display: none; } }
-
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
-.btn {
-  --btn-bg: var(--ink);
-  --btn-fg: var(--bg);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  height: 2.375rem;
-  padding: 0 0.95rem;
-  border: 1px solid var(--btn-bg);
-  border-radius: 7px;
-  background: var(--btn-bg);
-  color: var(--btn-fg);
-  font: 500 0.875rem/1 var(--sans);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
-}
-
-.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-.btn:active { transform: none; }
-
-.btn--quiet {
-  --btn-bg: transparent;
-  --btn-fg: var(--ink);
-  border-color: var(--line-2);
-  background: var(--surface);
-}
-
-.btn--quiet:hover { border-color: var(--ink-3); }
-
-.btn--lg { height: 2.75rem; padding: 0 1.25rem; font-size: 0.95rem; }
-
-/* ── Hero ────────────────────────────────────────────────────────────────── */
-.hero { padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(2rem, 4vw, 3rem); }
-
-.hero__grid { display: grid; gap: clamp(1.75rem, 4vw, 2.75rem); }
-
-.hero__copy { max-width: 44rem; }
-
-.hero h1 {
-  font-size: clamp(2.1rem, 4.6vw, 3.1rem);
-  line-height: 1.06;
-  letter-spacing: -0.032em;
-}
-
-.hero p.lede {
-  margin: 1.1rem 0 0;
-  font-size: 1.0625rem;
-  line-height: 1.62;
-  color: var(--ink-2);
-  max-width: 34rem;
-}
-
-.hero__cta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.75rem; }
-
-/* A grid, not wrap-on-flex: three equal columns keep the figures on one baseline. As a
-   flex row they wrapped 2 + 1 and read like a layout accident. */
-.hero__facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 2rem 0 0;
-  padding: 1.15rem 0 0;
-  border-top: 1px solid var(--line);
-  list-style: none;
-}
-
-@media (max-width: 26rem) { .hero__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
-.hero__facts b {
-  display: block;
-  font: 600 1.35rem/1.2 var(--heading);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.hero__facts span { font-size: 0.8125rem; color: var(--ink-3); }
-
-/* Product shot in a restrained window frame — the most credible element on the
-   page, so it gets the visual weight rather than an illustration. */
-.shot {
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
-/* The shot sits on the tinted band, pulled up so it straddles the hero's lower edge —
-   the one composition move on the page, and the reason the hero does not read as a
-   text block with a picture bolted to the side. */
-.hero__shot { margin: 0; }
-
-@media (min-width: 48rem) {
-  .hero { padding-bottom: 0; }
-  .hero__shot { margin-bottom: clamp(-5rem, -6vw, -3rem); position: relative; z-index: 1; }
-  .hero + section { padding-top: clamp(6rem, 10vw, 8rem); background: var(--surface-2); }
-}
-
-.shot img { display: block; width: 100%; }
-
-/* ── Section frame ───────────────────────────────────────────────────────── */
-section { padding: clamp(2.75rem, 6vw, 4.5rem) 0; border-top: 1px solid var(--line); }
-
-.sec__head { max-width: 46rem; margin-bottom: clamp(1.5rem, 3vw, 2.25rem); }
-.sec__head h2 { font-size: clamp(1.5rem, 2.8vw, 2rem); line-height: 1.15; }
-.sec__head p { margin: 0.7rem 0 0; color: var(--ink-2); }
-
-/* ── Platform grid ───────────────────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 1.35rem 1.4rem 1.5rem;
-  background: var(--surface);
-  transition: background .14s ease;
-}
-
-.card:hover { background: var(--surface-2); }
-
-/* The lead card spans two columns AND lays its own content out in two, otherwise the
-   right half is empty and the grid looks broken rather than emphasised. */
-@media (min-width: 60rem) {
-  .card--lead { grid-column: span 2; display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 2rem; align-items: start; }
-  .card--lead .card__top { grid-column: 1 / -1; }
-  .card--lead .card__mech { grid-column: 1; grid-row: 2 / span 2; }
-  .card--lead .card__pkg { grid-column: 2; grid-row: 2; margin-top: 0.1rem; }
-  .card--lead .card__note { grid-column: 2; grid-row: 3; align-self: start; }
-  .card--lead .card__link { grid-column: 1 / -1; }
-}
-
-.card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-
-.card h3 { font-size: 1.0625rem; letter-spacing: -0.015em; }
-
-.card__mech { margin: 0; font-size: 0.875rem; color: var(--ink-2); }
-
-.card__pkg {
-  margin: 0;
-  font: 400 0.75rem/1.5 var(--mono);
-  color: var(--ink-3);
-  /* break-word, not break-all: break-all split "Extensions" mid-word. Long identifiers
-     still wrap, but only where a break is legitimate. */
-  overflow-wrap: break-word;
-}
-
-.card__note { margin: 0.35rem 0 0; font-size: 0.8125rem; color: var(--ink-3); }
-
-.card__link {
-  margin-top: auto;
-  padding-top: 0.85rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  text-decoration: none;
-  color: var(--accent);
-}
-
-.card__link:hover { text-decoration: underline; text-underline-offset: 3px; }
-
-/* Status chip: a dot plus a word, no rotation, no badge clichés. */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex: none;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  background: var(--surface-2);
-  font: 500 0.6875rem/1.3 var(--sans);
-  letter-spacing: 0.01em;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-
-.chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
-
-.chip--verified { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--line-2)); background: var(--ok-bg); }
-.chip--verified::before { background: var(--ok); }
-
-/* ── Detail: OpenCart deep dive ──────────────────────────────────────────── */
-.split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(1.5rem, 4vw, 3rem);
-  align-items: start;
-}
-
-@media (max-width: 60rem) { .split { grid-template-columns: 1fr; } }
-
-.steps { counter-reset: s; list-style: none; margin: 0; padding: 0; }
-
-.steps li {
-  counter-increment: s;
-  position: relative;
-  padding: 0 0 1rem 2.25rem;
-  border-left: 1px solid var(--line);
-  margin-left: 0.65rem;
-}
-
-.steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
-
-.steps li::before {
-  content: counter(s);
-  position: absolute;
-  left: -0.66rem;
-  top: 0;
-  width: 1.3rem;
-  height: 1.3rem;
-  border: 1px solid var(--line-2);
-  border-radius: 50%;
-  background: var(--bg);
-  font: 500 0.7rem/1.25rem var(--mono);
-  text-align: center;
-  color: var(--ink-2);
-}
-
-.steps b { font-weight: 600; }
-.steps p { margin: 0.15rem 0 0; font-size: 0.9375rem; color: var(--ink-2); }
-
-.panel {
-  padding: 1.25rem 1.35rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.panel h3 { font-size: 0.9375rem; margin-bottom: 0.5rem; }
-.panel ul { margin: 0; padding-left: 1.1rem; }
-.panel li { font-size: 0.9375rem; color: var(--ink-2); margin-bottom: 0.5rem; }
-.panel li:last-child { margin-bottom: 0; }
-
-code {
-  font: 400 0.85em/1.5 var(--mono);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 0.06em 0.3em;
-}
-
-/* ── Evidence table ──────────────────────────────────────────────────────── */
-.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-
-table { width: 100%; min-width: 40rem; border-collapse: collapse; }
-
-th, td { text-align: left; padding: 0.8rem 1.1rem; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 0.9375rem; }
-
-thead th {
-  font: 500 0.6875rem/1.3 var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  background: var(--surface-2);
-}
-
-tbody tr:last-child td { border-bottom: 0; }
-
-td:first-child { font: 500 0.8125rem/1.6 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-
-td .num { font-variant-numeric: tabular-nums; }
-
-/* ── Callout ─────────────────────────────────────────────────────────────── */
-.callout {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.9rem;
-  padding: 1.1rem 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
-  border-radius: var(--radius);
-  background: var(--accent-bg);
-}
-
-.callout__tag {
-  font: 500 0.6875rem/1.4 var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-  white-space: nowrap;
-}
-
-.callout p { margin: 0; font-size: 0.9375rem; color: var(--ink-2); }
-.callout p + p { margin-top: 0.55rem; }
-
-@media (max-width: 40rem) { .callout { grid-template-columns: 1fr; gap: 0.4rem; } }
-
-/* ── Footer ──────────────────────────────────────────────────────────────── */
-footer { border-top: 1px solid var(--line); padding: 2.5rem 0 3rem; }
-
-.footer__in { display: flex; flex-wrap: wrap; gap: 1.5rem 3rem; align-items: baseline; font-size: 0.875rem; color: var(--ink-2); }
-
-footer a { text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--line-2); }
-footer a:hover { border-bottom-color: var(--accent); }
-
-.footer__note { margin-left: auto; color: var(--ink-3); font-size: 0.8125rem; }
-
-/* One entrance, hero only, and only if the visitor has not asked for less. */
-@media (prefers-reduced-motion: no-preference) {
-  .rise { animation: rise .55s cubic-bezier(.2, .7, .3, 1) both; }
-  .rise--2 { animation-delay: .08s; }
-  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TackQuote Extensions — B2B quoting for every storefront</title>
+  <meta name="description" content="Official TackQuote extensions for 10 commerce platforms. Add secure request-a-quote workflows, catalog sync and order conversion to the storefront you already run.">
+  <link rel="icon" href="assets/mark.webp" type="image/webp">
+  <meta property="og:title" content="TackQuote Storefront Extensions">
+  <meta property="og:description" content="B2B quoting for 10 commerce platforms — verified packages, install guides and implementation evidence.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://ackm04.github.io/tack-ecommerce-extensions/assets/tackquote-quote.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#07111f">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #07111f;
+      --navy-2: #0b192b;
+      --navy-3: #11243b;
+      --ink: #101828;
+      --muted: #5d6b7e;
+      --soft: #f3f6fa;
+      --surface: #ffffff;
+      --line: #dfe6ef;
+      --brand: #eb3f4d;
+      --brand-dark: #c82634;
+      --aqua: #21c3b6;
+      --aqua-soft: #e9fbf8;
+      --blue: #4b7bec;
+      --success: #138a72;
+      --success-soft: #eaf8f4;
+      --warning-soft: #fff7e6;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --sans: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --shadow-sm: 0 8px 24px rgba(16, 24, 40, .07);
+      --shadow-md: 0 18px 50px rgba(7, 17, 31, .12);
+      --shadow-lg: 0 32px 90px rgba(0, 0, 0, .3);
+      --radius-sm: 12px;
+      --radius: 20px;
+      --radius-lg: 28px;
+      --max: 1200px;
+      --pad: clamp(1.25rem, 4vw, 2.5rem);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 5rem; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--surface);
+      font: 400 1rem/1.65 var(--sans);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    body.menu-open { overflow: hidden; }
+    img { max-width: 100%; height: auto; }
+    a { color: inherit; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    :focus-visible { outline: 3px solid rgba(33, 195, 182, .55); outline-offset: 3px; }
+    ::selection { background: rgba(235, 63, 77, .2); }
+
+    h1, h2, h3 { margin: 0; color: inherit; font-weight: 800; letter-spacing: -.04em; line-height: 1.08; }
+    p { margin: 0; }
+    code {
+      padding: .12em .38em;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #34445b;
+      background: var(--soft);
+      font: 500 .82em/1.55 var(--mono);
+      overflow-wrap: anywhere;
+    }
+
+    .wrap { width: min(100%, var(--max)); margin-inline: auto; padding-inline: var(--pad); }
+    .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .section { padding: clamp(4.5rem, 9vw, 7.5rem) 0; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      margin-bottom: 1rem;
+      color: var(--brand);
+      font: 500 .72rem/1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 1.75rem; height: 1px; background: currentColor; }
+    .eyebrow--light { color: #78e3da; }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(18rem, .7fr); gap: 2rem 5rem; align-items: end; margin-bottom: 2.5rem; }
+    .section-head h2 { max-width: 700px; font-size: clamp(2rem, 4vw, 3.6rem); }
+    .section-head > p { color: var(--muted); }
+    .section-head--single { display: block; max-width: 750px; }
+    .section-head--single > p:last-child { margin-top: 1rem; }
+
+    /* Navigation */
+    .nav {
+      position: absolute;
+      inset: 0 0 auto;
+      z-index: 50;
+      color: #fff;
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
+    }
+    .nav.scrolled {
+      position: fixed;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .9);
+      border-bottom-color: var(--line);
+      box-shadow: 0 8px 30px rgba(16, 24, 40, .08);
+      backdrop-filter: blur(18px);
+    }
+    .nav__inner { display: flex; align-items: center; min-height: 72px; gap: 2rem; }
+    .brand { display: inline-flex; align-items: center; gap: .72rem; color: inherit; font-weight: 800; text-decoration: none; letter-spacing: -.03em; }
+    .brand img { width: 30px; height: 30px; border-radius: 8px; box-shadow: 0 6px 16px rgba(235, 63, 77, .28); }
+    .brand small { margin-left: .15rem; color: rgba(255, 255, 255, .55); font-size: .78rem; font-weight: 500; letter-spacing: 0; }
+    .nav.scrolled .brand small { color: var(--muted); }
+    .nav__links { display: flex; align-items: center; gap: .3rem; margin-left: auto; }
+    .nav__links > a:not(.btn) { padding: .7rem .85rem; color: rgba(255,255,255,.72); font-size: .86rem; font-weight: 600; text-decoration: none; }
+    .nav__links > a:not(.btn):hover { color: #fff; }
+    .nav.scrolled .nav__links > a:not(.btn) { color: var(--muted); }
+    .nav.scrolled .nav__links > a:not(.btn):hover { color: var(--ink); }
+    .menu-toggle { display: none; margin-left: auto; width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.22); border-radius: 12px; color: inherit; background: transparent; }
+    .nav.scrolled .menu-toggle { border-color: var(--line); }
+    .menu-toggle svg { display: block; margin: auto; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .55rem;
+      min-height: 46px;
+      padding: .75rem 1.08rem;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: #fff;
+      background: var(--brand);
+      box-shadow: 0 10px 25px rgba(235, 63, 77, .2);
+      font-size: .86rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .btn:hover { transform: translateY(-2px); background: var(--brand-dark); box-shadow: 0 14px 28px rgba(235, 63, 77, .26); }
+    .btn svg { width: 17px; height: 17px; }
+    .btn--ghost { color: #fff; background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.22); box-shadow: none; }
+    .btn--ghost:hover { background: rgba(255,255,255,.13); box-shadow: none; }
+    .nav.scrolled .btn--ghost { color: var(--ink); background: #fff; border-color: var(--line); }
+    .nav.scrolled .btn--ghost:hover { background: var(--soft); }
+    .btn--dark { color: #fff; background: var(--navy); box-shadow: none; }
+    .btn--dark:hover { background: var(--navy-3); box-shadow: var(--shadow-sm); }
+    .btn--light { color: var(--ink); background: #fff; box-shadow: none; }
+    .btn--light:hover { color: var(--ink); background: #f7f9fc; box-shadow: var(--shadow-sm); }
+    .btn--large { min-height: 54px; padding-inline: 1.35rem; border-radius: 14px; font-size: .94rem; }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      min-height: 900px;
+      overflow: hidden;
+      color: #fff;
+      background:
+        radial-gradient(circle at 80% 18%, rgba(75, 123, 236, .25), transparent 30%),
+        radial-gradient(circle at 12% 30%, rgba(33, 195, 182, .15), transparent 28%),
+        linear-gradient(145deg, #07111f 0%, #0b1728 55%, #081220 100%);
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .14;
+      background-image:
+        linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, black, transparent 85%);
+    }
+    .hero__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .9fr) minmax(520px, 1.1fr); gap: clamp(3rem, 6vw, 6rem); align-items: center; padding-top: 150px; padding-bottom: 120px; }
+    .hero__copy { max-width: 620px; }
+    .hero__status {
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.35rem;
+      padding: .45rem .75rem;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      color: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.06);
+      font: 500 .72rem/1.2 var(--mono);
+      backdrop-filter: blur(10px);
+    }
+    .hero__status i { width: 8px; height: 8px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 0 5px rgba(33,195,182,.14); }
+    .hero h1 { font-size: clamp(3rem, 6vw, 5.8rem); letter-spacing: -.065em; }
+    .hero h1 span { color: #7ce4dc; }
+    .hero__lede { max-width: 590px; margin-top: 1.4rem; color: rgba(255,255,255,.7); font-size: clamp(1rem, 1.8vw, 1.16rem); }
+    .hero__actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
+    .hero__trust { display: flex; flex-wrap: wrap; gap: .8rem 1.5rem; margin-top: 2rem; color: rgba(255,255,255,.62); font-size: .78rem; }
+    .hero__trust span { display: inline-flex; align-items: center; gap: .45rem; }
+    .hero__trust svg { width: 15px; color: #79ddd5; }
+    .hero__visual { position: relative; }
+    .product-window { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow-lg); transform: perspective(1300px) rotateY(-4deg) rotateX(1deg); }
+    .product-window__bar { display: flex; align-items: center; gap: .45rem; height: 42px; padding: 0 1rem; background: #f5f7f9; border-bottom: 1px solid #e1e7ed; }
+    .product-window__bar i { width: 8px; height: 8px; border-radius: 50%; background: #d4dae2; }
+    .product-window__bar span { margin-left: .35rem; color: #738095; font: 500 .58rem/1 var(--mono); }
+    .product-window img { display: block; width: 100%; }
+    .float-card { position: absolute; z-index: 3; display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; color: #fff; background: rgba(11,25,43,.88); box-shadow: 0 20px 45px rgba(0,0,0,.28); backdrop-filter: blur(14px); }
+    .float-card b { display: block; font-size: .78rem; }
+    .float-card small { display: block; margin-top: .12rem; color: rgba(255,255,255,.58); font-size: .66rem; }
+    .float-card__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: var(--navy); background: #73e0d7; }
+    .float-card__icon svg { width: 17px; }
+    .float-card--one { top: -34px; right: 10px; }
+    .float-card--two { bottom: -42px; left: -35px; }
+    .hero__stats { position: absolute; z-index: 2; inset: auto 0 0; transform: translateY(50%); }
+    .stats-card { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow-md); }
+    .stat { padding: 1.55rem 1.7rem; }
+    .stat + .stat { border-left: 1px solid var(--line); }
+    .stat b { display: block; color: var(--ink); font-size: 1.65rem; letter-spacing: -.04em; }
+    .stat span { color: var(--muted); font-size: .78rem; }
+
+    /* Platform explorer */
+    #platforms { padding-top: clamp(8rem, 13vw, 11rem); background: var(--soft); }
+    .filter-bar { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.5rem; overflow-x: auto; scrollbar-width: none; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn { flex: none; padding: .68rem 1rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: #fff; font-size: .78rem; font-weight: 700; }
+    .filter-btn:hover, .filter-btn[aria-pressed="true"] { color: #fff; background: var(--navy); border-color: var(--navy); }
+    .platform-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .platform-card {
+      position: relative;
+      display: flex;
+      min-height: 320px;
+      flex-direction: column;
+      padding: 1.55rem;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(16,24,40,.02);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .platform-card::after { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--card-accent, var(--brand)); transform: scaleX(0); transform-origin: left; transition: transform .2s ease; }
+    .platform-card:hover { transform: translateY(-5px); border-color: #cbd6e4; box-shadow: var(--shadow-sm); }
+    .platform-card:hover::after { transform: scaleX(1); }
+    .platform-card[hidden] { display: none; }
+    .platform-card--feature { grid-column: span 2; color: #fff; background: var(--navy); border-color: var(--navy); }
+    .platform-card--feature .platform-card__copy, .platform-card--feature .platform-card__meta { color: rgba(255,255,255,.64); }
+    .platform-card--feature .platform-card__link { color: #77e0d7; }
+    .platform-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .platform-id { display: flex; align-items: center; gap: .8rem; }
+    .platform-icon { display: grid; width: 42px; height: 42px; flex: none; place-items: center; border-radius: 12px; color: #fff; background: var(--card-accent, var(--brand)); font-size: .78rem; font-weight: 800; letter-spacing: -.03em; }
+    .platform-card h3 { font-size: 1.15rem; letter-spacing: -.025em; }
+    .platform-type { margin-top: .22rem; color: var(--muted); font: 500 .66rem/1.3 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+    .platform-card--feature .platform-type { color: rgba(255,255,255,.5); }
+    .status { display: inline-flex; align-items: center; gap: .35rem; flex: none; padding: .35rem .55rem; border-radius: 999px; color: #486079; background: #edf2f7; font-size: .64rem; font-weight: 700; white-space: nowrap; }
+    .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #91a0b4; }
+    .status--verified { color: var(--success); background: var(--success-soft); }
+    .status--verified::before { background: var(--success); box-shadow: 0 0 0 3px rgba(19,138,114,.1); }
+    .platform-card__copy { margin-top: 1.3rem; color: var(--muted); font-size: .85rem; line-height: 1.65; }
+    .platform-card__meta { margin-top: auto; padding-top: 1.3rem; color: #7a899c; font: 500 .66rem/1.55 var(--mono); }
+    .platform-card__link { display: inline-flex; align-items: center; gap: .35rem; margin-top: .65rem; color: var(--brand); font-size: .75rem; font-weight: 800; text-decoration: none; }
+    .platform-card__link:hover { gap: .55rem; }
+
+    /* Workflow */
+    .workflow { color: #fff; background: var(--navy); }
+    .workflow .section-head > p { color: rgba(255,255,255,.62); }
+    .workflow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius); background: rgba(255,255,255,.1); }
+    .workflow-step { position: relative; padding: 2rem 1.5rem; background: var(--navy-2); }
+    .workflow-step__num { display: inline-grid; width: 34px; height: 34px; place-items: center; margin-bottom: 2.5rem; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; color: #7de3db; font: 500 .7rem/1 var(--mono); }
+    .workflow-step h3 { font-size: 1.1rem; letter-spacing: -.02em; }
+    .workflow-step p { margin-top: .7rem; color: rgba(255,255,255,.58); font-size: .82rem; }
+    .workflow-step:not(:last-child)::after { content: "→"; position: absolute; z-index: 2; top: 2.45rem; right: -.55rem; color: #6ed8cf; font-size: 1.1rem; }
+
+    /* Detail */
+    .detail-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(2rem, 6vw, 6rem); align-items: start; }
+    .detail-copy { position: sticky; top: 105px; }
+    .detail-copy h2 { font-size: clamp(2.2rem, 4vw, 3.7rem); }
+    .detail-copy > p:not(.eyebrow) { margin-top: 1rem; color: var(--muted); }
+    .detail-badges { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.4rem; }
+    .detail-badges span { padding: .45rem .65rem; border-radius: 8px; color: var(--success); background: var(--success-soft); font: 500 .68rem/1 var(--mono); }
+    .timeline { counter-reset: step; }
+    .timeline-item { counter-increment: step; position: relative; display: grid; grid-template-columns: 48px 1fr; gap: 1rem; padding-bottom: 2rem; }
+    .timeline-item:not(:last-child)::before { content: ""; position: absolute; top: 48px; bottom: 0; left: 23px; width: 1px; background: var(--line); }
+    .timeline-item__num { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid var(--line); border-radius: 14px; color: var(--brand); background: #fff; box-shadow: var(--shadow-sm); font: 500 .72rem/1 var(--mono); }
+    .timeline-item__num::before { content: "0" counter(step); }
+    .timeline-item__body { padding: .2rem 0 0; }
+    .timeline-item h3 { font-size: 1.05rem; letter-spacing: -.02em; }
+    .timeline-item p { margin-top: .45rem; color: var(--muted); font-size: .86rem; }
+    .security-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem; }
+    .info-card { padding: 1.35rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--soft); }
+    .info-card svg { width: 21px; color: var(--brand); }
+    .info-card h3 { margin-top: .8rem; font-size: .92rem; letter-spacing: -.02em; }
+    .info-card p { margin-top: .45rem; color: var(--muted); font-size: .78rem; }
+
+    /* Evidence */
+    .evidence { background: var(--soft); }
+    .evidence-shell { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow-sm); }
+    .evidence-top { display: flex; justify-content: space-between; gap: 1rem; padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--line); }
+    .evidence-top b { font-size: .82rem; }
+    .evidence-top span { color: var(--muted); font: 500 .67rem/1.4 var(--mono); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 720px; border-collapse: collapse; }
+    th, td { padding: 1rem 1.4rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #748399; background: #f8fafc; font: 500 .65rem/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    td { color: var(--muted); font-size: .82rem; }
+    td:first-child { color: var(--ink); font: 500 .7rem/1.6 var(--mono); white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fbfcfe; }
+    .result { display: inline-flex; align-items: center; gap: .4rem; color: var(--success); font-weight: 700; }
+    .result::before { content: "✓"; display: inline-grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: #fff; background: var(--success); font-size: .65rem; }
+
+    /* Install */
+    .install-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 1rem; }
+    .release-card, .install-card { border-radius: var(--radius); padding: clamp(1.7rem, 4vw, 2.5rem); }
+    .release-card { position: relative; overflow: hidden; color: #fff; background: linear-gradient(135deg, var(--brand), #b92051); }
+    .release-card::after { content: ""; position: absolute; width: 280px; height: 280px; right: -100px; bottom: -150px; border: 50px solid rgba(255,255,255,.08); border-radius: 50%; }
+    .release-card .eyebrow { color: #fff; }
+    .release-card h2 { position: relative; z-index: 1; max-width: 450px; font-size: clamp(2rem, 4vw, 3.2rem); }
+    .release-card > p:not(.eyebrow) { position: relative; z-index: 1; margin-top: 1rem; color: rgba(255,255,255,.75); font-size: .88rem; }
+    .release-card .btn { position: relative; z-index: 1; margin-top: 1.6rem; }
+    .install-card { border: 1px solid var(--line); background: #fff; box-shadow: var(--shadow-sm); }
+    .install-card h3 { font-size: 1.35rem; letter-spacing: -.025em; }
+    .install-list { margin: 1.4rem 0 0; padding: 0; list-style: none; counter-reset: install; }
+    .install-list li { counter-increment: install; display: grid; grid-template-columns: 34px 1fr; gap: .8rem; padding: 1rem 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .83rem; }
+    .install-list li::before { content: counter(install); display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: var(--ink); background: var(--soft); font: 500 .7rem/1 var(--mono); }
+    .install-list b { display: block; margin-bottom: .2rem; color: var(--ink); }
+
+    /* CTA + Footer */
+    .cta { padding: 0 0 1rem; }
+    .cta-card { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: center; padding: clamp(2rem, 5vw, 3.5rem); border-radius: var(--radius-lg); color: #fff; background: var(--navy); }
+    .cta-card h2 { max-width: 700px; font-size: clamp(2rem, 4vw, 3.5rem); }
+    .cta-card p { margin-top: .8rem; color: rgba(255,255,255,.62); }
+    .cta-card__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .7rem; }
+    footer { padding: 3rem 0; }
+    .footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 2rem; }
+    .footer-brand p { max-width: 350px; margin-top: .8rem; color: var(--muted); font-size: .78rem; }
+    .footer-col h3 { margin-bottom: .8rem; color: #728197; font: 500 .65rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .footer-col a { display: block; width: fit-content; margin: .45rem 0; color: var(--muted); font-size: .78rem; text-decoration: none; }
+    .footer-col a:hover { color: var(--brand); }
+    .footer-bottom { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1.4rem; border-top: 1px solid var(--line); color: #8290a2; font-size: .68rem; }
+
+    /* Motion */
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+      .reveal.visible { opacity: 1; transform: none; }
+      .product-window { animation: float 6s ease-in-out infinite; }
+      @keyframes float { 0%,100% { transform: perspective(1300px) rotateY(-4deg) rotateX(1deg) translateY(0); } 50% { transform: perspective(1300px) rotateY(-4deg) rotateX(1deg) translateY(-8px); } }
+    }
+
+    /* Responsive */
+    @media (max-width: 1040px) {
+      .hero { min-height: auto; }
+      .hero__inner { grid-template-columns: 1fr; padding-bottom: 190px; }
+      .hero__copy { max-width: 780px; }
+      .hero__visual { width: min(100%, 760px); margin-inline: auto; }
+      .platform-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workflow-grid { grid-template-columns: repeat(2, 1fr); }
+      .workflow-step:nth-child(2)::after { display: none; }
+    }
+    @media (max-width: 800px) {
+      .section-head, .detail-grid, .install-grid { grid-template-columns: 1fr; }
+      .detail-copy { position: static; }
+      .menu-toggle { display: inline-grid; place-items: center; }
+      .nav__links {
+        position: fixed;
+        inset: 72px 0 auto;
+        display: none;
+        align-items: stretch;
+        flex-direction: column;
+        gap: .2rem;
+        margin: 0;
+        padding: 1rem var(--pad) 1.4rem;
+        color: var(--ink);
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+        box-shadow: var(--shadow-md);
+      }
+      .nav__links.open { display: flex; }
+      .nav__links > a:not(.btn), .nav.scrolled .nav__links > a:not(.btn) { padding: .9rem .2rem; color: var(--ink); }
+      .nav__links .btn { width: 100%; margin-top: .4rem; color: #fff; background: var(--navy); border-color: var(--navy); }
+      .stats-card { grid-template-columns: repeat(2, 1fr); }
+      .stat:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .stat:nth-child(4) { border-top: 1px solid var(--line); }
+      .platform-card--feature { grid-column: auto; }
+      .cta-card { grid-template-columns: 1fr; }
+      .cta-card__actions { justify-content: flex-start; }
+      .footer-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 620px) {
+      .section { padding: 4rem 0; }
+      .brand small { display: none; }
+      .hero__inner { padding-top: 120px; padding-bottom: 220px; }
+      .hero h1 { font-size: clamp(2.7rem, 14vw, 4rem); }
+      .hero__visual { margin-top: 1rem; }
+      .product-window { transform: none; animation: none; }
+      .float-card--one { top: -28px; right: -8px; }
+      .float-card--two { bottom: -48px; left: 8px; }
+      .float-card { padding: .7rem .8rem; }
+      .float-card__icon { width: 30px; height: 30px; }
+      .hero__stats { transform: translateY(55%); }
+      #platforms { padding-top: 12rem; }
+      .platform-grid, .workflow-grid, .security-grid { grid-template-columns: 1fr; }
+      .workflow-step:not(:last-child)::after { display: none; }
+      .platform-card { min-height: 290px; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-brand { grid-column: auto; }
+      .footer-bottom { flex-direction: column; }
+    }
+  </style>
 </head>
 <body>
-
-<header class="nav">
-  <div class="wrap nav__in">
-    <a class="brand" href="#top"><img src="assets/mark.webp" alt="" width="20" height="20"> TackQuote <span>Extensions</span></a>
-    <div class="nav__links">
-      <a href="#platforms">Platforms</a>
-      <a href="#opencart">OpenCart</a>
-      <a href="#evidence">Evidence</a>
-      <a href="#install">Install</a>
-      <a class="btn btn--quiet" href="https://github.com/ackm04/tack-ecommerce-extensions">GitHub</a>
+  <header class="nav" id="site-nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href="#top" aria-label="TackQuote Extensions home">
+        <img src="assets/mark.webp" alt="" width="30" height="30">
+        TackQuote <small>Storefront Extensions</small>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-controls="nav-links" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <nav class="nav__links" id="nav-links" aria-label="Primary navigation">
+        <a href="#platforms">Platforms</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#install">Install</a>
+        <a class="btn btn--ghost" href="https://github.com/ackm04/tack-ecommerce-extensions" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2.02c-3.22.7-3.9-1.37-3.9-1.37-.52-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.77 2.72 1.26 3.38.96.1-.75.4-1.26.74-1.55-2.57-.3-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.1-.12-.3-.52-1.47.11-3.06 0 0 .97-.31 3.16 1.18a10.95 10.95 0 0 1 5.76 0c2.19-1.49 3.15-1.18 3.15-1.18.63 1.59.23 2.76.11 3.06.74.81 1.19 1.84 1.19 3.1 0 4.42-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+          GitHub
+        </a>
+      </nav>
     </div>
-  </div>
-</header>
+  </header>
 
-<main id="top">
-
-
-  <section class="hero" style="border-top: 0">
-    <div class="wrap hero__grid">
-      <div class="rise hero__copy">
-        <p class="eyebrow">Official storefront extensions · MIT</p>
-        <h1>B2B quoting, inside the storefront you already run.</h1>
-        <p class="lede">
-          Ten platforms, one quoting back end. Each extension puts a request-a-quote path beside
-          Add to Cart, keeps a multi-product quote list out of the shopper's cart, and — where the
-          platform ships no catalog API — serves the feed TackQuote syncs products and orders
-          through.
-        </p>
-        <div class="hero__cta">
-          <a class="btn btn--lg" href="#platforms">Find your platform</a>
-          <a class="btn btn--quiet btn--lg" href="https://github.com/ackm04/tack-ecommerce-extensions/releases">Releases</a>
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero__inner">
+        <div class="hero__copy">
+          <div class="hero__status"><i aria-hidden="true"></i> Open source · MIT licensed · Production-minded</div>
+          <h1>Turn product interest into <span>qualified quotes.</span></h1>
+          <p class="hero__lede">Official TackQuote extensions add a secure B2B request-a-quote workflow to the storefront you already run—without hijacking the cart or trusting prices from the browser.</p>
+          <div class="hero__actions">
+            <a class="btn btn--large" href="#platforms">
+              Find your platform
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+            <a class="btn btn--ghost btn--large" href="https://github.com/ackm04/tack-ecommerce-extensions/releases">View releases</a>
+          </div>
+          <div class="hero__trust">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Server-side price validation</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Cart-safe quote lists</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Platform-native installs</span>
+          </div>
         </div>
-        <ul class="hero__facts">
-          <li><b>10</b><span>platforms supported</span></li>
-          <li><b>2</b><span>directions per connector</span></li>
-          <li><b>0</b><span>prices trusted from the browser</span></li>
-        </ul>
-      </div>
 
-      <figure class="shot hero__shot rise rise--2">
-        <img src="assets/tackquote-quote.webp" alt="A TackQuote quote for Meridian Supply Co. showing three priced line items, two signers and a quote total of $21,850.00" width="1240" height="472">
-      </figure>
-    </div>
-  </section>
-
-  <section id="platforms">
-    <div class="wrap">
-      <div class="sec__head">
-        <p class="eyebrow">Platforms</p>
-        <h2>Three integration shapes, ten storefronts</h2>
-        <p>
-          Some platforms take a downloadable package. Some are wired up inside the TackQuote app
-          because the vendor gives us an API rather than a plugin slot. Two are a snippet. The chip
-          on each card says which — and which have been run in a real store, not just built.
-        </p>
-      </div>
-
-      <div class="grid">
-
-        <article class="card card--lead">
-          <div class="card__top">
-            <h3>OpenCart</h3>
-            <span class="chip chip--verified">Verified on 4.1.0.4</span>
+        <div class="hero__visual" aria-label="TackQuote quote interface preview">
+          <div class="float-card float-card--one">
+            <span class="float-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7 10 17l-5-5"/></svg></span>
+            <span><b>Price verified</b><small>Re-read from store catalog</small></span>
           </div>
-          <p class="card__mech">
-            Quote buttons beside Add to Cart, a multi-product quote list, and a three-step request
-            form — plus the catalog/order feed TackQuote pulls through, because OpenCart core has
-            no such endpoint. Placement uses a storefront view event, so no theme file is edited.
-          </p>
-          <p class="card__pkg">4.0.x · 4.1.x — tack.ocmod.zip</p>
-          <p class="card__note">Installed from Extensions &gt; Installer. Prices are re-read from the catalog on submit, so a request forging one is ignored.</p>
-          <a class="card__link" href="#opencart">Read the detail →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>WooCommerce</h3>
-            <span class="chip chip--verified">Verified on WP 7.1 / WC 11.0.1</span>
+          <div class="product-window">
+            <div class="product-window__bar"><i></i><i></i><i></i><span>app.tackquote.com/quotes</span></div>
+            <img src="assets/tackquote-quote.webp" alt="TackQuote quote for Meridian Supply Co. with three priced line items and a total of $21,850" width="1240" height="472">
           </div>
-          <p class="card__mech">
-            Hooks <code>woocommerce_after_add_to_cart_button</code> for the button and
-            <code>wp_footer</code> for the quote drawer, so placement follows the theme instead of a
-            shortcode. Order sync is handed to Action Scheduler, so a slow or unreachable TackQuote
-            cannot sit inside a shopper's checkout.
-          </p>
-          <p class="card__pkg">WordPress plugin — tack-quotes</p>
-          <p class="card__note">Needs WooCommerce itself; inert on a plain WordPress site. Passes <code>wp plugin check</code> and <code>phpcs --standard=WordPress</code> with nothing outstanding.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/wordpress">Source →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Magento 2</h3>
-            <span class="chip">Package</span>
-          </div>
-          <p class="card__mech">
-            Places its controls with layout XML (<code>after="product.info.addtocart"</code>), keeps
-            the quote list separate from the Magento cart, and re-resolves every SKU server-side.
-            Ships an admin dashboard, submission throttle and idempotency guard.
-          </p>
-          <p class="card__pkg">Module — TackQuote_Quotes</p>
-          <p class="card__note">Configurable products must have options chosen before a line can be quoted.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/magento2">Source →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>PrestaShop</h3>
-            <span class="chip">Package</span>
-          </div>
-          <p class="card__mech">
-            Hooks <code>displayProductButtons</code> and serves an in-page modal — no redirect away
-            from the product. Built to PrestaShop's own coding standard: the package carries the
-            vendor's <code>php-cs-fixer</code> config and passes it.
-          </p>
-          <p class="card__pkg">1.7 · 8.x module — tackquotes</p>
-          <p class="card__note">Button stays hidden until an API key is set, and says so in the admin.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/prestashop">Source →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Shopware 6</h3>
-            <span class="chip">Package</span>
-          </div>
-          <p class="card__mech">
-            Extends the storefront through a Twig component rather than overriding the whole
-            product-detail page, so a platform update does not take the button with it. Ships en-GB
-            and de-DE snippets and a PHPUnit suite.
-          </p>
-          <p class="card__pkg">Plugin — TackQuote</p>
-          <p class="card__note">Exercised against 6.6; 6.4/6.5 may need the template path adjusted.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/shopware">Source →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Zen Cart</h3>
-            <span class="chip">Package</span>
-          </div>
-          <p class="card__mech">
-            Two halves, like OpenCart. The storefront half injects the button and handles the
-            request; <code>tack-connector/</code> serves products and orders as JSON, because Zen
-            Cart core has no JSON API at all.
-          </p>
-          <p class="card__pkg">Addon + tack-connector feed</p>
-          <p class="card__note">The feed is mandatory, Bearer-authenticated, and fails closed until a token is set.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/zencart">Source →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Shopify</h3>
-            <span class="chip">In-app</span>
-          </div>
-          <p class="card__mech">
-            GraphQL Admin API with webhooks on <code>orders/create</code> and
-            <code>products/update</code>; quote entry points are injected by a theme app extension.
-          </p>
-          <p class="card__pkg">App install — no download</p>
-          <p class="card__note">There is no ZIP for Shopify, and there should not be: it is an app install.</p>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>BigCommerce</h3>
-            <span class="chip">In-app</span>
-          </div>
-          <p class="card__mech">
-            The storefront widget is installed through the Script Manager API, and
-            <code>store/order/created</code> webhooks drive order conversion.
-          </p>
-          <p class="card__pkg">Script API + REST V3 — no download</p>
-          <p class="card__note">Script Manager runs on Stencil; a headless front end needs the widget wired in by hand.</p>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Squarespace</h3>
-            <span class="chip">Snippet</span>
-          </div>
-          <p class="card__mech">
-            One embed script pasted into Code Injection, which finds product pages and adds the
-            quote entry point client-side.
-          </p>
-          <p class="card__pkg">Code injection</p>
-          <p class="card__note">No server-side extension point exists, so there is no catalog feed.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/squarespace">Setup guide →</a>
-        </article>
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Wix</h3>
-            <span class="chip">Snippet</span>
-          </div>
-          <p class="card__mech">
-            An HTML component plus a Velo backend module, which keeps the credential on Wix's
-            server side rather than in page code.
-          </p>
-          <p class="card__pkg">Velo custom code</p>
-          <p class="card__note">Requires Dev Mode; editor-only sites cannot host the backend module.</p>
-          <a class="card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/wix">Setup guide →</a>
-        </article>
-
-
-        <article class="card">
-          <div class="card__top">
-            <h3>Another platform?</h3>
-            <span class="chip">Widget or API</span>
-          </div>
-          <p class="card__mech">
-            Any storefront can embed the quote widget snippet, and anything that can make an HTTP
-            request can call the quote API directly — which is exactly what the Squarespace and Wix
-            guides here do.
-          </p>
-          <p class="card__pkg">Embed snippet · REST API</p>
-          <p class="card__note">A platform-specific package gets you catalog and order sync too; the widget alone covers quote capture.</p>
-          <a class="card__link" href="https://tackquote.com/integrations">See all integrations →</a>
-        </article>
-
-      </div>
-    </div>
-  </section>
-
-  <section id="opencart">
-    <div class="wrap">
-      <div class="sec__head">
-        <p class="eyebrow">OpenCart 4 · in detail</p>
-        <h2>What a buyer does, and what the store does about it</h2>
-        <p>
-          The OpenCart extension has been installed, configured and exercised on a real 4.1.0.4
-          store end to end, so it is documented here in full. WooCommerce has since had the same
-          treatment on WordPress 7.1 with WooCommerce 11.0.1 — installed from the built zip, a
-          quote request carried through to a real quote record, and order sync observed leaving
-          checkout untouched. The remaining packages follow the same contract.
-        </p>
-      </div>
-
-      <div class="split">
-        <ol class="steps">
-          <li>
-            <b>Collect</b>
-            <p>“Add to Quote” gathers products from product pages and category tiles into a list held in the browser — never in the OpenCart cart, so a buyer pricing a dozen items leaves their cart, shipping estimate and abandoned-cart email untouched.</p>
-          </li>
-          <li>
-            <b>Ask</b>
-            <p>A three-step panel takes the items, then the buyer's details, then confirms. Logged-in customers have their name, email and phone prefilled from the store; guests type them.</p>
-          </li>
-          <li>
-            <b>Re-price server-side</b>
-            <p>The panel posts product ids and quantities only. The extension re-reads name, model and price from the catalog and applies the store's own visibility rules, so a disabled product cannot be quoted by guessing its id.</p>
-          </li>
-          <li>
-            <b>Land as a draft quote</b>
-            <p>TackQuote creates a draft in the store's own currency for a seller to price and send back, and returns the reference the buyer sees.</p>
-          </li>
-        </ol>
-
-        <div style="display:grid; gap:1rem">
-          <div class="panel">
-            <h3>Both directions, two separate secrets</h3>
-            <ul>
-              <li><b>Store → TackQuote.</b> Quote requests are posted server-side with your TackQuote API key, so the key never reaches a page.</li>
-              <li><b>TackQuote → store.</b> <code>extension/tack/api/product.list</code>, <code>order.list</code> and <code>order.add</code>, authenticated with a feed token you generate in the store.</li>
-              <li>Neither secret works in the other direction, and the feed refuses every request with a 503 until a token is set.</li>
-            </ul>
-          </div>
-          <div class="panel">
-            <h3>Known limits</h3>
-            <ul>
-              <li>OpenCart 4 only. 4.x resolves routes and autoloads differently from 3.x, and no 3.x package is shipped.</li>
-              <li>If a theme has renamed core's Add to Cart button (<code>id="button-cart"</code>), the inline buttons are skipped rather than injected on a guess — assign the module to a layout position instead.</li>
-              <li>A quote holds up to 50 distinct products, and one browser session may submit five requests per ten minutes.</li>
-            </ul>
+          <div class="float-card float-card--two">
+            <span class="float-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM8 9h8M8 13h5"/></svg></span>
+            <span><b>Draft created</b><small>Ready for seller review</small></span>
           </div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <section id="evidence">
-    <div class="wrap">
-      <div class="sec__head">
-        <p class="eyebrow">Evidence</p>
-        <h2>Every claim above, and what was run to check it</h2>
-        <p>
-          A “verified” chip is worth nothing without the record behind it. These are checks
-          performed against a real store, with the artefacts they produced. Where a platform has not
-          been exercised this way, its card says <em>Package</em> — not <em>Verified</em>.
-        </p>
+      <div class="wrap hero__stats">
+        <div class="stats-card">
+          <div class="stat"><b>10</b><span>commerce platforms</span></div>
+          <div class="stat"><b>3</b><span>integration models</span></div>
+          <div class="stat"><b>2-way</b><span>catalog &amp; order sync</span></div>
+          <div class="stat"><b>0</b><span>browser prices trusted</span></div>
+        </div>
       </div>
+    </section>
 
-      <div class="tablewrap">
-        <table>
-          <caption class="eyebrow" style="padding:0.8rem 1.1rem; text-align:left; margin:0">OpenCart 4.1.0.4 · demo catalog · 19 Aug 2026</caption>
-          <thead>
-            <tr><th scope="col">Artefact</th><th scope="col">What was done</th><th scope="col">Result</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>TK-2026-001073</td>
-              <td>One product quoted from a product page</td>
-              <td><span class="num">12 × $100.00 = $1,200.00</span>, USD, draft</td>
-            </tr>
-            <tr>
-              <td>TK-2026-001075</td>
-              <td>Three products collected across category tiles and a product page, submitted as one request</td>
-              <td><span class="num">3</span> lines, <span class="num">$46,000.00</span>, quantities <span class="num">25 / 10 / 1</span></td>
-            </tr>
-            <tr>
-              <td>TK-2026-001076</td>
-              <td>A request forging <code>unitPrice=0.01</code>, a SKU and a product name</td>
-              <td>Stored at the real <span class="num">$2,000.00</span> with the real SKU and name — every forged value ignored</td>
-            </tr>
-            <tr>
-              <td>Currency</td>
-              <td>Store trading in USD, displaying tax-inclusive prices</td>
-              <td>Quote denominated from the store's own setting; lines stored at ex-tax catalog prices</td>
-            </tr>
-            <tr>
-              <td>Throttle</td>
-              <td>Six submissions from one browser session</td>
-              <td>Five accepted, the sixth refused</td>
-            </tr>
-            <tr>
-              <td>Install path</td>
-              <td>Uploaded through OpenCart's own Extensions &gt; Installer rather than copied into place</td>
-              <td><span class="num">32</span> files extracted to <code>extension/tack/</code>; module registered, configured and placed</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <section id="install">
-    <div class="wrap">
-      <div class="sec__head">
-        <p class="eyebrow">Install &amp; distribution</p>
-        <h2>Where the packages come from</h2>
-        <p>
-          This repository is the distribution authority. Each platform's source sits in its own
-          top-level directory, and every package is rebuilt from that source rather than edited in
-          place.
-        </p>
-      </div>
-
-      <div class="split">
-        <div class="callout">
-          <span class="callout__tag">Read first</span>
+    <section class="section" id="platforms">
+      <div class="wrap">
+        <div class="section-head reveal">
           <div>
-            <p>
-              The latest published release is <code>v1.0.0</code> (1 Aug 2026). <code>main</code> is
-              ahead of it — including the OpenCart work in the evidence table — so for anything newer
-              than that release, take the source from this repository and build the package with the
-              repository's own packaging script.
-            </p>
-            <p>
-              The OpenCart installer archive <code>tack.ocmod.zip</code> is not among the v1.0.0
-              assets at all; its README explains how to build it. The filename is load-bearing —
-              OpenCart derives the extension code from it.
-            </p>
+            <p class="eyebrow">Platform explorer</p>
+            <h2>Built for the commerce stack you already own.</h2>
           </div>
+          <p>Choose a downloadable package, connect an in-app integration, or add a lightweight snippet. Every card tells you exactly what ships and what has been verified.</p>
         </div>
 
-        <div class="panel">
-          <h3>Getting a package</h3>
-          <ul>
-            <li><b>From a release.</b> Download the ZIP for your platform from the Releases page and install it the way that platform installs extensions.</li>
-            <li><b>From source.</b> Clone this repository and run its packaging script; the artefacts land in <code>dist/extensions/</code>.</li>
-            <li><b>Then connect it.</b> Paste a TackQuote API key into the extension's settings screen and use its “Test connection” button — it calls the API rather than checking that a field is filled in.</li>
-          </ul>
-          <p style="margin:1.1rem 0 0; display:flex; gap:0.6rem; flex-wrap:wrap">
-            <a class="btn" href="https://github.com/ackm04/tack-ecommerce-extensions/releases">All releases</a>
-            <a class="btn btn--quiet" href="https://github.com/ackm04/tack-ecommerce-extensions">Browse source</a>
-          </p>
+        <div class="filter-bar reveal" aria-label="Filter platforms">
+          <button class="filter-btn" type="button" data-filter="all" aria-pressed="true">All platforms</button>
+          <button class="filter-btn" type="button" data-filter="verified" aria-pressed="false">Verified</button>
+          <button class="filter-btn" type="button" data-filter="package" aria-pressed="false">Packages</button>
+          <button class="filter-btn" type="button" data-filter="in-app" aria-pressed="false">In-app</button>
+          <button class="filter-btn" type="button" data-filter="snippet" aria-pressed="false">Snippets</button>
+        </div>
+
+        <div class="platform-grid" id="platform-grid">
+          <article class="platform-card platform-card--feature reveal" data-kind="verified package" style="--card-accent:#21c3b6">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">OC</span><div><h3>OpenCart</h3><p class="platform-type">Downloadable package</p></div></div>
+              <span class="status status--verified">Verified 4.1.0.4</span>
+            </div>
+            <p class="platform-card__copy">Native quote buttons, a multi-product quote list and a three-step request flow—plus the catalog and order feed OpenCart core does not provide. No theme files are edited.</p>
+            <p class="platform-card__meta">4.0.x · 4.1.x · tack.ocmod.zip</p>
+            <a class="platform-card__link" href="#opencart">Explore verified flow →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="verified package" style="--card-accent:#7f54b3">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">WC</span><div><h3>WooCommerce</h3><p class="platform-type">WordPress plugin</p></div></div>
+              <span class="status status--verified">Verified</span>
+            </div>
+            <p class="platform-card__copy">Theme-aware quote controls and a quote drawer, with order sync handed to Action Scheduler so an unavailable API cannot delay checkout.</p>
+            <p class="platform-card__meta">WP 7.1 · WC 11.0.1 · tack-quotes</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/wordpress">View source →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="package" style="--card-accent:#f26322">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">M2</span><div><h3>Magento 2</h3><p class="platform-type">Adobe Commerce module</p></div></div>
+              <span class="status">Package</span>
+            </div>
+            <p class="platform-card__copy">Layout-native controls, a separate quote list, server-side SKU resolution, admin dashboard, submission throttling and idempotency protection.</p>
+            <p class="platform-card__meta">Module · TackQuote_Quotes</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/magento2">View source →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="package" style="--card-accent:#df0067">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">PS</span><div><h3>PrestaShop</h3><p class="platform-type">Native module</p></div></div>
+              <span class="status">Package</span>
+            </div>
+            <p class="platform-card__copy">Product-page buttons and an in-page request modal, built against PrestaShop's coding standards and hidden safely until configured.</p>
+            <p class="platform-card__meta">1.7 · 8.x · tackquotes</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/prestashop">View source →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="package" style="--card-accent:#189eff">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">S6</span><div><h3>Shopware 6</h3><p class="platform-type">Plugin + app</p></div></div>
+              <span class="status">Package</span>
+            </div>
+            <p class="platform-card__copy">A Twig component instead of a page override, bilingual snippets, read-only catalog access and signed lifecycle and order webhooks.</p>
+            <p class="platform-card__meta">Shopware 6.6+ · TackQuote</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/shopware">View source →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="package" style="--card-accent:#596b33">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">ZC</span><div><h3>Zen Cart</h3><p class="platform-type">Addon + secure feed</p></div></div>
+              <span class="status">Package</span>
+            </div>
+            <p class="platform-card__copy">Storefront quoting plus a bearer-authenticated product and order feed for a platform with no native JSON catalog API.</p>
+            <p class="platform-card__meta">Addon · tack-connector feed</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/zencart">View source →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="in-app" style="--card-accent:#7a5cff">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">SH</span><div><h3>Shopify</h3><p class="platform-type">In-app integration</p></div></div>
+              <span class="status">In-app</span>
+            </div>
+            <p class="platform-card__copy">GraphQL Admin API, product and order webhooks, plus quote entry points delivered through a theme app extension.</p>
+            <p class="platform-card__meta">App install · no download</p>
+          </article>
+
+          <article class="platform-card reveal" data-kind="in-app" style="--card-accent:#2d77c7">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">BC</span><div><h3>BigCommerce</h3><p class="platform-type">In-app integration</p></div></div>
+              <span class="status">In-app</span>
+            </div>
+            <p class="platform-card__copy">A storefront widget installed through Script Manager API, with REST V3 catalog access and order-created webhooks.</p>
+            <p class="platform-card__meta">Script API · REST V3 · no download</p>
+          </article>
+
+          <article class="platform-card reveal" data-kind="snippet" style="--card-accent:#222">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">SQ</span><div><h3>Squarespace</h3><p class="platform-type">Embed snippet</p></div></div>
+              <span class="status">Snippet</span>
+            </div>
+            <p class="platform-card__copy">One Code Injection script detects product pages and adds the quote entry point without a server-side extension.</p>
+            <p class="platform-card__meta">Code Injection · client-side</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/squarespace">Setup guide →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="snippet" style="--card-accent:#0c66e4">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">WX</span><div><h3>Wix</h3><p class="platform-type">Velo integration</p></div></div>
+              <span class="status">Snippet</span>
+            </div>
+            <p class="platform-card__copy">An HTML component and Velo backend module keep the credential on Wix's server instead of exposing it in page code.</p>
+            <p class="platform-card__meta">Dev Mode · Velo custom code</p>
+            <a class="platform-card__link" href="https://github.com/ackm04/tack-ecommerce-extensions/tree/main/wix">Setup guide →</a>
+          </article>
+
+          <article class="platform-card reveal" data-kind="snippet in-app" style="--card-accent:#eb3f4d">
+            <div class="platform-card__head">
+              <div class="platform-id"><span class="platform-icon">API</span><div><h3>Another platform?</h3><p class="platform-type">Widget or REST API</p></div></div>
+              <span class="status">Flexible</span>
+            </div>
+            <p class="platform-card__copy">Embed the quote widget in any storefront, or connect directly to the quote API when your platform can make HTTP requests.</p>
+            <p class="platform-card__meta">Embed snippet · REST API</p>
+            <a class="platform-card__link" href="https://tackquote.com/integrations">See integrations →</a>
+          </article>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-</main>
+    <section class="section workflow" id="how-it-works">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div><p class="eyebrow eyebrow--light">One clean workflow</p><h2>Familiar for buyers. Trustworthy for sellers.</h2></div>
+          <p>The experience stays inside the storefront while validation and quote creation happen where they belong: on trusted servers.</p>
+        </div>
+        <div class="workflow-grid reveal">
+          <article class="workflow-step"><span class="workflow-step__num">01</span><h3>Collect products</h3><p>Buyers add one or many products to a quote list that remains separate from the shopping cart.</p></article>
+          <article class="workflow-step"><span class="workflow-step__num">02</span><h3>Share requirements</h3><p>A focused request flow captures quantities, contact details and buying context.</p></article>
+          <article class="workflow-step"><span class="workflow-step__num">03</span><h3>Validate safely</h3><p>The extension re-reads catalog data and rejects forged names, SKUs and prices.</p></article>
+          <article class="workflow-step"><span class="workflow-step__num">04</span><h3>Create the draft</h3><p>A structured quote lands in TackQuote for the seller to price, approve and send.</p></article>
+        </div>
+      </div>
+    </section>
 
-<footer>
-  <div class="wrap footer__in">
-    <div>
-      <div class="eyebrow" style="margin-bottom:0.4rem">TackQuote</div>
-      B2B quoting and CPQ — <a href="https://tackquote.com">tackquote.com</a>
-    </div>
-    <div>
-      <div class="eyebrow" style="margin-bottom:0.4rem">Repository</div>
-      <a href="https://github.com/ackm04/tack-ecommerce-extensions">ackm04/tack-ecommerce-extensions</a>
-    </div>
-    <div>
-      <div class="eyebrow" style="margin-bottom:0.4rem">Licence</div>
-      <a href="https://github.com/ackm04/tack-ecommerce-extensions/blob/main/LICENSE">MIT</a>
-    </div>
-    <p class="footer__note">Platform names and marks belong to their respective owners.</p>
-  </div>
-</footer>
+    <section class="section" id="opencart">
+      <div class="wrap detail-grid">
+        <div class="detail-copy reveal">
+          <p class="eyebrow">OpenCart · verified in detail</p>
+          <h2>A real buyer flow, tested end to end.</h2>
+          <p>OpenCart 4.1.0.4 was installed, configured and exercised against a real store. The extension uses storefront events instead of modifying theme files and fails closed until its secrets are configured.</p>
+          <div class="detail-badges"><span>✓ Real store</span><span>✓ Forged price rejected</span><span>✓ Throttle verified</span></div>
+        </div>
+        <div>
+          <div class="timeline">
+            <article class="timeline-item reveal"><span class="timeline-item__num"></span><div class="timeline-item__body"><h3>Collect without touching the cart</h3><p>“Add to Quote” gathers products from product pages and category tiles. Buyers can price a dozen items without changing shipping estimates or triggering abandoned-cart automations.</p></div></article>
+            <article class="timeline-item reveal"><span class="timeline-item__num"></span><div class="timeline-item__body"><h3>Ask only for what matters</h3><p>A three-step panel confirms items and quantities, collects buyer details and shows a clear confirmation. Logged-in customer details are prefilled.</p></div></article>
+            <article class="timeline-item reveal"><span class="timeline-item__num"></span><div class="timeline-item__body"><h3>Re-price on the server</h3><p>The browser submits product IDs and quantities only. The extension resolves name, model and price from the catalog and applies the store's visibility rules.</p></div></article>
+            <article class="timeline-item reveal"><span class="timeline-item__num"></span><div class="timeline-item__body"><h3>Land as a structured draft</h3><p>TackQuote creates a draft in the store's currency and returns the reference the buyer sees, ready for a seller to price and send.</p></div></article>
+          </div>
+          <div class="security-grid reveal">
+            <article class="info-card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+              <h3>Separate secrets</h3>
+              <p>Store-to-TackQuote uses an API key. TackQuote-to-store uses a distinct feed token. Neither can be reused in the other direction.</p>
+            </article>
+            <article class="info-card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <h3>Bounded requests</h3>
+              <p>Quote lists hold up to 50 products. A browser session can submit five requests per ten minutes before the throttle refuses more.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
 
+    <section class="section evidence" id="evidence">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div><p class="eyebrow">Evidence, not promises</p><h2>Every “verified” badge has a record behind it.</h2></div>
+          <p>These checks were performed against a real OpenCart store. Platforms that have not received the same treatment are labeled “Package”—never “Verified.”</p>
+        </div>
+        <div class="evidence-shell reveal">
+          <div class="evidence-top"><b>OpenCart verification record</b><span>4.1.0.4 · DEMO CATALOG · 19 AUG 2026</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Artefact</th><th scope="col">What was tested</th><th scope="col">Result</th></tr></thead>
+              <tbody>
+                <tr><td>TK-2026-001073</td><td>One product quoted from a product page</td><td><span class="result">12 × $100 = $1,200 · USD draft</span></td></tr>
+                <tr><td>TK-2026-001075</td><td>Three products collected across category tiles and a product page</td><td><span class="result">3 lines · $46,000 · quantities 25 / 10 / 1</span></td></tr>
+                <tr><td>TK-2026-001076</td><td>A request forged with <code>unitPrice=0.01</code>, a false SKU and product name</td><td><span class="result">Real $2,000 price, SKU and name stored</span></td></tr>
+                <tr><td>Currency</td><td>USD store displaying tax-inclusive prices</td><td><span class="result">Store currency used; ex-tax lines stored</span></td></tr>
+                <tr><td>Throttle</td><td>Six submissions from one browser session</td><td><span class="result">Five accepted; the sixth refused</span></td></tr>
+                <tr><td>Install path</td><td>Uploaded through Extensions › Installer</td><td><span class="result">32 files extracted; module registered</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <div class="wrap">
+        <div class="install-grid">
+          <article class="release-card reveal">
+            <p class="eyebrow">Install &amp; distribution</p>
+            <h2>One trusted source for every package.</h2>
+            <p>This repository is the distribution authority. Every platform lives in its own top-level directory, and packages are rebuilt from source—not edited in place.</p>
+            <a class="btn btn--light" href="https://github.com/ackm04/tack-ecommerce-extensions/releases">Browse all releases →</a>
+          </article>
+          <article class="install-card reveal">
+            <h3>From download to first quote</h3>
+            <ol class="install-list">
+              <li><div><b>Choose the right integration</b>Use the platform explorer to confirm whether your store needs a package, in-app connection or snippet.</div></li>
+              <li><div><b>Install from release or source</b>Download a release ZIP when available, or run the platform's packaging script from the repository.</div></li>
+              <li><div><b>Connect and verify</b>Enter your TackQuote API key and use the extension's “Test connection” action before exposing quote controls.</div></li>
+            </ol>
+            <a class="btn btn--dark" href="https://github.com/ackm04/tack-ecommerce-extensions">Browse source on GitHub</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap">
+        <div class="cta-card reveal">
+          <div><h2>Ready to add quoting to your storefront?</h2><p>Start with the verified packages or explore the source for your platform.</p></div>
+          <div class="cta-card__actions"><a class="btn" href="#platforms">Choose a platform</a><a class="btn btn--ghost" href="https://tackquote.com">Visit TackQuote</a></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="#top"><img src="assets/mark.webp" alt="" width="30" height="30">TackQuote</a>
+          <p>Official open-source storefront extensions for secure B2B quoting, catalog sync and quote-to-order workflows.</p>
+        </div>
+        <div class="footer-col"><h3>Explore</h3><a href="#platforms">Platforms</a><a href="#how-it-works">How it works</a><a href="#evidence">Evidence</a></div>
+        <div class="footer-col"><h3>Developers</h3><a href="https://github.com/ackm04/tack-ecommerce-extensions">Repository</a><a href="https://github.com/ackm04/tack-ecommerce-extensions/releases">Releases</a><a href="https://github.com/ackm04/tack-ecommerce-extensions/blob/main/LICENSE">MIT licence</a></div>
+        <div class="footer-col"><h3>Product</h3><a href="https://tackquote.com">TackQuote.com</a><a href="https://tackquote.com/integrations">All integrations</a></div>
+      </div>
+      <div class="footer-bottom"><span>© 2026 TackQuote. Open-source storefront extensions.</span><span>Platform names and marks belong to their respective owners.</span></div>
+    </div>
+  </footer>
+
+  <script>
+    const nav = document.getElementById('site-nav');
+    const toggle = document.querySelector('.menu-toggle');
+    const links = document.getElementById('nav-links');
+    const setNavState = () => nav.classList.toggle('scrolled', window.scrollY > 24);
+    setNavState();
+    window.addEventListener('scroll', setNavState, { passive: true });
+
+    toggle.addEventListener('click', () => {
+      const open = links.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      document.body.classList.toggle('menu-open', open);
+    });
+    links.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+      links.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('menu-open');
+    }));
+
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const platformCards = document.querySelectorAll('.platform-card');
+    filterButtons.forEach(button => button.addEventListener('click', () => {
+      const filter = button.dataset.filter;
+      filterButtons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      platformCards.forEach(card => {
+        card.hidden = filter !== 'all' && !card.dataset.kind.split(' ').includes(filter);
+      });
+    }));
+
+    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .08 });
+      document.querySelectorAll('.reveal').forEach(element => observer.observe(element));
+    } else {
+      document.querySelectorAll('.reveal').forEach(element => element.classList.add('visible'));
+    }
+  </script>
 </body>
 </html>
