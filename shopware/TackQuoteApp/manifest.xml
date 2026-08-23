@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/Framework/App/Manifest/Schema/manifest-3.0.xsd">
+    <meta>
+        <!-- MUST equal the containing directory name, and is concatenated into the
+             registration `proof` HMAC. Changing either one breaks registration. -->
+        <name>TackQuoteApp</name>
+        <label>TackQuote B2B Quoting</label>
+        <label lang="de-DE">TackQuote B2B-Angebote</label>
+        <description>Adds B2B request-a-quote to your storefront and syncs catalog, customers and orders with TackQuote.</description>
+        <description lang="de-DE">Ergaenzt Ihren Storefront um B2B-Angebotsanfragen und synchronisiert Katalog, Kunden und Auftraege mit TackQuote.</description>
+        <author>TackQuote</author>
+        <copyright>(c) TackQuote</copyright>
+        <version>1.0.0</version>
+        <license>MIT</license>
+        <compatibility>&gt;=6.6.0</compatibility>
+        <privacy>https://tackquote.com/privacy</privacy>
+    </meta>
+
+    <setup>
+        <registrationUrl>https://api.tackquote.com/v1/integrations/shopware/app/register</registrationUrl>
+        <!-- No <secret> here on purpose. A committed <secret> is a committed
+             credential, and its presence also tells the shop to skip Shopware
+             Account authentication. For local development, add one in a working
+             copy only - see README.md. -->
+    </setup>
+
+    <permissions>
+        <!-- Reads only. TackQuote pulls catalog/customer/order data through the
+             Admin API credentials handed over at registration confirmation.
+             Nothing here grants write access, because the app does not write
+             back to Shopware yet - see README.md "Not implemented yet". -->
+        <read>product</read>
+        <read>product_price</read>
+        <read>category</read>
+        <read>currency</read>
+        <read>customer</read>
+        <read>customer_group</read>
+        <read>order</read>
+        <read>order_line_item</read>
+        <read>sales_channel</read>
+    </permissions>
+
+    <allowed-hosts>
+        <host>api.tackquote.com</host>
+    </allowed-hosts>
+
+    <webhooks>
+        <webhook name="tackquote-app-lifecycle-activated"
+                 url="https://api.tackquote.com/v1/integrations/shopware/app/webhook/app-activated"
+                 event="app.activated"/>
+        <webhook name="tackquote-app-lifecycle-deactivated"
+                 url="https://api.tackquote.com/v1/integrations/shopware/app/webhook/app-deactivated"
+                 event="app.deactivated"/>
+        <webhook name="tackquote-app-lifecycle-deleted"
+                 url="https://api.tackquote.com/v1/integrations/shopware/app/webhook/app-deleted"
+                 event="app.deleted"/>
+        <webhook name="tackquote-order-placed"
+                 url="https://api.tackquote.com/v1/integrations/shopware/app/webhook/order-placed"
+                 event="checkout.order.placed"/>
+    </webhooks>
+</manifest>
