@@ -101,8 +101,10 @@
       position: absolute;
       inset: 0 0 auto;
       z-index: 50;
-      color: #fff;
-      border-bottom: 1px solid rgba(255, 255, 255, .1);
+      color: var(--ink);
+      background: rgba(255, 255, 255, .82);
+      border-bottom: 1px solid rgba(223, 230, 239, .8);
+      backdrop-filter: blur(18px);
     }
     .nav.scrolled {
       position: fixed;
@@ -115,14 +117,14 @@
     .nav__inner { display: flex; align-items: center; min-height: 72px; gap: 2rem; }
     .brand { display: inline-flex; align-items: center; gap: .72rem; color: inherit; font-weight: 800; text-decoration: none; letter-spacing: -.03em; }
     .brand img { width: 30px; height: 30px; border-radius: 8px; box-shadow: 0 6px 16px rgba(235, 63, 77, .28); }
-    .brand small { margin-left: .15rem; color: rgba(255, 255, 255, .55); font-size: .78rem; font-weight: 500; letter-spacing: 0; }
+    .brand small { margin-left: .15rem; color: var(--muted); font-size: .78rem; font-weight: 500; letter-spacing: 0; }
     .nav.scrolled .brand small { color: var(--muted); }
     .nav__links { display: flex; align-items: center; gap: .3rem; margin-left: auto; }
-    .nav__links > a:not(.btn) { padding: .7rem .85rem; color: rgba(255,255,255,.72); font-size: .86rem; font-weight: 600; text-decoration: none; }
-    .nav__links > a:not(.btn):hover { color: #fff; }
+    .nav__links > a:not(.btn) { padding: .7rem .85rem; color: var(--muted); font-size: .86rem; font-weight: 600; text-decoration: none; }
+    .nav__links > a:not(.btn):hover { color: var(--ink); }
     .nav.scrolled .nav__links > a:not(.btn) { color: var(--muted); }
     .nav.scrolled .nav__links > a:not(.btn):hover { color: var(--ink); }
-    .menu-toggle { display: none; margin-left: auto; width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.22); border-radius: 12px; color: inherit; background: transparent; }
+    .menu-toggle { display: none; margin-left: auto; width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 12px; color: inherit; background: transparent; }
     .nav.scrolled .menu-toggle { border-color: var(--line); }
     .menu-toggle svg { display: block; margin: auto; }
 
@@ -146,8 +148,8 @@
     }
     .btn:hover { transform: translateY(-2px); background: var(--brand-dark); box-shadow: 0 14px 28px rgba(235, 63, 77, .26); }
     .btn svg { width: 17px; height: 17px; }
-    .btn--ghost { color: #fff; background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.22); box-shadow: none; }
-    .btn--ghost:hover { background: rgba(255,255,255,.13); box-shadow: none; }
+    .btn--ghost { color: var(--ink); background: #fff; border-color: var(--line); box-shadow: none; }
+    .btn--ghost:hover { color: var(--ink); background: var(--soft); box-shadow: none; }
     .nav.scrolled .btn--ghost { color: var(--ink); background: #fff; border-color: var(--line); }
     .nav.scrolled .btn--ghost:hover { background: var(--soft); }
     .btn--dark { color: #fff; background: var(--navy); box-shadow: none; }
@@ -159,55 +161,56 @@
     /* Hero */
     .hero {
       position: relative;
-      min-height: 900px;
+      min-height: 790px;
       overflow: hidden;
-      color: #fff;
+      color: var(--ink);
       background:
-        radial-gradient(circle at 80% 18%, rgba(75, 123, 236, .25), transparent 30%),
-        radial-gradient(circle at 12% 30%, rgba(33, 195, 182, .15), transparent 28%),
-        linear-gradient(145deg, #07111f 0%, #0b1728 55%, #081220 100%);
+        radial-gradient(circle at 86% 18%, rgba(75, 123, 236, .12), transparent 28%),
+        radial-gradient(circle at 12% 40%, rgba(235, 63, 77, .08), transparent 26%),
+        linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
     }
     .hero::before {
       content: "";
       position: absolute;
       inset: 0;
-      opacity: .14;
+      opacity: .55;
       background-image:
-        linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
-      background-size: 48px 48px;
+        linear-gradient(rgba(7,17,31,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(7,17,31,.035) 1px, transparent 1px);
+      background-size: 56px 56px;
       mask-image: linear-gradient(to bottom, black, transparent 85%);
     }
-    .hero__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .9fr) minmax(520px, 1.1fr); gap: clamp(3rem, 6vw, 6rem); align-items: center; padding-top: 150px; padding-bottom: 120px; }
-    .hero__copy { max-width: 620px; }
+    .hero__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .88fr) minmax(520px, 1.12fr); gap: clamp(3rem, 6vw, 6rem); align-items: center; padding-top: 145px; padding-bottom: 170px; }
+    .hero__copy { max-width: 570px; }
     .hero__status {
       display: inline-flex;
       align-items: center;
       gap: .6rem;
       margin-bottom: 1.35rem;
       padding: .45rem .75rem;
-      border: 1px solid rgba(255,255,255,.14);
+      border: 1px solid var(--line);
       border-radius: 999px;
-      color: rgba(255,255,255,.75);
-      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      background: rgba(255,255,255,.8);
       font: 500 .72rem/1.2 var(--mono);
       backdrop-filter: blur(10px);
     }
     .hero__status i { width: 8px; height: 8px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 0 5px rgba(33,195,182,.14); }
-    .hero h1 { font-size: clamp(3rem, 6vw, 5.8rem); letter-spacing: -.065em; }
-    .hero h1 span { color: #7ce4dc; }
-    .hero__lede { max-width: 590px; margin-top: 1.4rem; color: rgba(255,255,255,.7); font-size: clamp(1rem, 1.8vw, 1.16rem); }
+    .hero h1 { max-width: 590px; font-size: clamp(3rem, 5vw, 4.65rem); letter-spacing: -.06em; }
+    .hero h1 span { color: var(--brand); }
+    .hero__lede { max-width: 550px; margin-top: 1.35rem; color: var(--muted); font-size: clamp(1rem, 1.6vw, 1.12rem); }
     .hero__actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
-    .hero__trust { display: flex; flex-wrap: wrap; gap: .8rem 1.5rem; margin-top: 2rem; color: rgba(255,255,255,.62); font-size: .78rem; }
+    .hero__trust { display: flex; flex-wrap: wrap; gap: .8rem 1.4rem; margin-top: 1.6rem; color: var(--muted); font-size: .76rem; }
     .hero__trust span { display: inline-flex; align-items: center; gap: .45rem; }
-    .hero__trust svg { width: 15px; color: #79ddd5; }
-    .hero__visual { position: relative; }
-    .product-window { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow-lg); transform: perspective(1300px) rotateY(-4deg) rotateX(1deg); }
+    .hero__trust svg { width: 15px; color: var(--success); }
+    .hero__visual { position: relative; padding: 1.1rem; border: 1px solid rgba(223,230,239,.9); border-radius: 28px; background: rgba(255,255,255,.7); box-shadow: 0 30px 80px rgba(22, 34, 51, .12); backdrop-filter: blur(12px); }
+    .hero__visual::before { content: ""; position: absolute; z-index: -1; width: 340px; height: 340px; top: -70px; right: -90px; border-radius: 50%; background: radial-gradient(circle, rgba(75,123,236,.2), transparent 68%); }
+    .product-window { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 18px 50px rgba(16,24,40,.12); }
     .product-window__bar { display: flex; align-items: center; gap: .45rem; height: 42px; padding: 0 1rem; background: #f5f7f9; border-bottom: 1px solid #e1e7ed; }
     .product-window__bar i { width: 8px; height: 8px; border-radius: 50%; background: #d4dae2; }
     .product-window__bar span { margin-left: .35rem; color: #738095; font: 500 .58rem/1 var(--mono); }
     .product-window img { display: block; width: 100%; }
-    .float-card { position: absolute; z-index: 3; display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; color: #fff; background: rgba(11,25,43,.88); box-shadow: 0 20px 45px rgba(0,0,0,.28); backdrop-filter: blur(14px); }
+    .float-card { display: none; }
     .float-card b { display: block; font-size: .78rem; }
     .float-card small { display: block; margin-top: .12rem; color: rgba(255,255,255,.58); font-size: .66rem; }
     .float-card__icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: var(--navy); background: #73e0d7; }
@@ -345,8 +348,6 @@
     @media (prefers-reduced-motion: no-preference) {
       .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
       .reveal.visible { opacity: 1; transform: none; }
-      .product-window { animation: float 6s ease-in-out infinite; }
-      @keyframes float { 0%,100% { transform: perspective(1300px) rotateY(-4deg) rotateX(1deg) translateY(0); } 50% { transform: perspective(1300px) rotateY(-4deg) rotateX(1deg) translateY(-8px); } }
     }
 
     /* Responsive */
@@ -392,14 +393,10 @@
     @media (max-width: 620px) {
       .section { padding: 4rem 0; }
       .brand small { display: none; }
-      .hero__inner { padding-top: 120px; padding-bottom: 220px; }
-      .hero h1 { font-size: clamp(2.7rem, 14vw, 4rem); }
+      .hero__inner { padding-top: 118px; padding-bottom: 220px; }
+      .hero h1 { font-size: clamp(2.65rem, 13vw, 3.8rem); }
       .hero__visual { margin-top: 1rem; }
-      .product-window { transform: none; animation: none; }
-      .float-card--one { top: -28px; right: -8px; }
-      .float-card--two { bottom: -48px; left: 8px; }
-      .float-card { padding: .7rem .8rem; }
-      .float-card__icon { width: 30px; height: 30px; }
+      .hero__visual { padding: .55rem; border-radius: 20px; }
       .hero__stats { transform: translateY(55%); }
       #platforms { padding-top: 12rem; }
       .platform-grid, .workflow-grid, .security-grid { grid-template-columns: 1fr; }
@@ -438,15 +435,15 @@
     <section class="hero">
       <div class="wrap hero__inner">
         <div class="hero__copy">
-          <div class="hero__status"><i aria-hidden="true"></i> Open source · MIT licensed · Production-minded</div>
-          <h1>Turn product interest into <span>qualified quotes.</span></h1>
-          <p class="hero__lede">Official TackQuote extensions add a secure B2B request-a-quote workflow to the storefront you already run—without hijacking the cart or trusting prices from the browser.</p>
+          <div class="hero__status"><i aria-hidden="true"></i> Official TackQuote storefront extensions</div>
+          <h1>B2B quoting that feels <span>native.</span></h1>
+          <p class="hero__lede">Give buyers a fast way to request pricing across multiple products—while your store remains the source of truth for products, prices and availability.</p>
           <div class="hero__actions">
             <a class="btn btn--large" href="#platforms">
-              Find your platform
+              Explore extensions
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
-            <a class="btn btn--ghost btn--large" href="https://github.com/ackm04/tack-ecommerce-extensions/releases">View releases</a>
+            <a class="btn btn--ghost btn--large" href="https://github.com/ackm04/tack-ecommerce-extensions">Browse GitHub</a>
           </div>
           <div class="hero__trust">
             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg> Server-side price validation</span>
@@ -456,17 +453,9 @@
         </div>
 
         <div class="hero__visual" aria-label="TackQuote quote interface preview">
-          <div class="float-card float-card--one">
-            <span class="float-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7 10 17l-5-5"/></svg></span>
-            <span><b>Price verified</b><small>Re-read from store catalog</small></span>
-          </div>
           <div class="product-window">
             <div class="product-window__bar"><i></i><i></i><i></i><span>app.tackquote.com/quotes</span></div>
             <img src="assets/tackquote-quote.webp" alt="TackQuote quote for Meridian Supply Co. with three priced line items and a total of $21,850" width="1240" height="472">
-          </div>
-          <div class="float-card float-card--two">
-            <span class="float-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM8 9h8M8 13h5"/></svg></span>
-            <span><b>Draft created</b><small>Ready for seller review</small></span>
           </div>
         </div>
       </div>
