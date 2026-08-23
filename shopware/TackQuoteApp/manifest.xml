@@ -19,10 +19,28 @@
 
     <setup>
         <registrationUrl>https://api.tackquote.com/v1/integrations/shopware/app/register</registrationUrl>
-        <!-- No <secret> here on purpose. A committed <secret> is a committed
-             credential, and its presence also tells the shop to skip Shopware
-             Account authentication. For local development, add one in a working
-             copy only - see README.md. -->
+        <!-- No <secret> in the REPOSITORY, because a committed <secret> is a
+             committed credential and this repository is public.
+
+             But a secret IS REQUIRED to install this app. Shopware's docs are
+             explicit: "If you are developing a private app not published in the
+             Shopware Store, you must provide the <secret> in case of an external
+             app server." That is exactly this app - manifest-only, with its
+             backend on api.tackquote.com.
+
+             An earlier version of this comment claimed that omitting <secret>
+             makes the shop fall back to Shopware Account authentication. That is
+             WRONG and it is why installs failed: the Account only holds a secret
+             for apps uploaded TO THE STORE, so for an unpublished private app
+             omitting it leaves nothing to authenticate with.
+
+             The secret is therefore injected AT PACKAGE TIME, never committed:
+
+                 SHOPWARE_APP_SECRET=... bin/build-zip.sh
+
+             It must equal the API's SHOPWARE_APP_SECRET env var, which is what
+             ShopwareAppService.requireAppSecret() verifies the registration
+             signature against. -->
     </setup>
 
     <permissions>

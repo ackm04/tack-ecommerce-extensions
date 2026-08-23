@@ -49,6 +49,62 @@ The validator also catches a name/directory mismatch, a non-`https`
 
 ## Installing
 
+### Step 0 — build the zip (REQUIRED; do not upload the release asset directly)
+
+The zip attached to a GitHub release is a **template**. It cannot contain the app
+secret, because this repository is public. Build a signed zip first:
+
+```bash
+# read the secret from your own running API so the two cannot drift
+export SHOPWARE_APP_SECRET=$(docker inspect tack-api-1 \
+  --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | grep '^SHOPWARE_APP_SECRET=' | cut -d= -f2)
+
+bash shopware/TackQuoteApp/bin/build-zip.sh
+# -> shopware/TackQuoteApp/dist/TackQuoteApp.zip
+```
+
+That script does two things the hand-built v1.2.0 asset got wrong, both of which
+broke real installs:
+
+1. **Injects `<setup><secret>`.** Shopware's docs: *"If you are developing a
+   private app not published in the Shopware Store, you must provide the
+   `<secret>` in case of an external app server."* Without it the app can upload
+   but registration can never succeed, because for an unpublished private app
+   there is nothing else to authenticate with. An earlier comment in the manifest
+   claimed omitting it selects Shopware Account authentication — that is wrong;
+   the Account only holds a secret for apps uploaded to the store.
+2. **Omits zip directory entries** (`zip -D`). Shopware's own packaging tool never
+   writes them — `shopware-cli`'s `internal/archiver/zip.go` only ever adds files
+   — so the canonical artifact has `TackQuoteApp/manifest.xml` at index 0, while
+   plain `zip -r` puts a bare `TackQuoteApp/` there. Core's
+   `PluginZipDetector::isApp()` tolerates the directory entry, but **Shopware
+   Cloud runs a different, non-public codebase**, and this was the only structural
+   difference from what official tooling produces. A Cloud upload that reports
+
+   ```
+   No manifest.xml found: You can find an example of a valid manifest file ...
+   ```
+
+   is rejecting the archive at parse time, before any signature check — so this,
+   not the secret, is the change that addresses that specific error.
+
+The build fails loudly if the secret is unset, short, or a placeholder, and
+asserts all four postconditions on the finished zip (first entry is
+`TackQuoteApp/manifest.xml`, no directory entries, secret present,
+`<meta><name>` == directory name). The resulting zip **contains a live
+credential** — upload it and delete it; never commit or publish it.
+
+If it still fails, use the tool built for this path, which removes every
+packaging variable at once. Log in with **username and password** — the docs are
+explicit that the extension API "can be used only by users", so an integration
+/ client-credentials token will not work, and the acting user needs the
+**"Upload extensions"** right:
+
+```bash
+shopware-cli project extension upload ./shopware/TackQuoteApp --activate --increase-version
+```
+
 ### Shopware Cloud
 
 **Corrected 2026-08-23 by measurement.** This section previously said Cloud
