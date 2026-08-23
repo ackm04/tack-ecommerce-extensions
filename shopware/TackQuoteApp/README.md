@@ -74,20 +74,23 @@ broke real installs:
    there is nothing else to authenticate with. An earlier comment in the manifest
    claimed omitting it selects Shopware Account authentication — that is wrong;
    the Account only holds a secret for apps uploaded to the store.
-2. **Omits zip directory entries** (`zip -D`). Shopware's own packaging tool never
-   writes them — `shopware-cli`'s `internal/archiver/zip.go` only ever adds files
-   — so the canonical artifact has `TackQuoteApp/manifest.xml` at index 0, while
-   plain `zip -r` puts a bare `TackQuoteApp/` there. Core's
-   `PluginZipDetector::isApp()` tolerates the directory entry, but **Shopware
-   Cloud runs a different, non-public codebase**, and this was the only structural
-   difference from what official tooling produces. A Cloud upload that reports
+2. **Omits zip directory entries** (`zip -D`), to match `shopware-cli`, whose
+   `internal/archiver/zip.go` only ever adds files. **This is cosmetic — it was
+   NOT the fix.** I first hypothesised it was, and then measured it against the
+   live Cloud sandbox. Full matrix, four uploads to
+   `POST /api/_action/extension/upload` on Shopware 6.7:
 
-   ```
-   No manifest.xml found: You can find an example of a valid manifest file ...
-   ```
+   | dir entries | `<secret>` | result |
+   |---|---|---|
+   | yes | yes | reaches registration (then fails on Cloudflare, see below) |
+   | no  | yes | reaches registration |
+   | no  | no  | **400 `The private app check failed`** |
+   | yes | no  | **400 `The private app check failed`** ← the published asset |
 
-   is rejecting the archive at parse time, before any signature check — so this,
-   not the secret, is the change that addresses that specific error.
+   The secret is the ONLY variable that decides whether the upload is accepted.
+   Directory entries make no difference at either the API or the parse stage. The
+   admin UI renders that same rejection as "No manifest.xml found", which is
+   misleading — nothing is wrong with the archive's manifest.
 
 The build fails loudly if the secret is unset, short, or a placeholder, and
 asserts all four postconditions on the finished zip (first entry is
