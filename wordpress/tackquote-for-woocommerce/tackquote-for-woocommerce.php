@@ -3,7 +3,7 @@
  * Plugin Name:       TackQuote for WooCommerce
  * Plugin URI:        https://tackquote.com/integrations/woocommerce
  * Description:       Add a "Request a Quote" button to your WooCommerce store and sync orders with your TackQuote B2B quoting account.
- * Version:           1.3.1
+ * Version:           1.3.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            TackQuote
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // No direct access.
 }
 
-define( 'TACK_QUOTES_VERSION', '1.3.1' );
+define( 'TACK_QUOTES_VERSION', '1.3.2' );
 define( 'TACK_QUOTES_FILE', __FILE__ );
 define( 'TACK_QUOTES_DIR', plugin_dir_path( __FILE__ ) );
 define( 'TACK_QUOTES_URL', plugin_dir_url( __FILE__ ) );

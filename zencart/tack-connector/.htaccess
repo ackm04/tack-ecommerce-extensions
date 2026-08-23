@@ -19,7 +19,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Serve real files (this .htaccess is not one of them - see the deny below).
+    # Serve real files, so index.php and the directory itself are reachable.
+    # This .htaccess is not served: Apache's stock config carries a global
+    # `.ht*` deny. There is no deny rule in this file to rely on.
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]

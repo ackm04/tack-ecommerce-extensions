@@ -31,7 +31,7 @@ class TackQuotes extends Module
     {
         $this->name = 'tackquotes';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.0';
+        $this->version = '1.2.0';
         $this->author = 'TackQuote';
         // 1, not 0: PrestaShop skips constructing the module when rendering the Modules
         // page if this is 0, so `$this->warning` set in this constructor would never be
@@ -49,7 +49,7 @@ class TackQuotes extends Module
 
         $this->displayName = $this->trans('TackQuote for PrestaShop', [], 'Modules.Tackquotes.Admin');
         $this->description = $this->trans(
-            'Add a "Request a Quote" button to your product pages and sync orders with your TackQuote B2B quoting account.',
+            'Add a "Request a Quote" button to your product pages and connect this store to your TackQuote B2B quoting account.',
             [],
             'Modules.Tackquotes.Admin'
         );

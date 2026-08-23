@@ -1,0 +1,3 @@
+
+# Build output from scripts/package-all.sh and the per-plugin builders.
+dist/

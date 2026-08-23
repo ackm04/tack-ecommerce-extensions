@@ -3,7 +3,7 @@
   "description": "TackQuote for Magento 2 — \"Request a Quote\" and multi-product \"Add to Quote\" storefront controls that create real TackQuote B2B quote requests. Companion to the TackQuote WooCommerce plugin.",
   "type": "magento2-module",
   "license": "GPL-2.0-or-later",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "require": {
     "php": "~8.1.0||~8.2.0||~8.3.0||~8.4.0",
     "magento/framework": "103.0.*",

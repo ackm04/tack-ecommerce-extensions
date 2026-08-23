@@ -5,11 +5,15 @@ to product info pages and connects the store to a TackQuote B2B quoting
 account (API base URL + API key). It mirrors the pattern used by the
 TackQuote WooCommerce and PrestaShop companions
 (`integrations/wordpress/tackquote-for-woocommerce/`, `integrations/prestashop/modules/tackquotes/`),
-adapted to Zen Cart's classic PHP architecture — Zen Cart has no module-zip
-system, no DI container, and (unlike PrestaShop's `displayProductActions`
-hook) no plugin hook point on the default product info template, so this
-ships as a set of files you copy into your Zen Cart install plus one SQL
-patch and one manual template edit.
+adapted to Zen Cart's classic PHP architecture — no DI container and (unlike
+PrestaShop's `displayProductActions` hook) no plugin hook point on the default
+product info template, so this ships as a set of files you copy into your Zen
+Cart install plus one SQL patch and one manual template edit. Zen Cart *does*
+have a self-installing package format — "encapsulated plugins" under
+`zc_plugins/`, admin-only from 1.5.7 and extended to the storefront through
+2.1.0 (<https://docs.zen-cart.com/dev/plugins/encapsulated/>) — but this module
+is **not** packaged as one; it is a plain file overlay plus a SQL patch, which
+is what the rest of this README describes.
 
 This directory holds **two independent halves**:
 
@@ -23,7 +27,7 @@ store talk to TackQuote; `TACK_CONNECTOR_TOKEN` lets TackQuote talk to this
 store. Neither is usable in the other direction.
 
 Distribution authority: the public GitHub release asset is
-[`tack-zencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-zencart.zip).
+[`tack-zencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.2.0/tack-zencart.zip).
 This monorepo directory is build/source only. No Zen Cart plugin-directory listing
 is claimed.
 
@@ -33,32 +37,46 @@ is claimed.
 > described the token as "a Bearer token you generate on your side" for a
 > companion the merchant was expected to write. It now ships here.
 
-## What's in this directory
+## What's in the release zip
+
+`tack-zencart.zip` unpacks to a single top-level folder. **Only what is inside
+`store-root/` belongs on your web server** — the SQL patches and this README
+are deliberately kept outside it so they cannot end up publicly downloadable
+under your docroot:
 
 ```
-integrations/zencart/
-├── zc_install/install.sql              Adds the TackQuote settings group (see below)
-├── zc_install/uninstall.sql            Removes them
-├── zc_install/upgrade_connector.sql    Adds ONLY the new connector token, for
-│                                       stores that ran install.sql before 1.1.0
-├── includes/classes/tack_api_client.php                        API client (cURL)
-├── ajax_tack_quote_request.php                                 Storefront AJAX endpoint
-├── tack-connector/index.php            Inbound catalog/order connector
-├── tack-connector/.htaccess            Sub-path rewrite + Authorization passthrough
-└── includes/templates/template_default/
-    ├── templates/tpl_tack_quote_button.php  Button + modal template partial
-    ├── css/tack_quote_button.css
-    └── jscript/tack_quote_button.js
+tack-zencart/
+├── README.md                            ← this file. Do NOT copy to the server.
+├── zc_install/                          ← run these in admin. Do NOT copy to the server.
+│   ├── install.sql                      Adds the TackQuote settings group (see below)
+│   ├── uninstall.sql                    Removes them
+│   └── upgrade_connector.sql            Adds ONLY the new connector token, for
+│                                        stores that ran install.sql before 1.1.0
+└── store-root/                          ← copy the CONTENTS of this folder into
+    │                                      your Zen Cart docroot (not the folder itself)
+    ├── ajax_tack_quote_request.php                             Storefront AJAX endpoint
+    ├── tack-connector/index.php          Inbound catalog/order connector
+    ├── tack-connector/.htaccess          Sub-path rewrite + Authorization passthrough
+    └── includes/
+        ├── classes/tack_api_client.php                         API client (cURL)
+        └── templates/template_default/
+            ├── templates/tpl_tack_quote_button.php  Button + modal template partial
+            ├── css/tack_quote_button.css
+            └── jscript/tack_quote_button.js
 ```
 
-Every path under `includes/` and `ajax_tack_quote_request.php` is named and
-laid out exactly as it should sit inside your Zen Cart storefront root — copy
-the contents of this directory into your store's docroot (merging into your
-existing `includes/` tree; do not overwrite unrelated files).
+Every path under `store-root/` is named and laid out exactly as it should sit
+inside your Zen Cart storefront root, so the copy is a straight merge into your
+existing `includes/` tree — do not overwrite unrelated files, and do not create
+a `store-root` directory on the server.
+
+In this monorepo the same files sit flat under `integrations/zencart/`
+(`zc_install/`, `README.md`, and the store files side by side); the
+`store-root/` wrapper is created by the release packaging step.
 
 ## Installation
 
-1. **Copy files.** From this directory, copy:
+1. **Copy files.** From `store-root/` in the unpacked zip, copy:
    - `ajax_tack_quote_request.php` → your store root.
    - `tack-connector/` (the whole folder, **including the hidden `.htaccess`**)
      → your store root, so it sits at `{store}/tack-connector/`. Only needed if
@@ -70,14 +88,29 @@ existing `includes/` tree; do not overwrite unrelated files).
      if you haven't customized templates; otherwise your custom template's
      equivalent folders).
 2. **Run the settings SQL.** Import `zc_install/install.sql` into your Zen
-   Cart database (phpMyAdmin, `mysql your_db < zc_install/install.sql`, or
-   Zen Cart admin's SQL patch tool if you have one enabled). This adds a
+   Cart database. The supported route is Zen Cart admin ▸ **Tools ▸ Install SQL
+   Patches**, which takes either pasted SQL or an uploaded `.sql` file and
+   applies your store's database table prefix for you
+   (<https://docs.zen-cart.com/user/admin_pages/tools/install_sql_patches/>).
+   phpMyAdmin or `mysql your_db < zc_install/install.sql` also work, but there
+   you must add the table prefix yourself if your store uses one. This adds a
    "TackQuote" configuration group.
 
    **Already installed a pre-1.1.0 version?** Run
    `zc_install/upgrade_connector.sql` instead — it adds only the new
-   `TACK_CONNECTOR_TOKEN` setting. Re-running `install.sql` on a store that
-   already has the group would create a **second** "TackQuote" group.
+   `TACK_CONNECTOR_TOKEN` setting, is guarded by a `NOT EXISTS` on the key, and
+   is safe to re-run.
+
+   **Do not re-run `install.sql` on a store that already has the group.** It is
+   not written to be idempotent: the `configuration_group` row inserts again
+   (creating a **second**, empty "TackQuote" entry in the admin Configuration
+   menu), and the very next statement then aborts on Zen Cart's
+   `unq_config_key_zen` unique index with `ERROR 1062 Duplicate entry
+   'TACK_API_URL'`. Nothing is lost, but you are left with an orphan group to
+   clean up:
+   `DELETE FROM configuration_group WHERE configuration_group_title = 'TackQuote' AND configuration_group_id NOT IN (SELECT configuration_group_id FROM configuration);`
+   (Verified on the Zen Cart v1.5.8a `configuration` / `configuration_group`
+   schema; `uninstall.sql` and `upgrade_connector.sql` are both re-runnable.)
 3. **Configure in admin.** In Zen Cart admin, go to **Configuration ▸
    TackQuote** (it appears automatically once the SQL patch has run — Zen
    Cart's admin configuration screen renders a form for any group in
@@ -161,7 +194,10 @@ token is compared with `hash_equals()`.
 
 `{store}/tack-connector/products` is not a real file, so the shipped
 `.htaccess` rewrites everything under the directory to its `index.php` with the
-sub-path in `?tack_path=`. It needs `AllowOverride FileInfo` (or `All`), which
+sub-path in `?tack_path=`. Requests that DO resolve to a real file or directory
+are passed straight through, so `{store}/tack-connector/index.php` and
+`{store}/tack-connector/` still work; the `.htaccess` itself is protected by
+Apache's stock global `.ht*` deny, not by anything in this file. It needs `AllowOverride FileInfo` (or `All`), which
 Zen Cart already requires for its own `.htaccess` files. **nginx** has no
 `.htaccess`; add to the server block instead:
 
@@ -249,6 +285,13 @@ using `$db->bindVars()` for every non-integer value and `(int)` casts elsewhere.
   which is how most third-party Zen Cart add-ons are distributed.
 - **No auto-injecting hook** for the storefront button — step 4 above is a real
   one-line template edit.
+- **A custom template needs two more edits.**
+  `tpl_tack_quote_button.php` references its own CSS/JS with the literal paths
+  `includes/templates/template_default/css/tack_quote_button.css` and
+  `.../jscript/tack_quote_button.js`. If you copy the partial into a template
+  other than `template_default`, edit those two `href`/`src` values to your
+  template's directory as well, or the button renders unstyled and does
+  nothing when clicked.
 - **No "Test connection" button in admin.** This module uses Zen Cart's native
   configuration-group rendering rather than a custom admin page. Verify the
   quote button from a product page, and the connector with

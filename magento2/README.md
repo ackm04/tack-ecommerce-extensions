@@ -200,11 +200,19 @@ forwarded rather than assumed.
 ## Installation
 
 Distribution authority: the public GitHub release asset is
-[`tack-magento2.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-magento2.zip).
+[`tack-magento2.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.2.0/tack-magento2.zip).
 This monorepo directory is build/source only. No Magento Marketplace or Packagist listing
 is claimed.
 
-Download that zip, extract it into `app/code` as directed by the release README, then:
+The zip's top-level directory is `TackQuote/Quotes/`, so unzip it **into `app/code`**
+(not into `app/code/TackQuote/Quotes`) — that produces
+`app/code/TackQuote/Quotes/registration.php`:
+
+```bash
+unzip tack-magento2.zip -d <magento-root>/app/code
+```
+
+Then, from the Magento root:
 
 ```bash
 bin/magento module:enable TackQuote_Quotes

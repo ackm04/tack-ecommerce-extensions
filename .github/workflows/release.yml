@@ -1,0 +1,53 @@
+name: Release plugin ZIP
+
+# Publishes every platform artifact as GitHub Release assets when a v* tag is pushed.
+#
+# This file used to live at wordpress/tackquote-for-woocommerce/.github/workflows/,
+# where GitHub never read it — workflows are only picked up from the repository
+# ROOT .github/workflows/. That is why no release asset was ever built by CI: the
+# v1.1.0 tag triggered nothing and every zip was uploaded by hand. The Magento
+# asset shows what hand-building costs — the published v1.1.0 zip had a
+# `magento2/` top-level directory instead of `Vendor/Module/`, so Magento could
+# never discover the module, and it contained eight files that exist nowhere in
+# this repository's history.
+#
+# It also uploaded `dist/tack-quotes.zip` while build.sh emitted
+# `dist/tackquote-for-woocommerce.zip` (renamed in 90fbc01), so the upload step
+# would have failed on a missing file even if the workflow had been read.
+#
+# NOTE: GitHub Actions is currently billing-blocked on this account, so this
+# still does not run. Until that is resolved, cut releases with
+# `scripts/package-all.sh` locally — which is what this workflow invokes, so the
+# two cannot drift.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Lint PHP
+        run: |
+          find . -path ./dist -prune -o -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+      - name: Build every platform artifact
+        run: bash scripts/package-all.sh dist
+
+      - name: Attach ZIPs to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

@@ -17,6 +17,9 @@ rsync -a --delete \
 	--exclude '.git*' \
 	--exclude 'vendor' \
 	--exclude 'node_modules' \
+	--exclude 'tests' \
+	--exclude '*.dist' \
+	--exclude '.DS_Store' \
 	--exclude '*.md' \
 	"$ROOT/" "$STAGE/"
 
