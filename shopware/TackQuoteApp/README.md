@@ -51,9 +51,56 @@ The validator also catches a name/directory mismatch, a non-`https`
 
 ### Shopware Cloud
 
-Cloud installs apps from the Shopware Store only. That requires the app to be
-submitted and approved, with a Shopware Account issuing the app secret. There is
-no sideload path on Cloud — no filesystem, no `bin/console`.
+**Corrected 2026-08-23 by measurement.** This section previously said Cloud
+installs from the Shopware Store only, with no sideload path. That is **wrong**:
+a Cloud store accepts a zip through the Admin API.
+
+Verified against a live Cloud sandbox (Shopware **6.7.12.1**):
+
+```bash
+# 1. token
+curl -sX POST "$STORE/api/oauth/token" -H 'Content-Type: application/json' \
+  -d '{"grant_type":"client_credentials","client_id":"...","client_secret":"..."}'
+
+# 2. upload — this endpoint EXISTS on Cloud and accepts a private app
+curl -sX POST "$STORE/api/_action/extension/upload" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@TackQuoteApp.zip"
+```
+
+The store accepted the zip and immediately ran the registration handshake
+against `<setup><registrationUrl>`. So a `<secret>` in the manifest is required
+for Cloud too — the Store/Shopware-Account path is one option, not the only one.
+
+Two things also confirmed on that store, worth knowing:
+
+* All of Shopware's own first-party apps are `selfManaged=true` with an **HTTPS
+  `path`** (e.g. `https://copilot.apps.shopware.io`), not a filesystem path. Apps
+  whose code lives on their own server are the normal Cloud model.
+* The `<meta><name>` must equal the directory name inside the zip, and the
+  manifest must validate against `manifest-3.0.xsd`. The XSD makes `license` and
+  `compatibility` **required**, which the prose docs do not mention — validate
+  against the schema, not against an example.
+
+**Known blocker, not an app defect.** Registration is a server-to-server callback
+from Shopware to `registrationUrl`. If that host sits behind a bot challenge, the
+install fails with:
+
+```
+FRAMEWORK__APP_REGISTRATION_FAILED
+App registration for "TackQuoteApp" failed: Got status code 403,
+with response: <title>Just a moment...</title>
+```
+
+That is Cloudflare (or equivalent) challenging Shopware's egress, not a signature
+problem — the handshake itself was verified working by calling it directly:
+unsigned → 401, wrong signature → 401, correctly signed → 200 with a `proof`
+equal to `HMAC-SHA256(shopId + shopUrl + appName, appSecret)`. Exempt the
+registration and webhook paths from bot protection before installing. On a
+Cloudflare **Free** plan note that Bot Fight Mode *cannot* be skipped with a WAF
+rule — Cloudflare documents that it runs outside the Ruleset Engine — so use an
+IP Access rule for the vendor's egress ranges, upgrade for Super Bot Fight Mode,
+or disable the challenge.
 
 ### Self-hosted, or a Cloud dev/sandbox with app sideloading enabled
 
