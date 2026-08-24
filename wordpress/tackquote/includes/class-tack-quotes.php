@@ -13,6 +13,7 @@ require_once TACK_QUOTES_DIR . 'includes/class-tack-settings.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-api-client.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-widget.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-order-sync.php';
+require_once TACK_QUOTES_DIR . 'includes/class-tack-catalog-mode.php';
 
 /**
  * Main plugin class (singleton).
@@ -51,6 +52,11 @@ final class Tack_Quotes {
 	public function init() {
 		$this->settings = new Tack_Settings();
 		$this->settings->init();
+
+		// Quote-only (B2B catalog) mode. Registered unconditionally; the class
+		// re-checks whether it applies per request, because the current user is
+		// not resolved this early and a page cache would freeze a wrong answer.
+		( new Tack_Catalog_Mode() )->init();
 
 		// Frontend "Request a Quote" widget/button.
 		if ( 'yes' === get_option( 'tack_quotes_enable_widget', 'yes' ) ) {

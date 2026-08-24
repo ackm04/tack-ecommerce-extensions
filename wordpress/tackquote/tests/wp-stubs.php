@@ -21,14 +21,55 @@ function esc_attr( $t ) { return $t; }
 function esc_html( $t ) { return $t; }
 function esc_html__( $text, $domain = null ) { return $text; }
 function __( $text, $domain = null ) { return $text; }
-function add_action() {}
-function add_filter() {}
+$GLOBALS['TACK_HOOKS']   = array();
+$GLOBALS['TACK_REMOVED'] = array();
+
+function add_action( $hook, $callback = null, $priority = 10, $args = 1 ) {
+	$GLOBALS['TACK_HOOKS'][] = array( 'hook' => $hook, 'priority' => $priority );
+}
+function add_filter( $hook, $callback = null, $priority = 10, $args = 1 ) {
+	$GLOBALS['TACK_HOOKS'][] = array( 'hook' => $hook, 'priority' => $priority );
+}
+function remove_action( $hook, $callback, $priority = 10 ) {
+	$GLOBALS['TACK_REMOVED'][] = $hook . '|' . ( is_string( $callback ) ? $callback : 'closure' ) . '|' . $priority;
+	return true;
+}
+
+/**
+ * Current-visitor state the tests drive directly. Real WordPress resolves these
+ * from the session; here they are plain globals so a test can say "now this is
+ * a signed-out visitor" without a database.
+ */
+$GLOBALS['TACK_LOGGED_IN'] = false;
+$GLOBALS['TACK_CAPS']      = array();
+$GLOBALS['TACK_ROLES']     = array();
+
+function is_user_logged_in() { return (bool) $GLOBALS['TACK_LOGGED_IN']; }
+function wp_get_current_user() {
+	$u        = new stdClass();
+	$u->roles = (array) $GLOBALS['TACK_ROLES'];
+	return $u;
+}
+function checked( $a, $b = true, $echo = true ) { return (string) $a === (string) $b ? "checked='checked'" : ''; }
+function sanitize_key( $k ) { return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $k ) ); }
+function sanitize_text_field( $t ) { return trim( (string) $t ); }
+function esc_attr__( $t, $d = null ) { return $t; }
+function wc_add_notice( $msg, $type = 'success' ) { $GLOBALS['TACK_NOTICES'][] = $msg; }
+
+class TackStubRoles {
+	public function get_names() { return array( 'administrator' => 'Administrator', 'customer' => 'Customer', 'wholesale' => 'Wholesale' ); }
+}
+function wp_roles() { return new TackStubRoles(); }
 function register_setting() {}
 function add_settings_section() {}
 function add_settings_field() {}
 function plugin_basename( $file ) { return 'tackquote/tackquote.php'; }
-function get_option( $key, $default = false ) { return $default; }
-function current_user_can( $cap ) { return true; }
+$GLOBALS['TACK_OPTIONS'] = array();
+function get_option( $key, $default = false ) {
+	return array_key_exists( $key, (array) $GLOBALS['TACK_OPTIONS'] ) ? $GLOBALS['TACK_OPTIONS'][ $key ] : $default;
+}
+function update_option( $key, $value ) { $GLOBALS['TACK_OPTIONS'][ $key ] = $value; return true; }
+function current_user_can( $cap ) { return in_array( $cap, (array) $GLOBALS['TACK_CAPS'], true ); }
 
 function add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $callback = null, $icon = null, $position = null ) {
 	$GLOBALS['TACK_REGISTERED_PAGES'][ $menu_slug ] = $capability;
