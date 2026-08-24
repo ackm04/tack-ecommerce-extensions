@@ -44,7 +44,19 @@ class Quote extends Controller
      */
     public function productPage(string &$route, array &$data, string &$output): void
     {
-        if (!$this->isActive() || !$this->config->get('module_tackquotes_inline_button')) {
+        if (!$this->isActive()) {
+            return;
+        }
+
+        $quoteOnly = $this->quoteOnlyApplies();
+
+        // The placement toggle is OVERRIDDEN by quote-only mode, and that is deliberate.
+        // With the cart refused server-side, skipping this injection because a merchant
+        // had "Show beside Add to Cart" switched off would leave the product page with a
+        // dead Add to Cart button and no quote button at all — the exact "no way to
+        // transact" failure this feature must never produce. So: inject whenever the mode
+        // applies, regardless of the placement toggle.
+        if (!$quoteOnly && !$this->config->get('module_tackquotes_inline_button')) {
             return;
         }
 
@@ -55,7 +67,24 @@ class Quote extends Controller
 
         // The anchor: core's Add to Cart button. Everything after it is theme territory.
         $anchor = strpos($output, 'id="button-cart"');
+
+        // A theme that renamed the button gives us nothing to anchor on. Normally that
+        // means "inject nothing and leave the page alone" (see the class comment). In
+        // quote-only mode that answer is not available: the server is already refusing
+        // add-to-cart, so a page with no quote CTA is a dead end. The controls are appended
+        // to the end of the product page output instead — adjacent rather than perfect,
+        // which beats a shopper with no way to ask for a price.
         if ($anchor === false) {
+            if (!$quoteOnly) {
+                return;
+            }
+
+            $controls = $this->renderControls($productId, $quoteOnly);
+
+            if ($controls !== '') {
+                $output .= $controls;
+            }
+
             return;
         }
 
@@ -83,24 +112,93 @@ class Quote extends Controller
             $insertAt = $groupEnd + strlen('</div>');
         }
 
+        $controls = $this->renderControls($productId, $quoteOnly);
+        if ($controls === '') {
+            return;
+        }
+
+        $output = substr($output, 0, $insertAt) . $controls . substr($output, $insertAt);
+
+        // ORDER MATTERS. The Add to Cart button is removed only AFTER the quote controls
+        // are in the document, and the removal re-finds its own anchor in the new string.
+        //
+        // This is the WooCommerce lesson, made structural. There, the quote button hung off
+        // a hook that only fires INSIDE the add-to-cart form, so "remove the cart button"
+        // would have removed the quote button with it and left the store with nothing.
+        // OpenCart has the same coupling in a different shape: `id="button-cart"` is the
+        // only anchor this file has, so deleting it first would delete the very landmark
+        // the injection needs. Inserting first and stripping second means the two cannot
+        // half-happen: if the insertion did not take, the code returned above and the cart
+        // button is still there and still refused server-side, which is degraded but alive.
+        if ($quoteOnly) {
+            $output = self::stripCartButton($output);
+        }
+    }
+
+    /**
+     * Renders the product-page quote controls, or '' if the product cannot be read.
+     *
+     * Split out of productPage() because quote-only mode has a second call site: the
+     * append-to-the-end fallback used when a theme has renamed the Add to Cart button.
+     */
+    private function renderControls(int $productId, bool $quoteOnly): string
+    {
         $this->load->language('extension/tack/module/tackquotes');
         $this->load->model('catalog/product');
 
         $product = $this->model_catalog_product->getProduct($productId);
         if (!$product) {
-            return;
+            return '';
         }
 
-        $controls = $this->load->view('extension/tack/quote/controls', [
+        return (string) $this->load->view('extension/tack/quote/controls', [
             'tackquote_product_id' => $productId,
             'tackquote_sku' => (string) ($product['model'] ?? ''),
             'tackquote_name' => (string) ($product['name'] ?? ''),
             'tackquote_add_label' => $this->addToQuoteLabel(),
             'tackquote_request_label' => $this->requestQuoteLabel(),
             'tackquote_show_add' => (bool) $this->config->get('module_tackquotes_quote_list'),
+            // Promotes the request button from `secondary` to `primary`: with the cart gone
+            // it is no longer the alternative action, it is THE action.
+            'tackquote_quote_only' => $quoteOnly,
         ]);
+    }
 
-        $output = substr($output, 0, $insertAt) . $controls . substr($output, $insertAt);
+    /**
+     * Removes core's Add to Cart button element from already-rendered product HTML.
+     *
+     * Bounded exactly like the injection above: it looks for core's own `id="button-cart"`,
+     * walks back to that tag's `<button`, forward to the first `</button>`, and does nothing
+     * at all if either end is missing. It never removes more than one element and never
+     * touches a theme it does not recognise.
+     *
+     * A comment is left in place of the button rather than nothing, so a merchant reading
+     * page source (or a support engineer reading a bug report) can see WHY the button is
+     * absent instead of suspecting a broken theme.
+     *
+     * This is presentation. It is not the enforcement — that is
+     * catalog/controller/quotemode.php, and it holds whether or not this succeeds.
+     */
+    private static function stripCartButton(string $output): string
+    {
+        $anchor = strpos($output, 'id="button-cart"');
+        if ($anchor === false) {
+            return $output;
+        }
+
+        $start = strrpos(substr($output, 0, $anchor), '<button');
+        if ($start === false) {
+            return $output;
+        }
+
+        $end = strpos($output, '</button>', $anchor);
+        if ($end === false) {
+            return $output;
+        }
+
+        return substr($output, 0, $start)
+            . '<!-- TackQuote: quote-only mode is on for this visitor, Add to Cart removed -->'
+            . substr($output, $end + strlen('</button>'));
     }
 
     /**
@@ -138,6 +236,11 @@ class Quote extends Controller
         }
 
         $output .= $this->load->view('extension/tack/quote/drawer', [
+            // Read once here and handed to the JS, rather than re-derived in the browser.
+            // The storefront script uses it for PRESENTATION ONLY — swapping a category
+            // tile's cart button for an add-to-quote button. The refusal itself is
+            // catalog/controller/quotemode.php and does not consult this value.
+            'tackquote_quote_only' => $this->quoteOnlyApplies(),
             'tackquote_submit_url' => $this->url->link('extension/tack/module/tackquotes.quoteList', 'language=' . $this->config->get('config_language'), true),
             'tackquote_asset_base' => 'extension/tack/catalog/view/',
             'tackquote_customer' => $customer,
@@ -181,6 +284,21 @@ class Quote extends Controller
     {
         return (bool) $this->config->get('module_tackquotes_status')
             && (string) $this->config->get('module_tackquotes_api_key') !== '';
+    }
+
+    /**
+     * Does quote-only mode apply to this visitor?
+     *
+     * DELEGATED, not re-implemented. The guard controller owns the answer, and if this file
+     * derived it separately the two could disagree — with the worst disagreement being
+     * "enforcement on, CTA off", i.e. a storefront nobody can transact with in either
+     * direction. Constructing the controller is cheap: it holds no state, and its own
+     * cheap-checks-first ordering means the admin-preview DB query only happens once
+     * quote-only is otherwise switched on.
+     */
+    private function quoteOnlyApplies(): bool
+    {
+        return (new \Opencart\Catalog\Controller\Extension\Tack\Quotemode($this->registry))->applies();
     }
 
     private function addToQuoteLabel(): string

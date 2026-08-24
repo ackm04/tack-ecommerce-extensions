@@ -20,8 +20,11 @@
       {{ tackquote_add_label }}
     </button>
   {% endif %}
-  <button type="button" class="btn btn-secondary btn-lg tackquote-request" data-tackquote-request
-          aria-haspopup="dialog">
+  {# `primary` when the cart has been taken away (quote-only mode) and `secondary` when it
+     is still there: with Add to Cart gone this is not the alternative action any more, it
+     is the only one, and it must not read as the lesser button on the page. #}
+  <button type="button" class="btn {% if tackquote_quote_only %}btn-primary{% else %}btn-secondary{% endif %} btn-lg tackquote-request"
+          data-tackquote-request aria-haspopup="dialog">
     {{ tackquote_request_label }}
   </button>
   <div class="tackquote-inline-note" data-tackquote-note hidden></div>

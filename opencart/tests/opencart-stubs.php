@@ -313,14 +313,38 @@ class Loader
         $key = 'model_' . str_replace('/', '_', $route);
 
         if (!$this->registry->has($key)) {
-            $this->registry->set($key, $route === 'setting/setting' ? new SettingModel() : new EventModel());
+            if ($route === 'setting/setting') {
+                $model = new SettingModel();
+            } elseif ($route === 'customer/customer_group') {
+                $model = new CustomerGroupModel();
+            } else {
+                $model = new EventModel();
+            }
+
+            $this->registry->set($key, $model);
         }
     }
+
+    /**
+     * Renders a MARKER, not real Twig.
+     *
+     * The product-page tests assert on WHERE the marker ends up in the surrounding HTML and
+     * on what disappeared from around it — that is the whole subject (does the quote CTA
+     * survive removing Add to Cart?). Rendering real Twig would test Twig.
+     *
+     * Every call is recorded, not just the last: a single product page render now calls
+     * view() for the controls and the drawer, and "which one ran" is exactly what a
+     * regression here would get wrong.
+     *
+     * @var array<int, array{route: string, data: array<string, mixed>}>
+     */
+    public array $viewCalls = [];
 
     public function view(string $route, array $data = []): string
     {
         $this->viewRoute = $route;
         $this->viewData = $data;
+        $this->viewCalls[] = ['route' => $route, 'data' => $data];
 
         return '<!-- rendered ' . $route . ' -->';
     }
@@ -330,3 +354,93 @@ class Loader
         return '<!-- ' . $route . ' -->';
     }
 }
+
+namespace Opencart\System\Library\Cart;
+
+use Opencart\System\Engine\Registry;
+
+/**
+ * Stands in for OpenCart's real admin-session user object.
+ *
+ * Declared in the REAL namespace on purpose. Quotemode::isAdminPreview() does
+ * `class_exists('\\Opencart\\System\\Library\\Cart\\User')` and then constructs it from the
+ * Registry, exactly as core's maintenance mode does
+ * (catalog/controller/startup/maintenance.php:29-31). Stubbing the METHOD instead would have
+ * left that branch — the admin-preview exemption — untested, and the exemption is the thing
+ * standing between a merchant and a storefront they cannot verify.
+ */
+class User
+{
+    private bool $logged;
+
+    public function __construct(Registry $registry)
+    {
+        $this->logged = (bool) $registry->get('admin_user_logged');
+    }
+
+    public function isLogged(): bool
+    {
+        return $this->logged;
+    }
+}
+
+namespace Tack\Test;
+
+/**
+ * The storefront customer. Only the three accessors the quote-only rule consults.
+ *
+ * Note the guest case: OpenCart leaves customer_group_id at 0 for a guest
+ * (system/library/cart/customer.php:36), which is a sentinel rather than a real group — so
+ * the guest is deliberately constructed with 0 here, and it is the CALLER's substitution of
+ * `config_customer_group_id` that must make "specific groups" match a guest.
+ */
+class Customer
+{
+    public function __construct(private bool $logged = false, private int $groupId = 0)
+    {
+    }
+
+    public function isLogged(): bool
+    {
+        return $this->logged;
+    }
+
+    public function getGroupId(): int
+    {
+        return $this->groupId;
+    }
+
+    public function getEmail(): string
+    {
+        return $this->logged ? 'buyer@acme-example.com' : '';
+    }
+
+    public function getFirstName(): string
+    {
+        return $this->logged ? 'Grace' : '';
+    }
+
+    public function getLastName(): string
+    {
+        return $this->logged ? 'Hopper' : '';
+    }
+
+    public function getTelephone(): string
+    {
+        return '';
+    }
+}
+
+/** Two groups, the shape admin/model/customer/customer_group.php:151 returns. */
+class CustomerGroupModel
+{
+    /** @return array<int, array<string, mixed>> */
+    public function getCustomerGroups(array $data = []): array
+    {
+        return [
+            ['customer_group_id' => 1, 'name' => 'Default'],
+            ['customer_group_id' => 2, 'name' => 'Trade'],
+        ];
+    }
+}
+

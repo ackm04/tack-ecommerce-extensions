@@ -119,6 +119,57 @@
               <div class="form-text">{{ entry_listing_button_help }}</div>
             </div>
           </div>
+          {# ── Quote-only / B2B catalog mode ─────────────────────────────────────────────
+             The scope select and the group list are plain form controls: no JS is needed to
+             show or hide the group picker, because a group selection is simply ignored
+             unless the scope is "groups" (QuoteOnly::applies), and save() refuses the
+             combination that would silently match nobody. A show/hide script here would be
+             one more thing that can fail open on a page that decides whether a shop can
+             take money. #}
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-quote-only">{{ entry_quote_only }}</label>
+            <div class="col-sm-10">
+              <select name="module_tackquotes_quote_only" id="input-quote-only" class="form-select">
+                <option value="1" {% if module_tackquotes_quote_only %}selected{% endif %}>{{ text_enabled }}</option>
+                <option value="0" {% if not module_tackquotes_quote_only %}selected{% endif %}>{{ text_disabled }}</option>
+              </select>
+              {# common.js fills `#error-<key>` from `$json['error']['<key>']` with underscores
+                 mapped to dashes, so save()'s `quote_only` key lands here. Without this
+                 element the "save an API key first" refusal would be invisible. #}
+              <div id="error-quote-only" class="invalid-feedback"></div>
+              <div class="form-text">{{ entry_quote_only_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-quote-only-scope">{{ entry_quote_only_scope }}</label>
+            <div class="col-sm-10">
+              <select name="module_tackquotes_quote_only_scope" id="input-quote-only-scope" class="form-select">
+                {% for scope in quote_only_scopes %}
+                  <option value="{{ scope.value }}" {% if module_tackquotes_quote_only_scope == scope.value %}selected{% endif %}>{{ scope.text }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">{{ entry_quote_only_scope_help }}</div>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-2 col-form-label" for="input-quote-only-groups">{{ entry_quote_only_groups }}</label>
+            <div class="col-sm-10">
+              <div id="input-quote-only-groups" class="form-control" style="height: 150px; overflow: auto;">
+                {% for customer_group in customer_groups %}
+                  <div class="form-check">
+                    <input type="checkbox" name="module_tackquotes_quote_only_groups[]"
+                           value="{{ customer_group.customer_group_id }}"
+                           id="input-quote-only-group-{{ customer_group.customer_group_id }}"
+                           class="form-check-input"
+                           {% if customer_group.customer_group_id in module_tackquotes_quote_only_groups %}checked{% endif %}>
+                    <label for="input-quote-only-group-{{ customer_group.customer_group_id }}" class="form-check-label">{{ customer_group.name }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+              <div id="error-quote-only-groups" class="invalid-feedback d-block"></div>
+              <div class="form-text">{{ entry_quote_only_groups_help }}</div>
+            </div>
+          </div>
           <div class="mb-3 row">
             <div class="col-sm-10 offset-sm-2">
               {# No `data-oc-toggle="ajax"` / `data-oc-target` here: common.js only honours those

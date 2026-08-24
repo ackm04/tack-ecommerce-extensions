@@ -54,3 +54,18 @@ $_['entry_quote_list'] = 'Multi-product quote list';
 $_['entry_quote_list_help'] = 'Lets a buyer collect several products and request one quote for all of them, like a cart. The list is held in the browser and never touches the OpenCart cart. With this off, each request covers a single product.';
 $_['entry_listing_button'] = 'Add-to-Quote on category tiles';
 $_['entry_listing_button_help'] = 'Adds a compact add-to-quote button beside the cart/wishlist/compare buttons on category and search results. Requires the quote list to be enabled.';
+
+// ── Quote-only / B2B catalog mode (1.3.0) ────────────────────────────────────────────────
+$_['entry_quote_only'] = 'Quote-only store (B2B catalog)';
+$_['entry_quote_only_help'] = 'Turns the whole storefront into a B2B catalog: Add to Cart and checkout are REFUSED BY THE SERVER, and shoppers request a quote instead. This is enforced in PHP, not by hiding buttons, so a crafted request cannot get around it. Existing carts are not emptied — they simply cannot grow or be checked out — and admin API order creation (Sales > Orders > Add Order, and TackQuote converting an accepted quote) keeps working. While you are logged into this admin panel your own storefront session keeps its cart, so you can compare both.';
+$_['entry_quote_only_scope'] = 'Applies to';
+$_['entry_quote_only_scope_help'] = 'Who sees the quote-only storefront. "Guests only" is the usual B2B setup: the public gets a catalog, and approved customers who have logged in keep a normal cart and checkout.';
+$_['text_scope_all'] = 'Everyone';
+$_['text_scope_guests'] = 'Guests only (logged-in customers keep the cart)';
+$_['text_scope_groups'] = 'Selected customer groups';
+$_['entry_quote_only_groups'] = 'Customer groups';
+$_['entry_quote_only_groups_help'] = 'Used only when "Applies to" is set to selected customer groups. Visitors who are not logged in are matched against the store default customer group (System > Settings > Option > Customer Group), which is the group OpenCart already prices them in.';
+
+// Error
+$_['error_quote_only_groups'] = 'Choose at least one customer group, or set "Applies to" back to Everyone or Guests only.';
+$_['error_quote_only_api_key'] = 'Save a TackQuote API key before switching on quote-only mode. Without a key no quote button is rendered, so enforcing quote-only would leave your storefront with no way to buy AND no way to request a quote.';

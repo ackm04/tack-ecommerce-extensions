@@ -30,6 +30,7 @@ namespace Opencart\Admin\Controller\Extension\Tack\Module;
 
 use Opencart\System\Engine\Controller;
 use Opencart\System\Library\Extension\Tack\ApiClient;
+use Opencart\System\Library\Extension\Tack\QuoteOnly;
 
 class Tackquotes extends Controller
 {
@@ -102,6 +103,33 @@ class Tackquotes extends Controller
 
         if ($apiUrl === '' || !filter_var($apiUrl, FILTER_VALIDATE_URL)) {
             $json['error']['api_url'] = $this->language->get('error_api_url');
+        }
+
+        // ── Quote-only mode: two refusals that exist to prevent a DEAD STOREFRONT ─────────
+        //
+        // Both are settings-time errors on purpose. Each describes a state where the
+        // storefront would refuse the cart and offer no quote button either, and neither is
+        // visible from the admin once saved — the merchant would just get reports that the
+        // shop "does nothing".
+        if ((int) ($this->request->post['module_tackquotes_quote_only'] ?? 0) === 1) {
+            // (a) No API key anywhere. catalog/controller/event/quote.php::isActive() renders
+            //     no quote button without one, and QuoteOnly::appliesToStorefront() honours
+            //     the same condition — so this save would be a silent no-op. Say so instead.
+            //     keepOrReplace() is used rather than the raw POST because the key input is
+            //     rendered empty by design, so a merchant with a saved key posts a blank one.
+            if ($this->keepOrReplace('module_tackquotes_api_key') === '') {
+                $json['error']['quote_only'] = $this->language->get('error_quote_only_api_key');
+            }
+
+            // (b) "Selected customer groups" with nothing selected. QuoteOnly::applies()
+            //     matches nobody in that state, which is safe (the cart stays open) but is
+            //     certainly not what the merchant meant.
+            $scope = QuoteOnly::normaliseScope($this->request->post['module_tackquotes_quote_only_scope'] ?? '');
+
+            if ($scope === QuoteOnly::SCOPE_GROUPS
+                && QuoteOnly::normaliseGroups($this->request->post['module_tackquotes_quote_only_groups'] ?? []) === []) {
+                $json['error']['quote_only_groups'] = $this->language->get('error_quote_only_groups');
+            }
         }
 
         if (!$json) {
@@ -257,6 +285,12 @@ class Tackquotes extends Controller
             'module_tackquotes_inline_button' => 1,
             'module_tackquotes_quote_list' => 1,
             'module_tackquotes_listing_button' => 1,
+            // Seeded OFF, and seeded rather than left absent for the same reason as the
+            // placement flags: an absent row makes config->get() return null, and null is
+            // indistinguishable from "off" until someone tries to reason about it.
+            'module_tackquotes_quote_only' => 0,
+            'module_tackquotes_quote_only_scope' => QuoteOnly::SCOPE_ALL,
+            'module_tackquotes_quote_only_groups' => [],
         ], $existing));
     }
 
@@ -281,6 +315,74 @@ class Tackquotes extends Controller
                 'action' => 'extension/tack/event/quote.footer',
                 'status' => 1,
                 'sort_order' => 1,
+            ],
+
+            // ── Quote-only mode enforcement ───────────────────────────────────────────────
+            //
+            // THESE ROWS ARE THE ENFORCEMENT. Without them nothing refuses an add-to-cart
+            // POST, however the settings screen is configured — the handlers rewrite the
+            // route the framework is about to dispatch (see catalog/controller/quotemode.php
+            // for the by-reference mechanism and its source citations), and a handler that
+            // was never registered cannot rewrite anything.
+            //
+            // Each trigger is written out IN FULL, ending in `/before`.
+            // Opencart\System\Engine\Event::trigger() matches a registered trigger as a
+            // PREFIX (system/engine/event.php:70), so a shorter `…/checkout/cart` would also
+            // fire on `/after` — too late to refuse anything — and on cart.remove, which
+            // must keep working so a shopper can still empty a pre-existing basket.
+            //
+            // `sort_order` 0 puts these ahead of the view events above. Nothing else in this
+            // extension depends on the ordering; it is simply the right end of the list for
+            // a request that is about to be refused.
+            [
+                'code' => 'tackquotes_guard_cart_add',
+                'description' => 'TackQuote: refuse add-to-cart in quote-only mode',
+                'trigger' => 'catalog/controller/checkout/cart.add/before',
+                'action' => 'extension/tack/quotemode.guardCart',
+                'status' => 1,
+                'sort_order' => 0,
+            ],
+            [
+                // Not decoration. A cart holding one line from before the switch could
+                // otherwise be edited to any quantity and checked out.
+                'code' => 'tackquotes_guard_cart_edit',
+                'description' => 'TackQuote: refuse cart quantity changes in quote-only mode',
+                'trigger' => 'catalog/controller/checkout/cart.edit/before',
+                'action' => 'extension/tack/quotemode.guardCart',
+                'status' => 1,
+                'sort_order' => 0,
+            ],
+            [
+                'code' => 'tackquotes_guard_checkout',
+                'description' => 'TackQuote: refuse checkout in quote-only mode',
+                'trigger' => 'catalog/controller/checkout/checkout/before',
+                'action' => 'extension/tack/quotemode.guardCheckout',
+                'status' => 1,
+                'sort_order' => 0,
+            ],
+            [
+                // checkout/confirm is where the order is actually created
+                // (catalog/controller/checkout/confirm.php:280 addOrder). Registered both as
+                // a route and — because the checkout page loads it with
+                // $this->load->controller('checkout/confirm'), which fires the same event
+                // (system/engine/loader.php:73) — as a sub-controller.
+                'code' => 'tackquotes_guard_confirm',
+                'description' => 'TackQuote: refuse order confirmation in quote-only mode',
+                'trigger' => 'catalog/controller/checkout/confirm/before',
+                'action' => 'extension/tack/quotemode.guardCheckout',
+                'status' => 1,
+                'sort_order' => 0,
+            ],
+            [
+                // confirm.php:359 `confirm()` is `$this->response->setOutput($this->index());`
+                // — the same order-creating code under a second route, so it needs its own
+                // row rather than relying on prefix matching.
+                'code' => 'tackquotes_guard_confirm_route',
+                'description' => 'TackQuote: refuse the confirm route in quote-only mode',
+                'trigger' => 'catalog/controller/checkout/confirm.confirm/before',
+                'action' => 'extension/tack/quotemode.guardCheckout',
+                'status' => 1,
+                'sort_order' => 0,
             ],
         ];
     }
@@ -339,6 +441,11 @@ class Tackquotes extends Controller
             // store when it calls OUT to the TackQuote API. Empty = the feed is
             // switched off entirely (see Api\Product::list()).
             'module_tackquotes_connector_token' => '',
+            // Quote-only / B2B catalog mode. OFF by default: switching it on turns off
+            // every sale the store can make, which is never a safe default to inherit.
+            'module_tackquotes_quote_only' => 0,
+            // Default scope is "everyone", per the feature's stated contract.
+            'module_tackquotes_quote_only_scope' => QuoteOnly::SCOPE_ALL,
         ];
 
         foreach ($fields as $key => $default) {
@@ -365,6 +472,28 @@ class Tackquotes extends Controller
         // in the template by mistake.
         $data['module_tackquotes_api_key'] = '';
         $data['module_tackquotes_connector_token'] = '';
+
+        // Quote-only scope options and the store's real customer groups. Read from the
+        // store rather than hard-coded: group ids are per-installation, and a hard-coded
+        // list is how a "specific groups" rule silently matches the wrong people.
+        // getCustomerGroups() is core's own accessor, used the same way by
+        // admin/controller/catalog/product.php:956 and localisation/tax_rate.php:245.
+        $this->load->model('customer/customer_group');
+
+        $data['customer_groups'] = $this->model_customer_customer_group->getCustomerGroups();
+
+        $data['quote_only_scopes'] = [
+            ['value' => QuoteOnly::SCOPE_ALL, 'text' => $this->language->get('text_scope_all')],
+            ['value' => QuoteOnly::SCOPE_GUESTS, 'text' => $this->language->get('text_scope_guests')],
+            ['value' => QuoteOnly::SCOPE_GROUPS, 'text' => $this->language->get('text_scope_groups')],
+        ];
+
+        $data['module_tackquotes_quote_only_scope'] = QuoteOnly::normaliseScope(
+            $this->config->get('module_tackquotes_quote_only_scope')
+        );
+        $data['module_tackquotes_quote_only_groups'] = QuoteOnly::normaliseGroups(
+            $this->config->get('module_tackquotes_quote_only_groups')
+        );
 
         $data['header'] = $this->load->controller('common/header');
         $data['column_left'] = $this->load->controller('common/column_left');
@@ -413,6 +542,17 @@ class Tackquotes extends Controller
             'module_tackquotes_quote_list' => (int) ($this->request->post['module_tackquotes_quote_list'] ?? 0),
             'module_tackquotes_listing_button' => (int) ($this->request->post['module_tackquotes_listing_button'] ?? 0),
             'module_tackquotes_connector_token' => $connectorToken,
+            // Quote-only mode. The scope and group list are normalised on the way IN as well
+            // as on the way out, so a hand-crafted POST cannot store a scope the storefront
+            // does not understand, and the group list is stored as a clean array of ints
+            // (model_setting_setting JSON-encodes array values, and reads them back decoded).
+            'module_tackquotes_quote_only' => (int) ($this->request->post['module_tackquotes_quote_only'] ?? 0),
+            'module_tackquotes_quote_only_scope' => QuoteOnly::normaliseScope(
+                $this->request->post['module_tackquotes_quote_only_scope'] ?? ''
+            ),
+            'module_tackquotes_quote_only_groups' => QuoteOnly::normaliseGroups(
+                $this->request->post['module_tackquotes_quote_only_groups'] ?? []
+            ),
         ]);
     }
 

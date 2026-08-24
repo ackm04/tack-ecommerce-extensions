@@ -90,14 +90,19 @@ integrations/opencart/
 │   └── view/template/module/tackquotes.twig
 ├── catalog/
 │   ├── controller/module/tackquotes.php          storefront button + quote AJAX
+│   ├── controller/quotemode.php                  quote-only mode ENFORCEMENT + blocked page
+│   ├── controller/event/quote.php                product-page / footer view events
 │   ├── controller/api/product.php                GET  …route=extension/tack/api/product.list
 │   ├── controller/api/order.php                  GET  …route=extension/tack/api/order.list
 │   │                                             POST …route=extension/tack/api/order.add
 │   ├── language/en-gb/module/tackquotes.php
-│   └── view/template/module/tackquotes.twig
+│   └── view/template/
+│       ├── module/tackquotes.twig
+│       └── quote/{controls,drawer,blocked}.twig
 └── system/library/
     ├── api_client.php                            store → TackQuote HTTP client
-    └── api_guard.php                             TackQuote → store auth/paging/JSON
+    ├── api_guard.php                             TackQuote → store auth/paging/JSON
+    └── quote_only.php                            who is quote-only, in one place
 ```
 
 This is OpenCart 4's real extension layout, confirmed against **OpenCart's own
@@ -185,6 +190,119 @@ and `Action`/`Factory` resolve routes differently — the API routes above canno
 exist on OC3 in this form. Porting means an OC3-specific tree, which is not
 shipped.
 
+## Quote-only mode (B2B catalog)
+
+**Extensions > Modules > TackQuote > Quote-only store.** Turns the whole storefront
+into a B2B catalog: Add to Cart and checkout are refused and shoppers request a
+quote instead. Off by default.
+
+### It is refused by the server, not hidden by CSS
+
+The refusal is in PHP, before core's cart controller is constructed. Two event
+handlers registered against `catalog/controller/checkout/…/before` rewrite the
+route the framework is about to dispatch:
+
+| file | what it does |
+|---|---|
+| `catalog/controller/quotemode.php` → `guardCart()` | rewrites `checkout/cart.add` and `checkout/cart.edit` to `extension/tack/quotemode.blocked` |
+| `catalog/controller/quotemode.php` → `guardCheckout()` | rewrites `checkout/checkout`, `checkout/confirm` and `checkout/confirm.confirm` to `extension/tack/quotemode.notice` |
+
+Why a route rewrite is a refusal and not a suggestion, from OpenCart 4.1.0.4
+source rather than from documentation:
+
+```php
+system/framework.php:214   $action = '';
+system/framework.php:262   $event->trigger('controller/' . $trigger . '/before', [&$route, &$args]);
+system/framework.php:268   if (!$action) {
+system/framework.php:269       $action = new \Opencart\System\Engine\Action($route);
+system/framework.php:275   $output = $action->execute($registry, $args);
+```
+
+`$route` reaches the handler **by reference** and the Action is then built from
+whatever the handler left in it, so core `checkout/cart.add` is never
+constructed and nothing reaches `$this->cart->add()`
+(`catalog/controller/checkout/cart.php:286`). The identical event fires from
+`system/engine/loader.php:73` for internal `$this->load->controller(…)` calls,
+which is what covers `checkout/confirm` being loaded as a sub-controller of the
+checkout page. `curl -d 'product_id=42&quantity=1'` gets the JSON refusal, same
+as the browser.
+
+The event rows are written by `install()` and are visible under **Extensions >
+Events** as `tackquotes_guard_*`. Disabling them there disables enforcement —
+that is OpenCart's design, not a bypass this extension can close.
+
+### Who it applies to
+
+`Applies to` — **Everyone** (default), **Guests only** (logged-in customers keep
+a normal cart and checkout — the usual B2B setup), or **Selected customer
+groups**. Guests are matched against the store default customer group, which is
+the group OpenCart already prices them in; their raw `customer_group_id` is `0`,
+a sentinel rather than a group (`system/library/cart/customer.php:36`).
+
+An **admin logged into the same browser is exempt**, so a merchant can compare
+the real cart and checkout before and after flipping the switch. This mirrors
+core maintenance mode, the only other feature that switches the storefront off
+for the public but not for staff (`catalog/controller/startup/maintenance.php:29-31`).
+
+`api/*` is never guarded. Admin **Sales > Orders > Add Order** drives
+`catalog/controller/api/cart.php`, and TackQuote's own `extension/tack/api/order.add`
+places quote-accepted orders — blocking those would stop phone orders and stop
+the conversion of the very quotes this mode exists to collect. A test asserts
+that no `catalog/controller/api/…` trigger is ever registered.
+
+### The store is never left unable to transact
+
+This is the failure the WooCommerce build nearly shipped: there, the quote button
+hung off a hook that only fires *inside* the add-to-cart form, so removing the
+cart button would have silently removed the quote button too. OpenCart has the
+same coupling in a different shape — `id="button-cart"` is the **only** anchor
+the product-page injection has. So:
+
+- The quote controls are injected **first**, and the Add to Cart button is
+  removed **second**, re-finding its own anchor in the new string
+  (`catalog/controller/event/quote.php`). The two cannot half-happen.
+- Quote-only mode **overrides** the "Show beside Add to Cart" placement toggle.
+  Honouring it would leave a product page with a dead cart button and no quote
+  button.
+- If a theme has renamed `id="button-cart"`, the controls are **appended to the
+  end of the product page** instead of the usual "inject nothing". The theme's
+  own button is left untouched and the POST is refused anyway.
+- Enforcement and the CTA are switched on by **one condition**. With no API key
+  saved, `isActive()` renders no quote button — so with no API key the cart is
+  **not** blocked either, and the settings screen refuses to save quote-only
+  mode until a key exists.
+- The blocked-checkout page (`catalog/view/template/quote/blocked.twig`) carries
+  a "Request a quote" button of its own, plus a link back to the existing basket.
+
+Category and search tiles get their cart button hidden by
+`catalog/view/javascript/tack/quote-app.js` and an add-to-quote button in its
+place. That is cosmetic only — the server refuses the POST whether or not that
+script ran.
+
+### Existing carts and the checkout route
+
+Turning the mode on **does not empty anybody's cart**. A session cart is the
+shopper's data, and OpenCart persists carts in `oc_cart` across sessions for
+logged-in customers, so "silently deleted" could mean weeks later. `checkout/cart`
+and `checkout/cart.remove` stay open so a shopper can still see and clear what
+they had.
+
+What the cart cannot do while the mode applies is **grow or convert**: `.add` and
+`.edit` are refused (`.edit` is not decoration — without it a one-line cart from
+before the switch could be edited to quantity 10 000), and `checkout/confirm`,
+the only storefront path to `addOrder()` (`catalog/controller/checkout/confirm.php:280`),
+is refused. A pre-existing cart is inert rather than destroyed, and becomes live
+again untouched the moment the mode is switched off.
+
+**UNVERIFIED / known limit:** a third-party payment extension that calls
+`$this->model_checkout_order->addOrder()` itself instead of going through
+`checkout/confirm` would not be intercepted. Core has no such path — the only
+other callers in 4.1.0.4 are `catalog/controller/api/order.php` (exempt by
+design) and `catalog/controller/cron/subscription.php` (recurring billing for
+subscriptions taken out before the switch). The third-party ecosystem cannot be
+enumerated. The invariant that holds unconditionally is the one the feature is
+sold on: nothing new can enter the cart.
+
 ## Build
 
 ```
@@ -229,6 +347,27 @@ still matching `tack.ocmod.zip`.
 
 Checked against the pre-fix tree: 13 of the 15 fail on it. A suite that passes
 both before and after is not testing anything.
+
+**Quote-only mode** adds 38 more (67 total). They assert the two claims the
+feature actually makes, and both were mutation-tested — 10 deliberate breaks,
+all 10 compiled and all 10 were caught:
+
+| break | caught by |
+|---|---|
+| `guardCart()` stops rewriting the route | *a crafted add-to-cart POST never reaches core cart controller* |
+| scope "guests" inverted | *scope "guests" lets approved B2B customers keep the cart* |
+| the API-key condition dropped from the rule | *WITHOUT AN API KEY the cart is NOT blocked* |
+| the no-anchor fallback removed | *a theme that renamed the cart button still gets a quote CTA* |
+| the placement toggle can silence the CTA again | *quote-only overrides the placement toggle* |
+| the admin-preview exemption forced off | *an admin logged into this browser keeps cart and checkout* |
+| the `cart.add` guard row never registered | *install() registers the guard rows* |
+| the CTA renders as nothing while the button is removed | *removes Add to Cart AND leaves the quote CTA in its place* |
+| the Add to Cart button never removed | same test, other direction |
+| the guard pointed at `api/cart.add` | *no guard is ever registered against an api/ route* |
+
+The dispatch test does not mock the framework's contract, it reproduces it: the
+value it asserts on is literally the route OpenCart would construct and execute
+(`system/framework.php:262-269`).
 
 ## Install
 
@@ -350,6 +489,19 @@ Body is `application/x-www-form-urlencoded`:
 - **`order-sync`** (`POST /v1/integrations/opencart/order-sync` on the TackQuote
   side) still has no caller in this extension — order import happens through
   `order.list` above instead.
+- **Quote-only mode and third-party payment extensions.** See the UNVERIFIED note
+  under "Existing carts and the checkout route" above.
+- **Quote-only mode needs `install()` to have run since 1.3.0.** The guard event
+  rows are added by `install()`, which OpenCart calls when the extension is
+  installed or the module re-enabled. A merchant who upgrades the files in place
+  without re-installing gets the settings but no enforcement. Re-install from
+  Extensions > Installer, or check Extensions > Events for five
+  `tackquotes_guard_*` rows.
+- **Enter-to-submit on the product page.** In quote-only mode the Add to Cart
+  button is removed but core's `<form id="form-product">` remains, so pressing
+  Enter in the quantity field still fires its submit handler. The POST is refused
+  server-side; the stock inline handler has no `#error-warning` element, so the
+  refusal is not drawn on that page. Server-side correct, cosmetically silent.
 - Not verified against a running OpenCart install. Every structural claim above
   is cited to 4.0.2.3 source, and the PHP is syntax-checked in CI-equivalent
   fashion (`php -l`), but there is no integration test against a live store.
