@@ -10,10 +10,46 @@
 #}
 {% sw_extends '@Storefront/storefront/component/buy-widget/buy-widget.html.twig' %}
 
+{#
+  ── B2B quote-only mode: why the "Add to cart" form is removed HERE and not lower down ──
+
+  Core renders the whole purchase form from `buy_widget_buy_form` (core buy-widget.html.twig
+  line 189), which sw_includes buy-widget-form.html.twig. That included file owns the
+  quantity selector and the buy button, but ALSO the <form> element itself, its
+  action="frontend.checkout.line-item.add" and every hidden lineItems[...] input.
+
+  Suppressing `buy_widget_buy_form` therefore removes the entire cart affordance in one
+  place — button, quantity stepper and the form that posts them — instead of leaving a
+  headless <form> with orphaned hidden inputs behind.
+
+  THE COUPLING THAT HAD TO BE CHECKED FIRST: the TackQuote CTA below is appended inside
+  `buy_widget`, AFTER {{ parent() }} — it is a SIBLING of `buy_widget_buy_form`, not a child
+  of it. This is exactly the trap the WooCommerce build hit, where the quote button hung off
+  a hook that only fires inside the add-to-cart form, so removing the cart button silently
+  deleted the quote button with it and left the store with no way to transact at all.
+  It does not apply here, and tests/Resources/QuoteCtaRendersWithCartDisabledTest.php renders
+  this very file through Shopware's real sw_extends parser with the flag both ways to keep it
+  that way.
+
+  Enforcement is not here. This block only stops drawing the button; the refusal lives in
+  src/Core/Checkout/Cart/QuoteOnlyCartItemAddRoute.php.
+#}
+{% block buy_widget_buy_form %}
+    {% if not tackquote_quote_only() %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
+
 {% block buy_widget %}
     {{ parent() }}
 
-    {% if config('TackQuote.config.enableButton') %}
+    {#
+      In quote-only mode the CTA is shown regardless of the `enableButton` setting: that
+      setting exists to let a merchant who sells normally opt OUT of the extra button, but
+      with the cart disabled it is the only remaining way for a visitor to transact, and a
+      store with neither is a dead store.
+    #}
+    {% if config('TackQuote.config.enableButton') or tackquote_quote_only() %}
         {#
           Bootstrap 5 modal, matching how Shopware core does it (see
           page/account/order/cancel-order-modal.html.twig). The previous version hand-rolled

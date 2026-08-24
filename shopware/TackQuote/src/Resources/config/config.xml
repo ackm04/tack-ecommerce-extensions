@@ -57,4 +57,53 @@
             <defaultValue>Request a Quote</defaultValue>
         </input-field>
     </card>
+
+    <card>
+        <title>B2B quote-only mode (catalog mode)</title>
+        <title lang="de-DE">B2B-Nur-Angebot-Modus (Katalogmodus)</title>
+
+        <input-field type="bool">
+            <name>quoteOnlyMode</name>
+            <label>Run this storefront as a quote-only B2B catalog</label>
+            <label lang="de-DE">Diesen Verkaufskanal als reinen B2B-Angebotskatalog betreiben</label>
+            <defaultValue>false</defaultValue>
+            <helpText>Disables adding products to the cart and blocks checkout for the audience selected below. Customers browse the catalog and use "Request a Quote" instead. Enforced on the server, not just hidden in the theme: a crafted request to /store-api/checkout/cart/line-item is refused with 403, and a cart filled before this switch was turned on can no longer be ordered. Administrators are always exempt, including "log in as customer" from the Administration, so you can still test the store.</helpText>
+            <helpText lang="de-DE">Deaktiviert das Hinzufügen zum Warenkorb und blockiert den Checkout für die unten gewählte Zielgruppe. Kunden nutzen stattdessen "Angebot anfordern". Die Sperre wird serverseitig durchgesetzt, nicht nur im Theme ausgeblendet. Administratoren sind immer ausgenommen.</helpText>
+        </input-field>
+
+        <input-field type="single-select">
+            <name>quoteOnlyScope</name>
+            <label>Applies to</label>
+            <label lang="de-DE">Gilt für</label>
+            <defaultValue>everyone</defaultValue>
+            <options>
+                <option>
+                    <id>everyone</id>
+                    <name>Everyone</name>
+                    <name lang="de-DE">Alle</name>
+                </option>
+                <option>
+                    <id>guests</id>
+                    <name>Guests only (registered customers keep the cart)</name>
+                    <name lang="de-DE">Nur Gäste (registrierte Kunden behalten den Warenkorb)</name>
+                </option>
+                <option>
+                    <id>groups</id>
+                    <name>Specific customer groups</name>
+                    <name lang="de-DE">Bestimmte Kundengruppen</name>
+                </option>
+            </options>
+            <helpText>"Guests only" is the usual B2B setup: anonymous visitors and guest checkouts must request a quote, while an approved, logged-in B2B customer can still order directly. An unrecognised value falls back to "Everyone" — the safe direction, since the master switch above is on.</helpText>
+            <helpText lang="de-DE">"Nur Gäste" ist die übliche B2B-Einrichtung: Anonyme Besucher fordern ein Angebot an, freigeschaltete angemeldete B2B-Kunden können weiterhin direkt bestellen.</helpText>
+        </input-field>
+
+        <component name="sw-entity-multi-id-select">
+            <name>quoteOnlyCustomerGroupIds</name>
+            <entity>customer_group</entity>
+            <label>Customer groups</label>
+            <label lang="de-DE">Kundengruppen</label>
+            <helpText>Only used when "Applies to" is set to "Specific customer groups". Leaving this empty with that scope selected means quote-only mode matches nobody and the store behaves normally.</helpText>
+            <helpText lang="de-DE">Nur relevant, wenn oben "Bestimmte Kundengruppen" gewählt ist.</helpText>
+        </component>
+    </card>
 </config>

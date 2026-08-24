@@ -21,5 +21,11 @@
     "button": {
       "label": "Angebot anfordern"
     }
+  },
+  "checkout": {
+    "tackquote-quote-only-mode": "Dieser Shop läuft im Nur-Angebot-Modus. Bitte fordern Sie ein Angebot an, statt zur Kasse zu gehen."
+  },
+  "error": {
+    "tackquote-quote-only-mode": "Dieser Shop läuft im Nur-Angebot-Modus. Bitte fordern Sie ein Angebot an, statt zur Kasse zu gehen."
   }
 }

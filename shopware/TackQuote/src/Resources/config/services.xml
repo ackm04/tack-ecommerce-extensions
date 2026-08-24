@@ -9,6 +9,48 @@
             <argument type="service" id="logger"/>
         </service>
 
+        <!--
+          The one place that decides whether quote-only mode applies. Every consumer below
+          shares it, so the template and the server can never disagree about the answer.
+        -->
+        <service id="TackQuote\TackQuote\Service\QuoteOnlyModeService">
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+        </service>
+
+        <!--
+          ENFORCEMENT. Decorating the core route (not the storefront controller) is what makes
+          this cover the Store API and every headless client as well: CartService::add() is
+          wired to this service id in core's cart.xml:70, so both storefront add endpoints go
+          through the decorator too.
+        -->
+        <service id="TackQuote\TackQuote\Core\Checkout\Cart\QuoteOnlyCartItemAddRoute"
+                 decorates="Shopware\Core\Checkout\Cart\SalesChannel\CartItemAddRoute"
+                 public="true">
+            <argument type="service" id="TackQuote\TackQuote\Core\Checkout\Cart\QuoteOnlyCartItemAddRoute.inner"/>
+            <argument type="service" id="TackQuote\TackQuote\Service\QuoteOnlyModeService"/>
+        </service>
+
+        <!-- Blocks checkout of a cart that was already filled when the switch was flipped. -->
+        <service id="TackQuote\TackQuote\Core\Checkout\Cart\QuoteOnlyCartValidator">
+            <argument type="service" id="TackQuote\TackQuote\Service\QuoteOnlyModeService"/>
+            <tag name="shopware.cart.validator"/>
+        </service>
+
+        <service id="TackQuote\TackQuote\Storefront\Framework\Twig\QuoteOnlyTwigExtension">
+            <argument type="service" id="request_stack"/>
+            <argument type="service" id="TackQuote\TackQuote\Service\QuoteOnlyModeService"/>
+            <tag name="twig.extension"/>
+        </service>
+
+        <!--
+          Removed at container build time on Shopware versions without HttpCacheCookieEvent —
+          see TackQuote::build().
+        -->
+        <service id="TackQuote\TackQuote\Framework\Adapter\Cache\QuoteOnlyCacheCookieSubscriber">
+            <argument type="service" id="TackQuote\TackQuote\Service\QuoteOnlyModeService"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
         <service id="TackQuote\TackQuote\Storefront\Controller\QuoteRequestController"
                  public="true">
             <argument type="service" id="TackQuote\TackQuote\Service\TackQuoteApiClient"/>
