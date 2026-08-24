@@ -122,7 +122,14 @@ final class Tack_Quotes {
 	 * @return array
 	 */
 	public function action_links( $links ) {
-		$url  = admin_url( 'admin.php?page=tack-quotes' );
+		// Derive the slug from the constant the menu is actually registered with.
+		// This literal was correct when PAGE_SLUG was 'tack-quotes'; the later
+		// renames (to 'tackquote-for-woocommerce', then to the WordPress.org slug
+		// 'tackquote') moved the constant and left the literal behind. The link then
+		// pointed at an unregistered page, and wp-admin/admin.php answers that with
+		// "Sorry, you are not allowed to access this page." — the same sentence it
+		// uses for a capability failure, which sends the diagnosis the wrong way.
+		$url  = admin_url( 'admin.php?page=' . rawurlencode( Tack_Settings::PAGE_SLUG ) );
 		$link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'tackquote' ) . '</a>';
 		array_unshift( $links, $link );
 		return $links;
