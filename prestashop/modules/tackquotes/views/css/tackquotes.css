@@ -91,3 +91,35 @@
   font-size: 13px;
   margin-bottom: 10px;
 }
+
+/*
+ * Quote-only (B2B catalog) mode.
+ *
+ * Presentation ONLY. Nothing here disables anything: "Add to cart" is refused by
+ * the server in TackQuotes::hookActionFrontControllerInitBefore(), and the theme
+ * stops rendering the cart controls because core catalog mode is active for the
+ * request. There is deliberately no `display:none` rule for a cart button here —
+ * a hidden button that still works is not an enforcement mechanism.
+ */
+.tackquotes-widget--quote-only {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.tackquotes-quote-only-note {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+/*
+ * Fallback placement: the widget landed in the footer because this theme emits
+ * neither displayProductActions nor displayProductAdditionalInfo on the product
+ * page. Made deliberately conspicuous — it means a template needs adjusting.
+ */
+.tackquotes-widget--fallback {
+  margin: 16px 0;
+  padding: 16px;
+  border: 2px dashed #c0392b;
+  border-radius: 6px;
+}

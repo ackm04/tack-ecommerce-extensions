@@ -118,6 +118,160 @@ typed. Nothing failed: the request answered `201`. Confirmed against the live AP
   `GET /v1/integrations/woocommerce/registration-config` is the endpoint that exists to
   drive that rendering.
 
+## Quote-only / B2B catalog mode
+
+Configure > **Quote-only (B2B catalog) mode**. Off by default; installing the module
+never changes what a storefront is allowed to do.
+
+When it is on, an in-scope shopper gets a storefront where "Add to cart" and checkout
+are **refused by the server** and the "Request a Quote" button takes their place.
+
+### Where enforcement happens
+
+`TackQuotes::hookActionFrontControllerInitBefore()` in `tackquotes.php`. It runs from
+the first statement of `FrontController::init()`
+(`classes/controller/FrontController.php:264-269`, PrestaShop 8.2), i.e. before any
+controller does anything, and it does two things:
+
+1. **Refuses the request.** A cart-mutating request (`add` or `update`, in `$_GET` or
+   `$_POST`) is rejected outright — 403 + PrestaShop's own ajax error envelope for
+   XHR, redirect back to the product otherwise. `CartController::updateCart()` never
+   runs. This is what answers a crafted POST; no CSS or JS is involved anywhere in
+   this module's enforcement.
+2. **Engages PrestaShop's own catalog mode for this request only**, which inherits
+   core's whole enforcement surface: `Cart::updateQty()` (`classes/Cart.php:1563-1569`),
+   `Cart::checkQuantities()` (`classes/Cart.php:4120`), the cart page and its two ajax
+   endpoints (`controllers/front/CartController.php:99`, `:126`, `:166`) and checkout
+   (`controllers/front/OrderController.php:246`).
+
+### Why the native `PS_CATALOG_MODE` setting is *complemented*, not *driven*
+
+The persistent setting the merchant edits in **Shop Parameters > Product Settings >
+Catalog mode** is **never written** by this module. `Configuration::updateValue()` is
+never called for it, and `uninstall()` deliberately does not touch it.
+
+What the module does call is `Configuration::set()`, whose own docblock reads *"Set
+TEMPORARY a single configuration value"* (`classes/Configuration.php:369-376`) and
+whose body writes only the in-memory caches — there is no `Db` call anywhere in
+`classes/Configuration.php:377-406`. Nothing is persisted; the flag lasts exactly one
+request.
+
+Driving the real setting was rejected for three reasons:
+
+- **It is global.** `PS_CATALOG_MODE` has no notion of a customer group, so
+  "guests only, approved B2B buyers keep the cart" would be impossible. (Core *does*
+  have a per-group catalog mode via `Group::show_prices` — `Configuration::isCatalogMode()`
+  at `classes/Configuration.php:697-705` — but it works by hiding prices for that
+  group, which is a different feature.)
+- **The merchant also controls it.** Two writers on one setting means our uninstall
+  either clobbers a value the merchant set by hand, or leaves the shop stuck in
+  catalog mode after the module is gone. Both are worse than not writing it.
+- **It is not reversible per shopper.** Employee preview and post-purchase pages both
+  need the mode *off* within the same shop, in the same minute.
+
+If the merchant turns the native setting on themselves, nothing here fights them:
+`Configuration::isCatalogMode()` is already true and the module simply behaves as the
+theme does.
+
+### The quote button must survive the cart being removed
+
+In the classic theme, `{hook h='displayProductActions'}` sits at
+`themes/classic/templates/catalog/_partials/product-add-to-cart.tpl:64`, and line 26
+of that same file wraps everything from there down in `{if !$configuration.is_catalog}`.
+**Disabling the cart therefore stops the theme calling that hook at all** — the quote
+button would have vanished along with "Add to cart". This is the same shape of bug as
+the WooCommerce plugin hanging its button off a hook that only fires inside the
+add-to-cart form.
+
+So the CTA is published on three hooks and exactly one renders per page:
+
+| hook | used when | why it survives |
+| --- | --- | --- |
+| `displayProductActions` | normal storefront | current placement, next to "Add to cart" |
+| `displayProductAdditionalInfo` | quote-only mode | `product-additional-info.tpl:26` is included by `product.tpl:126-128` **outside** the `{if !$configuration.is_catalog}` guard |
+| `displayFooter` | neither of the above rendered | last-resort net; deliberately conspicuous, because it means the theme needs a template tweak |
+
+All three are template-emitted hooks, so a sufficiently unusual theme could still
+call none of them — which is what the footer net is for.
+
+On top of that, quote-only **refuses to engage at all** unless the CTA can actually
+render: it requires a saved API key *and* the storefront button switched on, because
+`renderQuoteWidget()` returns `''` without either. A store is never left unable to
+both buy and ask. `TackQuoteOnlyMode::applies()` enforces this (`ctaReady`), the
+settings form refuses the combination at save time, and the Modules page shows a
+warning if it is ever reached.
+
+### Scope
+
+| Setting | Behaviour |
+| --- | --- |
+| **Everyone** (default) | every visitor gets the quote-only storefront |
+| **Guests only** | signed-in customers keep a working cart; everyone else must request a quote |
+| **Specific customer groups** | a visitor in any ticked group gets quote-only; a group scope with nothing ticked does not engage |
+
+Groups come from `Customer::getGroupsStatic()`, which answers with
+`PS_UNIDENTIFIED_GROUP` for anonymous traffic (`classes/Customer.php:1098-1100`), so
+there is no separate anonymous branch.
+
+### Employee preview stays exempt
+
+A back-office preview (`?preview=1&adtoken=…&id_employee=…`) sees the ordinary
+storefront, cart included. The check reproduces core's own
+(`controllers/front/ProductController.php:136-142`) rather than calling
+`ProductController::isPreview()`, because that flag is set inside `init()` and this
+guard runs before `init()`. **Limit:** the exemption covers page *rendering*. The
+theme's add-to-cart form does not carry `adtoken`, so an employee clicking "Add to
+cart" from a preview page is still refused unless the request itself carries the
+preview credentials. Native catalog mode has no preview exemption at all, so this is
+strictly better, not worse.
+
+### Existing carts, and the order route
+
+- **Existing carts are not deleted.** Toggling quote-only on leaves every cart row
+  untouched, so toggling it off restores them intact. Destroying customer data on a
+  settings change is not reversible and was not asked for.
+- **Removing products from an existing cart is still allowed.** `delete` is
+  deliberately excluded from the blocked operations (`TackQuoteOnlyMode::CART_ADD_KEYS`):
+  a shopper who had a cart when the switch was flipped must be able to empty it rather
+  than be stranded with items they can no longer check out.
+- **Checkout is blocked** by core, at `controllers/front/OrderController.php:246`.
+- **Post-purchase pages are explicitly left alone** — `history`, `order-detail`,
+  `order-follow`, `order-slip`, `order-return`. Core's catalog mode redirects all five
+  away (`HistoryController.php:48`, `OrderDetailController.php:157`,
+  `OrderFollowController.php:105`, `OrderSlipController.php:44`,
+  `OrderReturnController.php:87`), which would retroactively hide the invoices and
+  order history of customers who bought while the shop was still selling. The
+  request-scoped flag is simply not set on those pages
+  (`TackQuotes::POST_PURCHASE_PAGES`).
+- **Prices**: PrestaShop hides prices in catalog mode unless "with prices" is also on
+  (`src/Core/Product/ProductPresentationSettings.php:46`), so the module exposes a
+  "Keep prices visible in quote-only mode" switch, default on.
+
+### Tests
+
+`tests/QuoteOnlyModeTest.php` loads the real `TackQuotes` class against small
+PrestaShop stubs and calls the real guard — it asserts behaviour, not source text.
+
+```
+docker run --rm -v "$PWD":/p -w /p php:8.3-cli \
+  php prestashop/modules/tackquotes/tests/QuoteOnlyModeTest.php
+```
+
+`tests/` is excluded from the release zip by `scripts/package-all.sh`.
+
+### Not verified
+
+- Nothing here has been exercised in a running PrestaShop. The behaviour above is
+  derived from PrestaShop 8.2 source read out of the `prestashop/prestashop:8.2-apache`
+  image, and from the PrestaShop docs MCP for hook names; the admin form has not been
+  rendered in a live back office.
+- **UNVERIFIED: interaction with Smarty template caching (`PS_SMARTY_CACHE`).**
+  Quote-only makes the product page differ per visitor. `Module::getCacheId()` does
+  include the visitor's groups (`classes/module/Module.php:2225-2228`), which is the
+  right shape, but this was not confirmed against a running shop with caching on.
+  Treat quote-only + full-page caching as unverified.
+- Themes other than `classic` were not inspected.
+
 ## Not implemented (out of scope for this scaffold)
 
 - Order sync (PrestaShop order -> TackQuote). The WooCommerce plugin has
