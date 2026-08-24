@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.4
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,13 @@ No, and no. "Add to Quote" adds the product to a separate, browser-side quote li
 So shoppers can add multiple products before requesting one combined quote. Use the floating "Quote list" button (bottom-right) once you've added everything you want quoted, then click "Checkout as Quote".
 
 == Changelog ==
+
+= 1.4.0 =
+* New: **Store mode**. A single setting turns the whole storefront into a B2B catalogue — "Add to cart" is withdrawn and customers request a quote instead. Choose whether it applies to every customer, to signed-out visitors only (so approved trade customers keep a normal cart), or to specific roles. Optionally replace prices with "Price on request".
+* The switch is enforced server-side via `woocommerce_is_purchasable`, which WooCommerce checks before accepting any cart line — so a hand-crafted `?add-to-cart=` link, the Store API and cached pages are all refused, not just the button hidden.
+* Carts filled *before* the store was switched to quote-only are emptied on the cart and checkout pages with an explanatory notice. WooCommerce's own cart validation only checks that a product still exists, not that it is purchasable, so without this a pre-existing cart could still be checked out and the store would not really be quote-only.
+* Anyone who can manage WooCommerce keeps a working cart, so you can test your own store while it is closed to customers.
+* Quote buttons now also mount outside the add-to-cart form, so they survive when the cart button is withdrawn.
 
 = 1.3.4 =
 * Fixed: the **Settings** link on the Plugins screen led to "Sorry, you are not allowed to access this page." even for an administrator. The link carried a hardcoded `page=tack-quotes`, which was the admin page slug up to 1.3.1; the 1.3.2 and 1.3.3 renames moved the slug to `tackquote` and left the link behind. Pointing at an unregistered page makes WordPress emit its permission-denied message, so the failure looked like a capability problem and was not one. The link is now derived from the same constant the menu is registered with, so the two cannot drift again.

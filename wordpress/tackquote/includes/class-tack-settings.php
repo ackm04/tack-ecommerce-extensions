@@ -75,6 +75,18 @@ class Tack_Settings {
 		register_setting( self::OPTION_GROUP, 'tack_quotes_enable_widget', array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, 'tack_quotes_enable_order_sync', array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 
+		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_MODE, array( 'sanitize_callback' => array( $this, 'sanitize_store_mode' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_SCOPE, array( 'sanitize_callback' => array( $this, 'sanitize_scope' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_ROLES, array( 'sanitize_callback' => array( $this, 'sanitize_roles' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_HIDE_PRICE, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_PRICE_TEXT, array( 'sanitize_callback' => 'sanitize_text_field' ) );
+
+		add_settings_section(
+			'tack_quotes_store_mode',
+			__( 'Store mode', 'tackquote' ),
+			array( $this, 'section_store_mode' ),
+			self::PAGE_SLUG
+		);
 		add_settings_section(
 			'tack_quotes_connection',
 			__( 'Connection', 'tackquote' ),
@@ -94,6 +106,9 @@ class Tack_Settings {
 			self::PAGE_SLUG
 		);
 
+		add_settings_field( Tack_Catalog_Mode::OPT_MODE, __( 'How customers buy', 'tackquote' ), array( $this, 'field_store_mode' ), self::PAGE_SLUG, 'tack_quotes_store_mode' );
+		add_settings_field( Tack_Catalog_Mode::OPT_SCOPE, __( 'Applies to', 'tackquote' ), array( $this, 'field_quote_only_scope' ), self::PAGE_SLUG, 'tack_quotes_store_mode' );
+		add_settings_field( Tack_Catalog_Mode::OPT_HIDE_PRICE, __( 'Prices', 'tackquote' ), array( $this, 'field_hide_prices' ), self::PAGE_SLUG, 'tack_quotes_store_mode' );
 		add_settings_field( 'tack_quotes_api_key', __( 'TackQuote API Key', 'tackquote' ), array( $this, 'field_api_key' ), self::PAGE_SLUG, 'tack_quotes_connection' );
 		add_settings_field( 'tack_quotes_api_url', __( 'TackQuote API URL', 'tackquote' ), array( $this, 'field_api_url' ), self::PAGE_SLUG, 'tack_quotes_connection' );
 		add_settings_field( 'tack_quotes_enable_widget', __( 'Show quote buttons', 'tackquote' ), array( $this, 'field_enable_widget' ), self::PAGE_SLUG, 'tack_quotes_storefront' );
@@ -271,6 +286,169 @@ class Tack_Settings {
 	 * admin page. A masked hint in the description gives an administrator the one thing they
 	 * actually need — confirmation of WHICH key is stored — without shipping the secret.
 	 */
+	/**
+	 * Intro copy for the Store mode section.
+	 */
+	public function section_store_mode() {
+		echo '<p class="description">' . esc_html__( 'Choose whether this is a normal shop that also takes quotes, or a B2B catalogue where every order starts as a quote.', 'tackquote' ) . '</p>';
+	}
+
+	/**
+	 * The store-mode switch, rendered as two explained choices rather than a
+	 * bare checkbox — turning off checkout store-wide is a big, scary action and
+	 * the consequence should be readable before it is taken, not after.
+	 */
+	public function field_store_mode() {
+		$mode = get_option( Tack_Catalog_Mode::OPT_MODE, Tack_Catalog_Mode::MODE_CART );
+
+		$choices = array(
+			Tack_Catalog_Mode::MODE_CART       => array(
+				'label' => __( 'Shop and quotes', 'tackquote' ),
+				'desc'  => __( 'Normal WooCommerce checkout, with the quote buttons alongside it. Customers choose which they want.', 'tackquote' ),
+			),
+			Tack_Catalog_Mode::MODE_QUOTE_ONLY => array(
+				'label' => __( 'Quote only (B2B catalogue)', 'tackquote' ),
+				'desc'  => __( 'Add to cart is switched off across the whole store and customers request a quote instead. Your products, categories and search all keep working — only checkout goes away.', 'tackquote' ),
+			),
+		);
+
+		echo '<fieldset class="tack-store-mode">';
+		foreach ( $choices as $value => $choice ) {
+			printf(
+				'<label style="display:block;margin-bottom:.75em;"><input type="radio" name="%1$s" value="%2$s" %3$s /> <strong>%4$s</strong><br /><span class="description" style="margin-left:1.9em;display:block;">%5$s</span></label>',
+				esc_attr( Tack_Catalog_Mode::OPT_MODE ),
+				esc_attr( $value ),
+				checked( $mode, $value, false ),
+				esc_html( $choice['label'] ),
+				esc_html( $choice['desc'] )
+			);
+		}
+		echo '</fieldset>';
+
+		echo '<p class="description"><strong>' . esc_html__( 'You are not locked out.', 'tackquote' ) . '</strong> '
+			. esc_html__( 'Anyone who can manage WooCommerce still sees a working cart, so you can test the store while it is closed to customers. Switching back restores checkout immediately.', 'tackquote' )
+			. '</p>';
+	}
+
+	/**
+	 * Who quote-only mode applies to.
+	 *
+	 * "Signed-out visitors only" is the option most B2B sellers actually want:
+	 * the public sees a catalogue, approved trade customers keep a real cart.
+	 */
+	public function field_quote_only_scope() {
+		$scope = get_option( Tack_Catalog_Mode::OPT_SCOPE, Tack_Catalog_Mode::SCOPE_EVERYONE );
+
+		$choices = array(
+			Tack_Catalog_Mode::SCOPE_EVERYONE => __( 'Every customer', 'tackquote' ),
+			Tack_Catalog_Mode::SCOPE_GUESTS   => __( 'Signed-out visitors only — approved customers keep a normal cart', 'tackquote' ),
+			Tack_Catalog_Mode::SCOPE_ROLES    => __( 'Only the roles I choose below', 'tackquote' ),
+		);
+
+		echo '<fieldset>';
+		foreach ( $choices as $value => $label ) {
+			printf(
+				'<label style="display:block;margin-bottom:.4em;"><input type="radio" name="%1$s" value="%2$s" %3$s /> %4$s</label>',
+				esc_attr( Tack_Catalog_Mode::OPT_SCOPE ),
+				esc_attr( $value ),
+				checked( $scope, $value, false ),
+				esc_html( $label )
+			);
+		}
+
+		$selected = (array) get_option( Tack_Catalog_Mode::OPT_ROLES, array() );
+		$roles    = function_exists( 'wp_roles' ) ? wp_roles()->get_names() : array();
+
+		echo '<div style="margin:.6em 0 0 1.9em;">';
+		printf(
+			'<label style="display:block;"><input type="checkbox" name="%1$s[]" value="guest" %2$s /> %3$s</label>',
+			esc_attr( Tack_Catalog_Mode::OPT_ROLES ),
+			checked( in_array( 'guest', $selected, true ), true, false ),
+			esc_html__( 'Signed-out visitors', 'tackquote' )
+		);
+		foreach ( $roles as $slug => $name ) {
+			printf(
+				'<label style="display:block;"><input type="checkbox" name="%1$s[]" value="%2$s" %3$s /> %4$s</label>',
+				esc_attr( Tack_Catalog_Mode::OPT_ROLES ),
+				esc_attr( $slug ),
+				checked( in_array( $slug, $selected, true ), true, false ),
+				esc_html( $name )
+			);
+		}
+		echo '</div>';
+		echo '</fieldset>';
+		echo '<p class="description">' . esc_html__( 'Only used when "Quote only" is selected above.', 'tackquote' ) . '</p>';
+	}
+
+	/**
+	 * Optional "price on request".
+	 */
+	public function field_hide_prices() {
+		$this->checkbox(
+			Tack_Catalog_Mode::OPT_HIDE_PRICE,
+			__( 'Hide prices while the store is quote-only.', 'tackquote' )
+		);
+		printf(
+			'<p style="margin-top:.5em;"><input type="text" class="regular-text" name="%1$s" value="%2$s" placeholder="%3$s" /></p>',
+			esc_attr( Tack_Catalog_Mode::OPT_PRICE_TEXT ),
+			esc_attr( (string) get_option( Tack_Catalog_Mode::OPT_PRICE_TEXT, '' ) ),
+			esc_attr__( 'Price on request', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__( 'Shown in place of the price. Leave blank for "Price on request".', 'tackquote' ) . '</p>';
+	}
+
+	/**
+	 * Only the two known modes are storable — anything else falls back to the
+	 * safe one (a working shop), so a malformed POST can never silently close
+	 * a store's checkout.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public function sanitize_store_mode( $value ) {
+		$value = is_string( $value ) ? $value : '';
+		return Tack_Catalog_Mode::MODE_QUOTE_ONLY === $value
+			? Tack_Catalog_Mode::MODE_QUOTE_ONLY
+			: Tack_Catalog_Mode::MODE_CART;
+	}
+
+	/**
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public function sanitize_scope( $value ) {
+		$allowed = array(
+			Tack_Catalog_Mode::SCOPE_EVERYONE,
+			Tack_Catalog_Mode::SCOPE_GUESTS,
+			Tack_Catalog_Mode::SCOPE_ROLES,
+		);
+		return in_array( $value, $allowed, true ) ? (string) $value : Tack_Catalog_Mode::SCOPE_EVERYONE;
+	}
+
+	/**
+	 * Role slugs must be real roles (or the pseudo-role `guest`), so a crafted
+	 * POST cannot store arbitrary strings into the option.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string[]
+	 */
+	public function sanitize_roles( $value ) {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+		$known = function_exists( 'wp_roles' ) ? array_keys( wp_roles()->get_names() ) : array();
+		$known[] = 'guest';
+
+		$clean = array();
+		foreach ( $value as $slug ) {
+			$slug = sanitize_key( (string) $slug );
+			if ( in_array( $slug, $known, true ) && ! in_array( $slug, $clean, true ) ) {
+				$clean[] = $slug;
+			}
+		}
+		return $clean;
+	}
+
 	public function field_api_key() {
 		$value  = (string) get_option( 'tack_quotes_api_key', '' );
 		$masked = '' !== $value ? str_repeat( '•', 8 ) . substr( $value, -4 ) : '';

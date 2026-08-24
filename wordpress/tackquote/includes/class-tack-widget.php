@@ -41,6 +41,14 @@ class Tack_Widget {
 	/**
 	 * Hard ceiling on line items accepted from one quote-list submission.
 	 */
+	/**
+	 * Products whose quote buttons have already been rendered this request, so
+	 * the two mount points in init() cannot double-render.
+	 *
+	 * @var int[]
+	 */
+	private $rendered_product_ids = array();
+
 	const ITEMS_MAX = 100;
 
 	/**
@@ -53,6 +61,22 @@ class Tack_Widget {
 	 */
 	public function init() {
 		add_action( 'woocommerce_after_add_to_cart_button', array( $this, 'render_product_button' ) );
+
+		/*
+		 * Fallback mount point for quote-only mode.
+		 *
+		 * `woocommerce_after_add_to_cart_button` fires INSIDE WooCommerce's
+		 * add-to-cart templates (templates/single-product/add-to-cart/*.php). In
+		 * quote-only mode `Tack_Catalog_Mode` withdraws those templates, so that
+		 * hook never fires and the quote button would vanish with the cart button
+		 * — leaving a storefront with NO way to transact at all. This re-mounts it
+		 * at the position the add-to-cart form used to occupy (priority 30 on
+		 * `woocommerce_single_product_summary`).
+		 *
+		 * `render_product_button()` is idempotent per product, so on a normal
+		 * store — where both hooks fire — the button still renders exactly once.
+		 */
+		add_action( 'woocommerce_single_product_summary', array( $this, 'render_product_button' ), 30 );
 		add_action( 'wp_footer', array( $this, 'render_quote_list_drawer' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 
@@ -269,6 +293,17 @@ class Tack_Widget {
 		if ( ! $product instanceof WC_Product ) {
 			return;
 		}
+
+		/*
+		 * Rendered once per product, whichever mount point fires first. Both are
+		 * registered (see init()) because only one of them exists in any given
+		 * mode, and on a normal store both fire.
+		 */
+		$product_id = $product->get_id();
+		if ( in_array( $product_id, $this->rendered_product_ids, true ) ) {
+			return;
+		}
+		$this->rendered_product_ids[] = $product_id;
 
 		$show_add_to_quote  = 'yes' === get_option( 'tack_quotes_show_add_to_quote', 'yes' );
 		$show_request_quote = 'yes' === get_option( 'tack_quotes_show_request_quote', 'yes' );
