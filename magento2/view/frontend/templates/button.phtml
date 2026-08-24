@@ -18,6 +18,10 @@
 $product = $block->getCurrentProduct();
 $showRequest = $block->isEnabled();
 $showAdd = $block->isAddToQuoteEnabled();
+// In quote-only mode Add to Cart has been removed from this page, so the request button is
+// no longer the alternative action — it is the only one, and must not read as the lesser
+// button. RequestQuote::isEnabled() already guarantees $showRequest is true here.
+$quoteOnly = $block->isQuoteOnly();
 
 if ((!$showRequest && !$showAdd) || !$product) {
     return;
@@ -27,7 +31,8 @@ if ((!$showRequest && !$showAdd) || !$product) {
      data-role="tackquote-product"
      data-sku="<?= $escaper->escapeHtmlAttr($product->getSku()) ?>"
      data-name="<?= $escaper->escapeHtmlAttr($product->getName()) ?>"
-     data-requires-options="<?= $block->productRequiresOptions() ? '1' : '0' ?>">
+     data-requires-options="<?= $block->productRequiresOptions() ? '1' : '0' ?>"
+     data-quote-only="<?= $quoteOnly ? '1' : '0' ?>">
 
     <?php if ($showAdd): ?>
         <button type="button" class="action tocart tackquote-add-btn">
@@ -37,7 +42,7 @@ if ((!$showRequest && !$showAdd) || !$product) {
 
     <?php if ($showRequest): ?>
         <button type="button"
-                class="action <?= $showAdd ? 'secondary' : 'tocart' ?> tackquote-request-btn"
+                class="action <?= ($showAdd && !$quoteOnly) ? 'secondary' : 'tocart' ?> tackquote-request-btn"
                 aria-haspopup="dialog">
             <span><?= $escaper->escapeHtml($block->getButtonLabel()) ?></span>
         </button>

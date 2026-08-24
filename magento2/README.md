@@ -171,6 +171,143 @@ opposite direction (Tack → the store: connect, sync, checkout). Quotes are tag
 `source` this module sends (`magento`) plus `plugin-request`, and the store's currency is
 forwarded rather than assumed.
 
+## Quote-only mode (B2B catalog)
+
+**Stores > Configuration > TackQuote > TackQuote Settings > Quote-Only Store (B2B Catalog).**
+Turns the whole storefront into a B2B catalog: Add to Cart and checkout are refused and
+shoppers request a quote instead. Off by default.
+
+### It is refused by the server, not hidden by CSS
+
+| where | what |
+|---|---|
+| `Plugin/Quote/QuoteOnlyCartGuard.php` → `beforeAddProduct()` | refuses `Magento\Quote\Model\Quote::addProduct()` |
+| `Plugin/Checkout/QuoteOnlyExistingCartGuard.php` | refuses quantity increases, reconfigure and reorder on a pre-existing cart |
+| `Plugin/Checkout/QuoteOnlyCheckoutGuard.php` → `aroundExecute()` | refuses `Magento\Checkout\Controller\Index\Index`, redirecting to the cart with a reason |
+
+`curl -d 'product=42&qty=1' https://store/checkout/cart/add/` gets the same refusal as the
+browser: a `before` plugin that throws aborts the intercepted call, so core's cart code never
+runs.
+
+**Why `Magento\Quote\Model\Quote::addProduct()` and not a controller plugin.** It is
+`@api` (`vendor/magento/module-quote/Model/Quote.php:34`), which is Magento's stability
+guarantee, and it is the single model every add path funnels through — the product page,
+related products, wishlist "Add to Cart", `checkout/cart/addgroup`, and
+`Magento\Checkout\Model\Cart::addProduct()`, which is itself only a caller
+(`vendor/magento/module-checkout/Model/Cart.php:392` is literally
+`$result = $this->getQuote()->addProduct($product, $request);`). A plugin on
+`Magento\Checkout\Controller\Cart\Add` would guard one route and miss the rest;
+`Magento\Checkout\Model\Cart` carries `@deprecated 100.1.0 Use \Magento\Quote\Model\Quote
+instead` in its own docblock. `LocalizedException` is thrown rather than a generic one
+because `Magento\Checkout\Controller\Cart\Add::execute()` catches that type at
+`Add.php:170` and renders the message to the shopper instead of producing a 500.
+
+### Admin and integrations stay exempt — structurally
+
+Everything is declared in **`etc/frontend/di.xml`**, so Magento generates the interceptors
+for the frontend area only. Admin order creation (Sales > Orders > Create New Order) drives
+the very same `Quote::addProduct()`, and so does TackQuote turning an accepted quote into a
+real order; both keep working because adminhtml never loads that file. Area-scoped `di.xml`
+is Magento's own mechanism for this — core scopes
+`Magento\Customer\Model\App\Action\ContextPlugin` the same way in
+`vendor/magento/module-customer/etc/frontend/di.xml:23-26`. There is deliberately no runtime
+area check: a check can be edited out, a file adminhtml never loads cannot be.
+`Test/Unit/Layout/QuoteOnlyLayoutTest.php` fails if any guard moves into a global `etc/di.xml`.
+
+### Who it applies to
+
+**Everyone** (default), **Guests only** (signed-in customers keep a normal cart and
+checkout — the usual B2B setup), or **Selected customer groups**. Magento group 0 is
+`NOT LOGGED IN`, a real row in the customer-group grid, so it can be selected on its own and
+is equivalent to "Guests only". (The OpenCart build of this feature deliberately *drops*
+group 0, because OpenCart uses it as a "no group" sentinel; copying that rule here would
+silently delete a merchant's selection.)
+
+Full-page cache is safe without a custom vary dimension: the decision reads only store config
+plus signed-in state and customer group, and Magento already puts both into the HTTP context
+that produces the vary hash (`Magento\Customer\Model\App\Action\ContextPlugin` lines 50
+and 55). **Adding any other input to `Model/QuoteOnlyMode.php` — a cookie, a time of day, the
+customer id — would serve one visitor's storefront to another** and needs its own
+`HttpContext::setValue()` first.
+
+### The store is never left unable to transact
+
+The same feature nearly shipped a dead storefront twice on other platforms: in WooCommerce
+the quote button hung off a hook that only fires *inside* the add-to-cart form, and in
+PrestaShop the theme wraps the CTA hook in `{if !$configuration.is_catalog}`. Magento's
+equivalent coupling was checked against 2.4.8 source **before** anything was removed:
+
+- The CTA block `tackquote.request.quote` is a child of the container `product.info.main`.
+  The blocks removed are children of *different* parents — `product.info.addtocart` of
+  `product.info.form.content`
+  (`vendor/magento/module-catalog/view/frontend/layout/catalog_product_view.xml:72`) and
+  `product.info.addtocart.additional` of `product.info.options.wrapper.bottom` (line 86) —
+  so `remove="true"` cannot reach it.
+- `Test/Unit/Layout/QuoteOnlyLayoutTest.php` pins that parentage, so a later "put it next to
+  Add to Cart" edit that recreates the coupling fails the suite instead of shipping.
+- **Both** add-to-cart blocks are removed. They render the same template; removing only the
+  first leaves a working-looking button on every product with custom options.
+- Quote-only mode **overrides** the `show_button` and `show_on_listing` preferences
+  (`Block/RequestQuote.php::isEnabled()`, `Block/ListingButton.php::isEnabled()`). Honouring
+  them would leave a product page with no cart button *and* no quote button.
+- Enforcement and the CTA are switched on by **one condition**: both require
+  `Config::isConfigured()`. With no API key saved, no quote button renders — and the cart is
+  therefore **not** blocked either.
+- The cart page gets its own notice with a working CTA (`Block/QuoteOnlyNotice.php`), which
+  is where a shopper refused at checkout lands.
+
+An ordering bug was fixed along the way: this module's `after="product.info.addtocart"` was
+inert, because Magento's `after` only orders *siblings* and returns without moving anything
+when the parents differ (`Structure.php:122-130`). It is now `after="product.info"`, a real
+sibling, so the quote controls finally render where the file always claimed — directly under
+the add-to-cart form rather than below the social links.
+
+Category and search tiles keep their cart button in the DOM and hidden by CSS
+(`view/frontend/web/css/request-quote.css`), because that button is hard-coded in
+`Magento_Catalog::product/list.phtml:108` rather than rendered as a removable block, and
+overriding that template would clobber every theme. **That hiding is cosmetic only** — the
+server refuses the POST regardless.
+
+### Existing carts and the checkout route
+
+Turning the mode on **does not empty anybody's cart**. Magento persists carts server-side in
+`quote`/`quote_item` for signed-in customers, so "silently deleted" could mean weeks later on
+another device; it would also make the switch destructive and effectively one-way. The cart
+page stays reachable, and **lowering a quantity, setting it to 0, and removing a line all
+stay allowed** — refusing the whole of `updateItems()` would trap a shopper with a basket
+they can see, cannot use, and cannot clear.
+
+What a cart cannot do is **grow or convert**: adds are refused, quantity *increases* are
+refused (without that, a one-line cart from before the switch could be edited to 10 000 and
+checked out), and the checkout route is refused. A pre-existing cart is **inert rather than
+destroyed**, and works normally again the moment the mode is switched off.
+
+### Verification
+
+51 unit tests were added (85 → 136, 255 assertions), run against a real Magento 2.4.8-p5
+bootstrap. The guard was mutation-tested with **12 deliberate breaks: 12 caught, 0 survived,
+0 rejected as non-compiling.**
+
+| break | caught by |
+|---|---|
+| the add-to-cart refusal never fires | *a crafted add-to-cart is REFUSED when the mode applies* |
+| scope "guests" inverted | *guests-only refuses the public and spares signed-in customers* |
+| dead-storefront guard removed (enforce with no API key) | *with no API key the mode stays INACTIVE* |
+| CTA override dropped | *the CTA renders EVEN with show_button turned off* |
+| only one of the two add-to-cart blocks removed | *both core Add to Cart blocks are removed* |
+| CTA moved into a container holding a removed block | *the CTA does not live inside anything being removed* |
+| the refusal declared globally | *the refusal is declared for the FRONTEND AREA ONLY* |
+| existing-cart guard refuses every update | *lowering the quantity / removing a line is ALLOWED* |
+| product-page removals applied on every page | *an ordinary page gets only the global handle* |
+| group 0 dropped (the OpenCart rule) | *group 0 is a real group in Magento and can be selected* |
+| checkout guard falls through | *checkout is refused and the shopper is sent back to their cart* |
+| cart CTA reverts to the `$root`-scoped JS hook | *the cart notice uses its own JS hook* |
+
+```
+# from a Magento install with the module in app/code/TackQuote/Quotes
+php vendor/bin/phpunit -c app/code/TackQuote/Quotes/Test/Unit/phpunit.xml
+```
+
 ## Known limitations
 
 - **No `Idempotency-Key` header is sent.** TackQuote accepts one, but
@@ -180,8 +317,25 @@ forwarded rather than assumed.
   Duplicate suppression is therefore done store-side in `Model/IdempotencyGuard.php`. The
   header line is commented out in `Model/Api/Client.php` and should be restored once the
   API is fixed.
-- **No cart-page quote button.** Quoting runs off the module's own browser-side list, not
-  Magento's cart, so there is no entry point on the cart page.
+- **No cart-page quote button in normal mode.** Quoting runs off the module's own
+  browser-side list, not Magento's cart, so there is no entry point on the cart page unless
+  quote-only mode is on (which adds one — see above).
+- **Quote-only mode does not cover the Web API or GraphQL areas.** `UNVERIFIED against a
+  running store.` The guards are declared in `etc/frontend/di.xml`, so `webapi_rest`,
+  `webapi_soap` and `graphql` are not intercepted. Two consequences: adding items to a guest
+  cart via `POST /rest/V1/guest-carts/{cartId}/items` — an anonymous endpoint — would still
+  succeed, and Magento's own Luma checkout places its order over `webapi_rest`, so a crafted
+  REST call against a cart that predates the switch could still place an order. Those areas
+  are left open deliberately: the same endpoints carry the merchant's own integrations,
+  including TackQuote placing quote-accepted orders, and telling an admin/integration token
+  from an anonymous storefront caller needs `UserContextInterface`, which is only bound in
+  the webapi areas — so one plugin cannot serve both, and guessing wrong would break quote
+  conversion. A merchant who needs that surface closed should disable the anonymous
+  guest-cart endpoints in `webapi.xml`, which is a store-wide decision. The invariant that
+  holds unconditionally is the one the feature is sold on: **nothing new can enter a cart
+  from the storefront.**
+- **Quote-only mode and multishipping.** `Magento_Multishipping` (`multishipping/checkout`,
+  off by default) has its own checkout controller and is not guarded. UNVERIFIED.
 - **The registration policy is cached for 15 minutes** (60 seconds on failure). A policy
   change in TackQuote can take that long to appear on the storefront.
 - **A TackQuote outage degrades rather than breaks the form** — the policy fetch returns
@@ -307,6 +461,9 @@ integrations/magento2/
 ├── etc/adminhtml/routes.xml                    Admin route tackquote/*
 ├── etc/adminhtml/system.xml                    Stores > Configuration > TackQuote fields
 ├── etc/frontend/routes.xml                     Storefront route tackquote/*
+├── etc/frontend/di.xml                         QUOTE-ONLY GUARDS — frontend area only,
+│                                               which is what keeps the admin exempt
+├── etc/frontend/events.xml                     layout_load_before -> quote-only handles
 ├── Model/Config.php                            Reads scoped config (enable/url/key/labels)
 ├── Model/Api/Client.php                        HTTP client for /v1/integrations/magento/*
 ├── Model/RegistrationConfigProvider.php        Fetches + caches the seller's policy
@@ -314,6 +471,14 @@ integrations/magento2/
 ├── Model/ProductOptionRequirement.php          "Does this product need a selection first?"
 ├── Model/SubmissionThrottle.php                Per-IP rate limit on the public endpoint
 ├── Model/IdempotencyGuard.php                  Collapses double-submits into one quote
+├── Model/QuoteOnlyRules.php                    Quote-only scoping rule, pure functions
+├── Model/QuoteOnlyMode.php                     "Is this visitor quote-only right now?"
+├── Model/Config/Source/QuoteOnlyScope.php      "Applies to" dropdown options
+├── Plugin/Quote/QuoteOnlyCartGuard.php         THE REFUSAL: Quote::addProduct()
+├── Plugin/Checkout/QuoteOnlyExistingCartGuard.php  Pre-existing carts: no growth
+├── Plugin/Checkout/QuoteOnlyCheckoutGuard.php  Refuses the checkout route
+├── Observer/QuoteOnlyLayoutHandle.php          Adds the quote-only layout handles
+├── Block/QuoteOnlyNotice.php                   Cart-page "this store works by quote" panel
 ├── Block/RequestQuote.php                      Product-page trigger view model
 ├── Block/ListingButton.php                     Category/search tile "Add to Quote"
 ├── Block/QuoteList.php                         Quote-list widget + shared form view model
@@ -326,6 +491,10 @@ integrations/magento2/
 │   ├── layout/catalog_product_view.xml         Product-page triggers
 │   ├── layout/catalog_category_view.xml        Listing-tile "Add to Quote"
 │   ├── layout/default.xml                      Site-wide quote list + shared form + CSS
+│   ├── layout/tackquote_quote_only.xml         Quote-only: body class (global)
+│   ├── layout/tackquote_quote_only_product.xml Quote-only: removes BOTH addtocart blocks
+│   ├── layout/tackquote_quote_only_cart.xml    Quote-only: cart-page notice
+│   ├── templates/quote-only-notice.phtml       Cart-page notice + CTA
 │   ├── templates/button.phtml                  Product-page triggers
 │   ├── templates/listing-button.phtml          Listing-tile trigger
 │   ├── templates/quote-list.phtml              Drawer + multi-step form markup

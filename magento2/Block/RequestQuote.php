@@ -29,6 +29,7 @@ use Magento\Framework\Registry;
 use Magento\Framework\View\Element\Template;
 use TackQuote\Quotes\Model\Config;
 use TackQuote\Quotes\Model\ProductOptionRequirement;
+use TackQuote\Quotes\Model\QuoteOnlyMode;
 
 class RequestQuote extends Template
 {
@@ -48,12 +49,18 @@ class RequestQuote extends Template
     private $optionRequirement;
 
     /**
+     * @var QuoteOnlyMode
+     */
+    private $quoteOnlyMode;
+
+    /**
      * Constructor.
      *
      * @param Context $context
      * @param Config $config
      * @param Registry $registry
      * @param ProductOptionRequirement $optionRequirement
+     * @param QuoteOnlyMode $quoteOnlyMode
      * @param array $data
      */
     public function __construct(
@@ -61,12 +68,28 @@ class RequestQuote extends Template
         Config $config,
         Registry $registry,
         ProductOptionRequirement $optionRequirement,
+        QuoteOnlyMode $quoteOnlyMode,
         array $data = []
     ) {
         parent::__construct($context, $data);
         $this->config = $config;
         $this->registry = $registry;
         $this->optionRequirement = $optionRequirement;
+        $this->quoteOnlyMode = $quoteOnlyMode;
+    }
+
+    /**
+     * Whether quote-only mode applies to the visitor looking at this page.
+     *
+     * The template uses it for emphasis (the request button becomes the primary action once
+     * Add to Cart is gone), and isEnabled() uses it for something far more important — see
+     * below.
+     *
+     * @return bool
+     */
+    public function isQuoteOnly(): bool
+    {
+        return $this->quoteOnlyMode->isActive();
     }
 
     /**
@@ -76,7 +99,27 @@ class RequestQuote extends Template
      */
     public function isEnabled(): bool
     {
-        return $this->config->isButtonEnabled();
+        // ── THE LINE THAT KEEPS THE STORE ABLE TO TRANSACT ──────────────────────────────
+        //
+        // `show_button` is a merchant preference: plenty of stores switch the single-product
+        // request button off and rely on the multi-product quote list alone. That is fine
+        // while the cart works. It is NOT fine once quote-only mode has removed Add to Cart
+        // from this page, because the template bails out entirely when neither trigger is
+        // enabled (view/frontend/templates/button.phtml) — leaving a product page with no
+        // cart button, no quote button, and a server that refuses the POST. A catalog nobody
+        // can transact with in either direction.
+        //
+        // So in quote-only mode the request trigger is not optional. This is the same
+        // override the OpenCart build of this feature applies to its placement toggle, and
+        // it is deliberately per-VISITOR (isActive(), not the raw config flag): a store
+        // scoped to guests must not force the button on for signed-in customers who still
+        // have a working cart.
+        //
+        // The dead-store invariant still holds in the other direction, because
+        // QuoteOnlyMode::isActive() and Config::isButtonEnabled() both require
+        // Config::isConfigured(). With no API key BOTH are false — and the guard does not
+        // enforce either, so the cart keeps working. Test/Unit asserts both halves.
+        return $this->config->isButtonEnabled() || $this->isQuoteOnly();
     }
 
     /**

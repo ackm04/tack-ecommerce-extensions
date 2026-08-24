@@ -1,0 +1,43 @@
+<?php
+/**
+ * Quote-only notice on the cart page.
+ *
+ * The button carries `data-role="tackquote-quote-only-cta"`, which is the SAME hook the quote
+ * drawer's own submit button uses (view/frontend/templates/quote-list.phtml), so it opens the
+ * existing request form rather than introducing a second flow. The drawer itself is rendered
+ * on every page by the `before.body.end` block in view/frontend/layout/default.xml, so it is
+ * always present to be opened.
+ *
+ * @var \TackQuote\Quotes\Block\QuoteOnlyNotice $block
+ * @var \Magento\Framework\Escaper $escaper
+ * @package TackQuote_Quotes
+ */
+
+if (!$block->isVisible()) {
+    return;
+}
+?>
+<div class="message notice tackquote-quote-only-notice" role="status">
+    <div class="tackquote-quote-only-notice__body">
+        <strong class="tackquote-quote-only-notice__title">
+            <?= $escaper->escapeHtml(__('This store works by quote')) ?>
+        </strong>
+        <p class="tackquote-quote-only-notice__text">
+            <?= $escaper->escapeHtml(__(
+                'Checkout is not available here. Tell us what you need and we will send you a '
+                . 'priced quote. Anything already in your basket stays where it is.'
+            )) ?>
+        </p>
+        <div class="tackquote-quote-only-notice__actions">
+            <button type="button"
+                    class="action primary tackquote-quote-only-notice__cta"
+                    data-role="tackquote-quote-only-cta"
+                    aria-haspopup="dialog">
+                <span><?= $escaper->escapeHtml($block->getRequestLabel()) ?></span>
+            </button>
+            <a class="action secondary" href="<?= $escaper->escapeUrl($block->getContinueShoppingUrl()) ?>">
+                <span><?= $escaper->escapeHtml(__('Continue shopping')) ?></span>
+            </a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+  Quote-only mode, applied on EVERY storefront page.
+
+  Added at request time by Observer\QuoteOnlyLayoutHandle, so it applies only to the
+  visitors the merchant scoped the mode to (everyone / guests / selected customer groups).
+
+  All this handle does is mark the page. The `tackquote-quote-only` body class is what
+  view/frontend/web/css/request-quote.css keys off to hide the Add to Cart button inside
+  category and search product tiles — that button is hard-coded in
+  Magento_Catalog::product/list.phtml (line 108, `class="action tocart primary"`), not
+  rendered as a block, so there is no block to remove and overriding the template would
+  clobber every theme that has already customised it.
+
+  THAT HIDING IS COSMETIC AND NOTHING ELSE. The server refuses the request whether or not
+  this stylesheet loaded, whether or not JavaScript ran, and whether or not someone deleted
+  the rule in devtools — see Plugin\Quote\QuoteOnlyCartGuard.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <attribute name="class" value="tackquote-quote-only"/>
+    </body>
+</page>

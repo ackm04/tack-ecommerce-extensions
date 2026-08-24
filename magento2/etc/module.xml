@@ -4,10 +4,17 @@
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
-    <module name="TackQuote_Quotes" setup_version="1.0.0">
+    <module name="TackQuote_Quotes" setup_version="1.3.0">
         <sequence>
             <module name="Magento_Catalog"/>
             <module name="Magento_Config"/>
+            <!-- Quote-only mode plugs Magento\Checkout\Model\Cart (existing-cart
+                 mutations) and Magento\Checkout\Controller\Index\Index (the checkout
+                 route), both declared in etc/frontend/di.xml. -->
+            <module name="Magento_Checkout"/>
+            <!-- Quote-only mode's actual refusal is a plugin on
+                 Magento\Quote\Model\Quote::addProduct(). -->
+            <module name="Magento_Quote"/>
             <!-- ProductQuoteResolver resolves a configurable's chosen variant so the
                  quote names a fulfillable child SKU at its real price. -->
             <module name="Magento_ConfigurableProduct"/>

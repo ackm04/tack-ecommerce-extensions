@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!--
+  Quote-only (B2B catalog) mode wiring.
+
+  THE PATH OF THIS FILE IS PART OF THE FEATURE. Everything declared here is generated as an
+  interceptor for the FRONTEND AREA ONLY. That is what keeps the admin exempt: Magento's
+  admin order creation (Sales > Orders > Create New Order) drives the very same
+  Magento\Quote\Model\Quote::addProduct() that the storefront does, and refusing it would
+  stop a merchant taking a phone order and stop TackQuote converting an accepted quote into
+  a real order.
+
+  Area-scoped di.xml is Magento's own mechanism for exactly this, not a local invention —
+  core scopes Magento\Customer\Model\App\Action\ContextPlugin the same way in
+  vendor/magento/module-customer/etc/frontend/di.xml:23-26. Moving any of these <type>
+  blocks into etc/di.xml would make the module refuse the merchant's own admin orders.
+  There is no runtime area check to compensate, and there deliberately is not one: a check
+  can be edited out or got wrong, a file that adminhtml never loads cannot be.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!--
+      The session is injected as a Proxy so that merely CONSTRUCTING the resolver never
+      starts a customer session. QuoteOnlyMode::isActive() runs the cheap store-config checks
+      first and only touches the session once the mode might actually apply.
+    -->
+    <type name="TackQuote\Quotes\Model\QuoteOnlyMode">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+
+    <!--
+      THE REFUSAL. Magento\Quote\Model\Quote::addProduct() is `@api` (Quote.php:34) and is
+      the single model every add path funnels through — the product page, related products,
+      wishlist "Add to Cart", addgroup, and Magento\Checkout\Model\Cart::addProduct(), which
+      is itself just a caller (module-checkout/Model/Cart.php:392).
+    -->
+    <type name="Magento\Quote\Model\Quote">
+        <plugin name="tackquote_quote_only_cart_guard"
+                type="TackQuote\Quotes\Plugin\Quote\QuoteOnlyCartGuard"
+                sortOrder="10"/>
+    </type>
+
+    <!-- Mutations of a cart that already existed when the mode was switched on. -->
+    <type name="Magento\Checkout\Model\Cart">
+        <plugin name="tackquote_quote_only_existing_cart_guard"
+                type="TackQuote\Quotes\Plugin\Checkout\QuoteOnlyExistingCartGuard"
+                sortOrder="10"/>
+    </type>
+
+    <!-- The checkout route itself. -->
+    <type name="Magento\Checkout\Controller\Index\Index">
+        <plugin name="tackquote_quote_only_checkout_guard"
+                type="TackQuote\Quotes\Plugin\Checkout\QuoteOnlyCheckoutGuard"
+                sortOrder="10"/>
+    </type>
+</config>

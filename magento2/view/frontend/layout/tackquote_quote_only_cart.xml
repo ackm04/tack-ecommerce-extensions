@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  Quote-only mode on the CART PAGE.
+
+  This is where a shopper lands when Plugin\Checkout\QuoteOnlyCheckoutGuard refuses checkout,
+  and where anyone with a cart from before the switch ends up. The redirect already carries
+  an error message, but a message fades; this block states what the store is and gives them
+  the action that still works.
+
+  `content` rather than `checkout.cart.form.before`: the latter is nested inside
+  `checkout.cart.items` (vendor/magento/module-checkout/view/frontend/layout/checkout_cart_index.xml:16-18)
+  and therefore renders only when the cart has items. A shopper with an EMPTY cart on a
+  quote-only store is exactly the person who most needs to be told how this shop works.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="content">
+            <block class="TackQuote\Quotes\Block\QuoteOnlyNotice"
+                   name="tackquote.quote.only.notice"
+                   template="TackQuote_Quotes::quote-only-notice.phtml"
+                   before="-"/>
+        </referenceContainer>
+    </body>
+</page>

@@ -3,6 +3,24 @@
   Adds the "Request a Quote" button under the add-to-cart area on the product
   view page — the Magento equivalent of the WooCommerce plugin's
   woocommerce_after_add_to_cart_button hook.
+
+  `after="product.info"`, NOT `after="product.info.addtocart"`. Magento's `after` is a
+  SIBLING hint and only works between children of the same parent:
+  Magento\Framework\View\Layout\Data\Structure::reorderChildElement() reads the sibling's
+  parent (Structure.php:122) and returns without moving anything when the parents differ
+  (Structure.php:130). `product.info.addtocart` is a child of `product.info.form.content`
+  (vendor/magento/module-catalog/view/frontend/layout/catalog_product_view.xml:72), not of
+  `product.info.main`, so that hint was inert and this block was landing at the END of
+  product.info.main — below the social links. `product.info` IS a child of
+  product.info.main (same core file, line 70) and is the block that renders the add-to-cart
+  form, so ordering after it puts the quote controls exactly where the comment above always
+  claimed they were.
+
+  This independence is also what makes quote-only mode safe: because the CTA hangs off
+  `product.info.main` and not off the add-to-cart block or its container, removing
+  `product.info.addtocart` cannot take it with it. See
+  view/frontend/layout/tackquote_quote_only_product.xml for the full analysis and
+  Test/Unit/Layout/QuoteOnlyLayoutTest.php for the assertion that keeps it true.
 -->
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
@@ -12,7 +30,7 @@
             <block class="TackQuote\Quotes\Block\RequestQuote"
                    name="tackquote.request.quote"
                    template="TackQuote_Quotes::button.phtml"
-                   after="product.info.addtocart"/>
+                   after="product.info"/>
         </referenceContainer>
     </body>
 </page>
