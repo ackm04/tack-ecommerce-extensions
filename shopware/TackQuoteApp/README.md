@@ -27,6 +27,32 @@ storefront template changes; this app is the only thing installable on Cloud.
 > taken by the plugin, so the app takes `TackQuoteApp`. Renaming either the
 > directory or the name breaks registration.
 
+## B2B quote-only mode: plugin only, NOT implemented here
+
+The quote-only / B2B catalog mode added in `../TackQuote` is a **plugin feature and has no
+equivalent in this app.** Enforcement there is a PHP decorator around
+`Shopware\Core\Checkout\Cart\SalesChannel\CartItemAddRoute` plus a
+`shopware.cart.validator`, and an app ships no PHP into the shop, so neither mechanism is
+reachable from a `manifest.xml`.
+
+Do not assume a Cloud store running this app is quote-only because the plugin config says so
+somewhere — the two extensions share nothing at runtime.
+
+Two mechanisms look like the right way to build the app-side equivalent later. Both are
+named here so nobody has to re-derive them, and **both are UNVERIFIED** — the hook and the
+interface exist in 6.6.10.22 source, but neither has been exercised for this purpose:
+
+- **App scripts, `cart` hook** (`Shopware\Core\Checkout\Cart\Hook\CartHook::HOOK_NAME`
+  = `'cart'`, executed from `core/Checkout/Cart/Processor.php:57`). Runs inside every cart
+  calculation, so it could strip product line items and raise a blocking error. Closest
+  analogue to what the plugin does, and it would need no round-trip to the app server.
+- **Checkout gateway** (`Shopware\Core\Checkout\Gateway\CheckoutGatewayInterface`, with
+  the `add-cart-error` command documented from 6.6.3.0). Blocks checkout, but runs at
+  checkout — it would not stop items entering the cart in the first place.
+
+Either would be a distinct piece of work with its own tests. Nothing about the plugin
+implementation carries over.
+
 ## Validate before you ship
 
 ```bash

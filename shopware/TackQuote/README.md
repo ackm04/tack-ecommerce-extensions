@@ -50,9 +50,11 @@ security-fixed floor of that line. Pin 6.6.10.7 or newer; this plugin was tested
   > registered — `path('frontend.tackquote.quote-request')` threw in the template and
   > the endpoint 404'd. Every plugin shipping a controller needs this file.
 - Administration → Extensions → TackQuote → Configure screen
-  (`src/Resources/config/config.xml`): **five fields across two cards** —
-  *TackQuote connection* (**API base URL**, **tenant slug**, **API key**) and
-  *Request a Quote button* (**enableButton**, **buttonLabel**).
+  (`src/Resources/config/config.xml`): **eight fields across three cards** —
+  *TackQuote connection* (**API base URL**, **tenant slug**, **API key**),
+  *Request a Quote button* (**enableButton**, **buttonLabel**) and
+  *B2B quote-only mode* (**quoteOnlyMode**, **quoteOnlyScope**,
+  **quoteOnlyCustomerGroupIds**).
 - A storefront **"Request a Quote"** button on the product detail page, from
   `src/Resources/views/storefront/component/buy-widget/buy-widget.html.twig`, which
   `sw_extends` `@Storefront/storefront/component/buy-widget/buy-widget.html.twig` and
@@ -128,15 +130,137 @@ security-fixed floor of that line. Pin 6.6.10.7 or newer; this plugin was tested
   (auto-discovered by `SnippetFileLoader` — no `SnippetFile` class needed). The inline JS
   receives its messages as already-translated `data-` attributes rather than containing
   English of its own.
+- **B2B quote-only mode (catalog mode)** — turns the storefront into a B2B catalog with the
+  cart disabled server-side. See the dedicated section below.
 
-### Tests
+## B2B quote-only mode
+
+Turns the whole storefront into a B2B catalog: no "Add to cart", customers request a
+quote instead. Off by default.
+
+### Where enforcement actually happens
+
+`src/Core/Checkout/Cart/QuoteOnlyCartItemAddRoute.php:60` — a decorator around
+`Shopware\Core\Checkout\Cart\SalesChannel\CartItemAddRoute` that throws
+`QuoteOnlyModeException` (HTTP **403**, error code `TACKQUOTE__QUOTE_ONLY_MODE_ACTIVE`)
+**before** delegating, so no line item is ever built, priced, persisted or announced by
+`BeforeLineItemAddedEvent`.
+
+Hiding the button in Twig is cosmetic and is treated as such here. A cached page, a
+bookmarked form post, a `curl` against `/store-api/checkout/cart/line-item` or any
+headless client bypasses the template entirely. Decorating the route covers all of them
+at once, verified against Shopware **6.6.10.22** source:
+
+| Entry point | Reaches the guard because |
+|---|---|
+| `POST /store-api/checkout/cart/line-item` | is this route (`core/Checkout/Cart/SalesChannel/CartItemAddRoute.php:47`) |
+| `POST /checkout/line-item/add` | `CartLineItemController::addLineItems()` → `CartService::add()` (`storefront/Controller/CartLineItemController.php:314`) |
+| `POST /checkout/product/add-by-number` | `CartLineItemController::addProductByNumber()` → `CartService::add()` (same file, line 245) |
+| any plugin calling `CartService::add()` | `CartService` is wired to the decorated service id (`core/Checkout/DependencyInjection/cart.xml:70` → `:116`); it delegates at `core/Checkout/Cart/SalesChannel/CartService.php:90` |
+
+A tree-wide grep for `AbstractCartItemAddRoute` across `shopware/core` + `shopware/storefront`
+returns only the abstract, the concrete route and that one `CartService` constructor
+argument — there is no fourth way to write a line item into a persisted cart.
+
+### Existing carts and the checkout route
+
+Blocking the add route does nothing about a basket that was already full when the merchant
+flipped the switch. So `src/Core/Checkout/Cart/QuoteOnlyCartValidator.php` (tagged
+`shopware.cart.validator`) puts a **blocking** `QuoteOnlyModeError` on any non-empty cart
+while quote-only mode applies.
+
+The checkout route is deliberately **not** decorated. Core already enforces blocking errors
+at the point of no return: `OrderPersister::persist()` throws on
+`$cart->getErrors()->blockOrder()` before writing the order row
+(`core/Checkout/Cart/Order/OrderPersister.php:38`), every cart calculation runs the tagged
+validators (`core/Checkout/Cart/Processor.php:62-63`), and `CartOrderRoute::order()`
+recalculates immediately before persisting (`core/Checkout/Cart/SalesChannel/CartOrderRoute.php:75`
+then `:87`). One validator therefore covers the storefront checkout, the Store API order
+route and anything else that persists a cart — a decorated controller would have covered
+only the first.
+
+Item **update** and **remove** are intentionally left working, so a shopper can still empty
+a stranded cart. Blocking them would prevent nothing, since that cart can no longer be
+ordered anyway.
+
+### Who it applies to
+
+| `quoteOnlyScope` | Effect |
+|---|---|
+| `everyone` (default) | Nobody can add to cart. |
+| `guests` | Anonymous visitors and guest-checkout customers must request a quote; a registered, logged-in B2B customer keeps a working cart. |
+| `groups` | Only the customer groups selected in `quoteOnlyCustomerGroupIds`. |
+
+An unrecognised scope value falls back to `everyone`, not to "off" — the master switch is
+on, so a typo must not silently put the buy button back on every product page.
+
+### Administrators are always exempt
+
+`QuoteOnlyModeService::isExemptOperator()` — so the merchant can still test their own store
+and support can still place an order for a customer who phoned in. Two signals, both read
+off core rather than guessed:
+
+- `SalesChannelContext::getImitatingUserId() !== null` — the Administration's "log in as
+  customer". Core reads exactly this at
+  `core/System/SalesChannel/Context/CartRestorer.php:166` and
+  `core/Framework/Routing/SalesChannelRequestContextResolver.php:73`.
+- context source is `AdminSalesChannelApiSource` / `AdminApiSource` / `SystemSource` — the
+  admin order module builds carts under the first of these
+  (`core/System/SalesChannel/Context/BaseContextFactory.php:248`). An ordinary shopper gets
+  `SalesChannelApiSource` (same file, line 250), which is **not** exempt; since
+  `AdminSalesChannelApiSource extends SalesChannelApiSource`, checking the parent would have
+  exempted every visitor on the site, and a test pins that direction.
+
+### The storefront never ends up with nothing to click
+
+The failure mode this feature has to avoid is a store where the customer can neither buy
+nor ask. Both templates are written and tested against it:
+
+- **Product page** — `buy-widget.html.twig` suppresses core's `buy_widget_buy_form`
+  (which owns the `<form>`, the quantity selector, the hidden `lineItems[…]` inputs and the
+  buy button in one place). The TackQuote CTA is appended inside `buy_widget` after
+  `{{ parent() }}`, i.e. a **sibling** of that form, not a child — so removing the form
+  cannot remove the CTA. In quote-only mode the CTA renders even when the `enableButton`
+  opt-out is off, because it is then the only remaining way to transact.
+- **Listing / cross-selling cards** — `component/product/card/action.html.twig` **replaces**
+  the buy form with a link to the product detail page rather than rendering nothing. Core's
+  template is an `if/else`; an override that emitted nothing would leave the card with an
+  empty action area, because the `else` branch (the "Details" link) never runs.
+
+`tests/Resources/QuoteCtaRendersWithCartDisabledTest.php` renders both real templates
+against the real core templates through Shopware's real `sw_extends` parser, with the flag
+forced both ways, and asserts the buy form disappears **and** the quote CTA survives.
+
+That test is the reason this note is not just a claim: mutating the CTA condition to
+`and not tackquote_quote_only()` — i.e. reproducing the WooCommerce coupling exactly — kills
+two of its cases. So does removing the guard in `QuoteOnlyCartItemAddRoute::add()`, flipping
+`QuoteOnlyModeError::blockOrder()` to `false`, inverting the `guests` scope, or making
+`isExemptOperator()` always true.
+
+### Reverse-proxy cache
+
+Core's HTTP cache hash covers rule ids, version, currency, tax state and a coarse
+logged-in / not-logged-in flag — but **not** the customer group
+(`core/Framework/Adapter/Cache/Http/CacheResponseSubscriber.php:238-246`). With
+`quoteOnlyScope = groups` that would let two logged-in customers in different groups share
+one cached page. `src/Framework/Adapter/Cache/QuoteOnlyCacheCookieSubscriber.php` adds the
+group to the hash, but only for that scope, so the other scopes do not fragment the cache.
+This is a display-correctness fix only; the server-side guard reads the live context and was
+never affected.
+
+> **UNVERIFIED:** which Shopware minor first shipped `HttpCacheCookieEvent`. It exists on
+> 6.6.10.22. `TackQuote::build()` removes the subscriber when the class is absent, because a
+> subscriber naming a missing class is a container-compile fatal — the shop would fail to
+> boot rather than lose one cache dimension.
+
+## Tests
 
 ```bash
 # from the Shopware project root, with the plugin at custom/plugins/TackQuote
 vendor/bin/phpunit -c custom/plugins/TackQuote/phpunit.xml.dist
 ```
 
-37 tests / 58 assertions. No kernel, database or network — mocks plus
+65 tests / 116 assertions. No kernel, database or network — mocks plus
 `MockHttpClient`, so the suite runs in ~0.03s. `failOnWarning`, `failOnNotice`,
 `failOnRisky` and `failOnDeprecation` are all enabled. The API-client tests assert on
 the **outgoing request** (method, URL, JSON body), not on a canned response — per
@@ -185,6 +309,9 @@ Shopware Admin → **Extensions → My extensions → TackQuote → Configure**:
 | API key | From TackQuote → Settings → Developer → API Keys. Stored for future use; not sent by this version of the plugin (see gap above). |
 | Show "Request a Quote" button | Toggles the storefront button. Default on. |
 | Button label | Default `Request a Quote`. |
+| Run this storefront as a quote-only B2B catalog | Master switch for quote-only mode. Default **off**. |
+| Applies to | `everyone` / `guests` / `groups`. Default `everyone`. |
+| Customer groups | Only read when *Applies to* is `groups`. Empty + `groups` means quote-only matches nobody. |
 
 ## Install (public release, or Composer path for maintainers)
 
@@ -236,6 +363,15 @@ config storage for a future tighter integration.
 - The public widget endpoint is throttled to **5 requests / 60s**, which is shared
   across all callers of that route — fine for a product page, but it will reject bursts.
 - Only Shopware 6.6 has been tested (see *Tested version*).
+- Quote-only mode has been verified against **6.6.10.22 source and by unit test only** —
+  it has not been exercised against a running storefront in this environment. The route
+  decoration, validator tag, config schema and Twig block names are all read off that
+  version's source; 6.5 and 6.7 remain UNVERIFIED, as for the rest of the plugin.
+- In quote-only mode the listing card links to the product detail page rather than opening
+  a quote modal in place. The quote form needs a quantity clamped to the product's own
+  `minPurchase`/`purchaseSteps` and a unit price from the advanced-price tier for that
+  quantity, both resolved server-side per product; duplicating that across a 24-item
+  listing buys nothing the detail page does not already do correctly.
 - Do not claim Marketplace-ready.
 
 ## Related

@@ -1,0 +1,40 @@
+{#
+  Listing / cross-selling product boxes in B2B quote-only mode.
+
+  Core's `component_product_box_action_inner` is an if/else: the buy form on one side, a
+  "Details" link on the other (core action.html.twig lines 8 / 77). Overriding
+  `component_product_box_action_buy` to render NOTHING would leave the `{% if %}` still true,
+  so the else-branch never runs and the card ends up with an empty action area — a listing of
+  products with no way to act on any of them.
+
+  So the buy form is replaced rather than deleted: the card links through to the product
+  detail page, which is where the "Request a Quote" CTA lives. That keeps a route to
+  transacting on every card.
+
+  A per-card quote modal is deliberately NOT rendered here. The quote form needs a quantity
+  that respects the product's minPurchase / purchaseSteps and a unit price resolved from the
+  advanced-price ladder for that quantity — both of which the controller derives server-side
+  per product (see Storefront/Controller/QuoteRequestController::resolveQuantity /
+  resolveUnitPrice). Multiplying that modal across a 24-item listing page buys nothing the
+  detail page does not already do properly.
+
+  Cosmetic only. The server-side refusal is in
+  src/Core/Checkout/Cart/QuoteOnlyCartItemAddRoute.php.
+#}
+{% sw_extends '@Storefront/storefront/component/product/card/action.html.twig' %}
+
+{% block component_product_box_action_buy %}
+    {% if tackquote_quote_only() %}
+        {% block tackquote_product_box_action_quote %}
+            <div class="d-grid">
+                <a href="{{ seoUrl('frontend.detail.page', {productId: id}) }}"
+                   class="btn btn-outline-primary btn-detail tack-quote-listing-link"
+                   title="{{ 'tackQuote.button.label'|trans|striptags }}">
+                    {{ config('TackQuote.config.buttonLabel')|default('tackQuote.button.label'|trans) }}
+                </a>
+            </div>
+        {% endblock %}
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
