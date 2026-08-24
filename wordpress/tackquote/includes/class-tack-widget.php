@@ -143,10 +143,10 @@ class Tack_Widget {
 			? (string) filemtime( $js )
 			: TACK_QUOTES_VERSION;
 
-		wp_enqueue_style( 'tackquote-for-woocommerce', TACK_QUOTES_URL . 'assets/css/tack-quotes.css', array(), $css_ver );
-		wp_enqueue_script( 'tackquote-for-woocommerce', TACK_QUOTES_URL . 'assets/js/tack-quotes.js', array( 'jquery' ), $js_ver, true );
+		wp_enqueue_style( 'tackquote', TACK_QUOTES_URL . 'assets/css/tack-quotes.css', array(), $css_ver );
+		wp_enqueue_script( 'tackquote', TACK_QUOTES_URL . 'assets/js/tack-quotes.js', array( 'jquery' ), $js_ver, true );
 		wp_localize_script(
-			'tackquote-for-woocommerce',
+			'tackquote',
 			'TackQuotes',
 			array(
 				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
@@ -156,63 +156,63 @@ class Tack_Widget {
 				// stays valid no matter how long the HTML sits in a cache.
 				'nonceUrl'            => $this->nonce_endpoint(),
 				'customerEmail'       => $this->current_customer_email(),
-				'checkoutButtonLabel' => (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tackquote-for-woocommerce' ) ),
+				'checkoutButtonLabel' => (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tackquote' ) ),
 				// The seller's registration policy drives which fields the form renders. Null
 				// when Tack is unreachable, in which case the JS falls back to a minimal
 				// name+email form rather than rendering nothing — a shopper must still be able
 				// to ask for a quote when our own API is having a bad day.
 				'registration'        => $this->registration_config(),
 				'i18n'                => array(
-					'modalTitle'         => __( 'Request a Quote', 'tackquote-for-woocommerce' ),
-					'firstNameLabel'     => __( 'First name', 'tackquote-for-woocommerce' ),
-					'lastNameLabel'      => __( 'Last name', 'tackquote-for-woocommerce' ),
-					'emailLabel'         => __( 'Email address', 'tackquote-for-woocommerce' ),
-					'phoneLabel'         => __( 'Phone', 'tackquote-for-woocommerce' ),
-					'companyHeading'     => __( 'Company details', 'tackquote-for-woocommerce' ),
-					'companyNameLabel'   => __( 'Company name', 'tackquote-for-woocommerce' ),
-					'buyingAsLabel'      => __( 'I am buying as', 'tackquote-for-woocommerce' ),
-					'buyingAsIndividual' => __( 'An individual', 'tackquote-for-woocommerce' ),
-					'buyingAsCompany'    => __( 'A company', 'tackquote-for-woocommerce' ),
-					'optional'           => __( '(optional)', 'tackquote-for-woocommerce' ),
-					'firstNameRequired'  => __( 'Please enter your first name.', 'tackquote-for-woocommerce' ),
-					'companyRequired'    => __( 'Please complete the required company details.', 'tackquote-for-woocommerce' ),
-					'awaitingApproval'   => __( 'Quote requested. Your company registration is awaiting approval by the seller.', 'tackquote-for-woocommerce' ),
+					'modalTitle'         => __( 'Request a Quote', 'tackquote' ),
+					'firstNameLabel'     => __( 'First name', 'tackquote' ),
+					'lastNameLabel'      => __( 'Last name', 'tackquote' ),
+					'emailLabel'         => __( 'Email address', 'tackquote' ),
+					'phoneLabel'         => __( 'Phone', 'tackquote' ),
+					'companyHeading'     => __( 'Company details', 'tackquote' ),
+					'companyNameLabel'   => __( 'Company name', 'tackquote' ),
+					'buyingAsLabel'      => __( 'I am buying as', 'tackquote' ),
+					'buyingAsIndividual' => __( 'An individual', 'tackquote' ),
+					'buyingAsCompany'    => __( 'A company', 'tackquote' ),
+					'optional'           => __( '(optional)', 'tackquote' ),
+					'firstNameRequired'  => __( 'Please enter your first name.', 'tackquote' ),
+					'companyRequired'    => __( 'Please complete the required company details.', 'tackquote' ),
+					'awaitingApproval'   => __( 'Quote requested. Your company registration is awaiting approval by the seller.', 'tackquote' ),
 					// Company field labels, keyed by the field names the API's
 					// requiredCompanyFields returns. Anything not listed here falls back to a
 					// humanised version of the key, so a new policy field still renders.
 					'companyFields'      => array(
-						'legalName'          => __( 'Legal name', 'tackquote-for-woocommerce' ),
-						'taxId'              => __( 'Tax / VAT ID', 'tackquote-for-woocommerce' ),
-						'registrationNumber' => __( 'Registration number', 'tackquote-for-woocommerce' ),
-						'website'            => __( 'Website', 'tackquote-for-woocommerce' ),
-						'addressLine1'       => __( 'Address', 'tackquote-for-woocommerce' ),
-						'addressLine2'       => __( 'Address line 2', 'tackquote-for-woocommerce' ),
-						'city'               => __( 'City', 'tackquote-for-woocommerce' ),
-						'state'              => __( 'State / Province', 'tackquote-for-woocommerce' ),
-						'postalCode'         => __( 'Postal code', 'tackquote-for-woocommerce' ),
-						'country'            => __( 'Country', 'tackquote-for-woocommerce' ),
-						'phone'              => __( 'Company phone', 'tackquote-for-woocommerce' ),
-						'industry'           => __( 'Industry', 'tackquote-for-woocommerce' ),
-						'employeeCount'      => __( 'Number of employees', 'tackquote-for-woocommerce' ),
+						'legalName'          => __( 'Legal name', 'tackquote' ),
+						'taxId'              => __( 'Tax / VAT ID', 'tackquote' ),
+						'registrationNumber' => __( 'Registration number', 'tackquote' ),
+						'website'            => __( 'Website', 'tackquote' ),
+						'addressLine1'       => __( 'Address', 'tackquote' ),
+						'addressLine2'       => __( 'Address line 2', 'tackquote' ),
+						'city'               => __( 'City', 'tackquote' ),
+						'state'              => __( 'State / Province', 'tackquote' ),
+						'postalCode'         => __( 'Postal code', 'tackquote' ),
+						'country'            => __( 'Country', 'tackquote' ),
+						'phone'              => __( 'Company phone', 'tackquote' ),
+						'industry'           => __( 'Industry', 'tackquote' ),
+						'employeeCount'      => __( 'Number of employees', 'tackquote' ),
 					),
-					'emailPlaceholder'   => __( 'you@example.com', 'tackquote-for-woocommerce' ),
+					'emailPlaceholder'   => __( 'you@example.com', 'tackquote' ),
 					// Just "Note": the optional marker is appended generically by the form
 					// builder now, and leaving it in the string rendered "Note (optional) (optional)".
-					'noteLabel'          => __( 'Note', 'tackquote-for-woocommerce' ),
-					'notePlaceholder'    => __( 'Anything the seller should know about this request…', 'tackquote-for-woocommerce' ),
-					'submit'             => __( 'Send request', 'tackquote-for-woocommerce' ),
-					'sending'            => __( 'Sending…', 'tackquote-for-woocommerce' ),
-					'cancel'             => __( 'Cancel', 'tackquote-for-woocommerce' ),
-					'close'              => __( 'Close', 'tackquote-for-woocommerce' ),
-					'error'              => __( 'Could not create the quote. Please try again.', 'tackquote-for-woocommerce' ),
-					'reload'             => __( 'Reload page', 'tackquote-for-woocommerce' ),
-					'emailRequired'      => __( 'Please enter a valid email address.', 'tackquote-for-woocommerce' ),
-					'success'            => __( 'Quote requested! Redirecting you to it now…', 'tackquote-for-woocommerce' ),
-					'added'              => __( 'Added ✓', 'tackquote-for-woocommerce' ),
-					'quoteListTitle'     => __( 'Your quote list', 'tackquote-for-woocommerce' ),
-					'quoteListEmpty'     => __( 'No products added yet.', 'tackquote-for-woocommerce' ),
-					'quoteListCount'     => __( 'Quote list', 'tackquote-for-woocommerce' ),
-					'remove'             => __( 'Remove', 'tackquote-for-woocommerce' ),
+					'noteLabel'          => __( 'Note', 'tackquote' ),
+					'notePlaceholder'    => __( 'Anything the seller should know about this request…', 'tackquote' ),
+					'submit'             => __( 'Send request', 'tackquote' ),
+					'sending'            => __( 'Sending…', 'tackquote' ),
+					'cancel'             => __( 'Cancel', 'tackquote' ),
+					'close'              => __( 'Close', 'tackquote' ),
+					'error'              => __( 'Could not create the quote. Please try again.', 'tackquote' ),
+					'reload'             => __( 'Reload page', 'tackquote' ),
+					'emailRequired'      => __( 'Please enter a valid email address.', 'tackquote' ),
+					'success'            => __( 'Quote requested! Redirecting you to it now…', 'tackquote' ),
+					'added'              => __( 'Added ✓', 'tackquote' ),
+					'quoteListTitle'     => __( 'Your quote list', 'tackquote' ),
+					'quoteListEmpty'     => __( 'No products added yet.', 'tackquote' ),
+					'quoteListCount'     => __( 'Quote list', 'tackquote' ),
+					'remove'             => __( 'Remove', 'tackquote' ),
 				),
 			)
 		);
@@ -279,7 +279,7 @@ class Tack_Widget {
 		echo '<div class="tack-quote-buttons">';
 
 		if ( $show_add_to_quote ) {
-			$label = (string) get_option( 'tack_quotes_button_label', __( 'Add to Quote', 'tackquote-for-woocommerce' ) );
+			$label = (string) get_option( 'tack_quotes_button_label', __( 'Add to Quote', 'tackquote' ) );
 			$this->button(
 				array(
 					'product-id'    => $product->get_id(),
@@ -293,7 +293,7 @@ class Tack_Widget {
 		}
 
 		if ( $show_request_quote ) {
-			$label = (string) get_option( 'tack_quotes_request_button_label', __( 'Request a Quote', 'tackquote-for-woocommerce' ) );
+			$label = (string) get_option( 'tack_quotes_request_button_label', __( 'Request a Quote', 'tackquote' ) );
 			$this->button( array( 'product-id' => $product->get_id() ), 'tack-quote-btn', $label );
 		}
 
@@ -313,17 +313,17 @@ class Tack_Widget {
 		?>
 		<div id="tack-quote-list-widget" class="tack-quote-list-widget" hidden>
 			<button type="button" id="tack-quote-list-toggle" class="tack-quote-list-toggle">
-				<?php esc_html_e( 'Quote list', 'tackquote-for-woocommerce' ); ?>
+				<?php esc_html_e( 'Quote list', 'tackquote' ); ?>
 				(<span id="tack-quote-list-count">0</span>)
 			</button>
 			<div id="tack-quote-list-drawer" class="tack-quote-list-drawer" hidden>
 				<div class="tack-quote-list-drawer-header">
-					<strong><?php esc_html_e( 'Your quote list', 'tackquote-for-woocommerce' ); ?></strong>
-					<button type="button" id="tack-quote-list-close" aria-label="<?php esc_attr_e( 'Close', 'tackquote-for-woocommerce' ); ?>">&times;</button>
+					<strong><?php esc_html_e( 'Your quote list', 'tackquote' ); ?></strong>
+					<button type="button" id="tack-quote-list-close" aria-label="<?php esc_attr_e( 'Close', 'tackquote' ); ?>">&times;</button>
 				</div>
 				<ul id="tack-quote-list-items" class="tack-quote-list-items"></ul>
 				<button type="button" id="tack-quote-list-checkout" class="button tack-quote-btn tack-quote-list-checkout">
-					<?php echo esc_html( (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tackquote-for-woocommerce' ) ) ); ?>
+					<?php echo esc_html( (string) get_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tackquote' ) ) ); ?>
 				</button>
 			</div>
 		</div>
@@ -453,7 +453,7 @@ class Tack_Widget {
 			wp_send_json_error(
 				array(
 					'code'    => 'tack_nonce_expired',
-					'message' => __( 'This page has been open too long, or was served from a cache. Reload it and request the quote again.', 'tackquote-for-woocommerce' ),
+					'message' => __( 'This page has been open too long, or was served from a cache. Reload it and request the quote again.', 'tackquote' ),
 					'reload'  => true,
 				),
 				403
@@ -475,7 +475,7 @@ class Tack_Widget {
 			wp_send_json_error(
 				array(
 					'code'    => 'tack_rate_limited',
-					'message' => __( 'Too many quote requests from this connection. Please wait a few minutes and try again.', 'tackquote-for-woocommerce' ),
+					'message' => __( 'Too many quote requests from this connection. Please wait a few minutes and try again.', 'tackquote' ),
 				),
 				429
 			);
@@ -532,7 +532,7 @@ class Tack_Widget {
 		$note = mb_substr( $note, 0, self::NOTE_MAX_LENGTH );
 
 		if ( '' === $email || ! is_email( $email ) ) {
-			wp_send_json_error( array( 'message' => __( 'A valid email address is required.', 'tackquote-for-woocommerce' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'A valid email address is required.', 'tackquote' ) ), 400 );
 		}
 
 		if ( $items_json ) {
@@ -552,8 +552,8 @@ class Tack_Widget {
 			wp_send_json_error(
 				array(
 					'message' => $needs_variation
-						? __( 'Please choose the product options before requesting a quote.', 'tackquote-for-woocommerce' )
-						: __( 'No products to quote.', 'tackquote-for-woocommerce' ),
+						? __( 'Please choose the product options before requesting a quote.', 'tackquote' )
+						: __( 'No products to quote.', 'tackquote' ),
 				),
 				400
 			);

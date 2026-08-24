@@ -99,20 +99,20 @@ final class Tack_Quotes {
 
 		$content =
 			'<p class="privacy-policy-tutorial">'
-			. esc_html__( 'Suggested text for stores using TackQuote for WooCommerce. Edit it to match how your store actually uses the plugin.', 'tackquote-for-woocommerce' )
-			. '</p><p><strong>' . esc_html__( 'Quote requests', 'tackquote-for-woocommerce' ) . '</strong><br />'
-			. esc_html__( 'When you request a quote, we send the details you enter in the quote form to our quoting provider, TackQuote: your email address, first and last name, phone number, and — if you are buying on behalf of a company — your company name and any company details the form asks for, together with any note you write. We also send the products, quantities, prices and currency you are asking to be quoted.', 'tackquote-for-woocommerce' )
-			. '</p><p><strong>' . esc_html__( 'Order sync (only if the store owner has switched it on)', 'tackquote-for-woocommerce' ) . '</strong><br />'
-			. esc_html__( 'When an order is placed or its status changes, we send that order to TackQuote: the order number and internal order ID, its status, currency and total, the billing email address, billing first and last name, billing company name, the order line items (product name, SKU, quantity and line total), and the date the order was created.', 'tackquote-for-woocommerce' )
-			. '</p><p><strong>' . esc_html__( 'Where it goes', 'tackquote-for-woocommerce' ) . '</strong><br />'
+			. esc_html__( 'Suggested text for stores using TackQuote for WooCommerce. Edit it to match how your store actually uses the plugin.', 'tackquote' )
+			. '</p><p><strong>' . esc_html__( 'Quote requests', 'tackquote' ) . '</strong><br />'
+			. esc_html__( 'When you request a quote, we send the details you enter in the quote form to our quoting provider, TackQuote: your email address, first and last name, phone number, and — if you are buying on behalf of a company — your company name and any company details the form asks for, together with any note you write. We also send the products, quantities, prices and currency you are asking to be quoted.', 'tackquote' )
+			. '</p><p><strong>' . esc_html__( 'Order sync (only if the store owner has switched it on)', 'tackquote' ) . '</strong><br />'
+			. esc_html__( 'When an order is placed or its status changes, we send that order to TackQuote: the order number and internal order ID, its status, currency and total, the billing email address, billing first and last name, billing company name, the order line items (product name, SKU, quantity and line total), and the date the order was created.', 'tackquote' )
+			. '</p><p><strong>' . esc_html__( 'Where it goes', 'tackquote' ) . '</strong><br />'
 			. sprintf(
 				/* translators: %s: the configured TackQuote API base URL. */
-				esc_html__( 'Data is sent over HTTPS to the TackQuote API at %s. No payment card data is sent. Nothing is shared with any other third party by this plugin.', 'tackquote-for-woocommerce' ),
+				esc_html__( 'Data is sent over HTTPS to the TackQuote API at %s. No payment card data is sent. Nothing is shared with any other third party by this plugin.', 'tackquote' ),
 				'<code>' . esc_html( $api_url ) . '</code>'
 			)
 			. '</p>';
 
-		wp_add_privacy_policy_content( __( 'TackQuote for WooCommerce', 'tackquote-for-woocommerce' ), $content );
+		wp_add_privacy_policy_content( __( 'TackQuote for WooCommerce', 'tackquote' ), $content );
 	}
 
 	/**
@@ -123,7 +123,7 @@ final class Tack_Quotes {
 	 */
 	public function action_links( $links ) {
 		$url  = admin_url( 'admin.php?page=tack-quotes' );
-		$link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'tackquote-for-woocommerce' ) . '</a>';
+		$link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'tackquote' ) . '</a>';
 		array_unshift( $links, $link );
 		return $links;
 	}
@@ -137,9 +137,9 @@ final class Tack_Quotes {
 		// Order sync ships OFF. It sends personal data to a third party, so it is the
 		// merchant's decision to make, not a default to be discovered later.
 		add_option( 'tack_quotes_enable_order_sync', 'no' );
-		add_option( 'tack_quotes_button_label', __( 'Add to Quote', 'tackquote-for-woocommerce' ) );
-		add_option( 'tack_quotes_request_button_label', __( 'Request a Quote', 'tackquote-for-woocommerce' ) );
-		add_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tackquote-for-woocommerce' ) );
+		add_option( 'tack_quotes_button_label', __( 'Add to Quote', 'tackquote' ) );
+		add_option( 'tack_quotes_request_button_label', __( 'Request a Quote', 'tackquote' ) );
+		add_option( 'tack_quotes_checkout_button_label', __( 'Checkout as Quote', 'tackquote' ) );
 		add_option( 'tack_quotes_show_add_to_quote', 'yes' );
 		add_option( 'tack_quotes_show_request_quote', 'yes' );
 		add_option( 'tack_quotes_schema_version', TACK_QUOTES_VERSION );

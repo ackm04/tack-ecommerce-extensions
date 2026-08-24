@@ -4,7 +4,7 @@ A Zen Cart storefront + admin companion that adds a "Request a Quote" button
 to product info pages and connects the store to a TackQuote B2B quoting
 account (API base URL + API key). It mirrors the pattern used by the
 TackQuote WooCommerce and PrestaShop companions
-(`integrations/wordpress/tackquote-for-woocommerce/`, `integrations/prestashop/modules/tackquotes/`),
+(`integrations/wordpress/tackquote/`, `integrations/prestashop/modules/tackquotes/`),
 adapted to Zen Cart's classic PHP architecture — no DI container and (unlike
 PrestaShop's `displayProductActions` hook) no plugin hook point on the default
 product info template, so this ships as a set of files you copy into your Zen

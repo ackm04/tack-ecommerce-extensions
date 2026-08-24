@@ -146,7 +146,7 @@ repo came to encode the same wrong assumptions as their code.
 **Gap — needs a new Nest endpoint to fully match the WooCommerce plugin's
 integration depth:**
 
-The WooCommerce plugin (`integrations/wordpress/tackquote-for-woocommerce/`) authenticates
+The WooCommerce plugin (`integrations/wordpress/tackquote/`) authenticates
 with an **API key** against a dedicated, WooCommerce-specific controller —
 `apps/api/src/modules/integrations/woocommerce/woocommerce-plugin.controller.ts`
 (`ApiKeyGuard`-protected `POST /integrations/woocommerce/quote-requests` and
@@ -244,4 +244,4 @@ config storage for a future tighter integration.
 - API connector (Admin API, seller-side sync): `apps/api/src/modules/integrations/shopware/shopware.service.ts`
 - Public widget endpoint this plugin calls: `apps/api/src/modules/quotes/widget.controller.ts`
 - Widget request/response contract: `apps/api/src/modules/quotes/dto/widget-quote.dto.ts`
-- Pattern mirrored (WooCommerce plugin): `integrations/wordpress/tackquote-for-woocommerce/`
+- Pattern mirrored (WooCommerce plugin): `integrations/wordpress/tackquote/`

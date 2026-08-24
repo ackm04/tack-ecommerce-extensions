@@ -3,7 +3,7 @@
 A PrestaShop 1.7 / 8.x module that adds a "Request a Quote" button to product
 pages and connects the store to a TackQuote B2B quoting account (API base URL
 + API key). It mirrors the pattern used by the TackQuote WooCommerce plugin at
-`integrations/wordpress/tackquote-for-woocommerce/`.
+`integrations/wordpress/tackquote/`.
 
 This module is **separate** from `apps/api/src/modules/integrations/prestashop/prestashop.service.ts`.
 That service is Tack acting as a client of *your* store's PrestaShop

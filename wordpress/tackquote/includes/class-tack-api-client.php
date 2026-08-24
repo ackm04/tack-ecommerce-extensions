@@ -59,7 +59,7 @@ class Tack_Api_Client {
 	public function request( $method, $path, $body = null, $timeout = null, $headers = array() ) {
 		$key = $this->api_key();
 		if ( '' === $key ) {
-			return new WP_Error( 'tack_no_key', __( 'No TackQuote API key configured.', 'tackquote-for-woocommerce' ) );
+			return new WP_Error( 'tack_no_key', __( 'No TackQuote API key configured.', 'tackquote' ) );
 		}
 
 		$args = array(
@@ -91,7 +91,7 @@ class Tack_Api_Client {
 		if ( $code < 200 || $code >= 300 ) {
 			$message = is_array( $data ) && isset( $data['message'] )
 				? ( is_array( $data['message'] ) ? implode( ', ', $data['message'] ) : $data['message'] )
-				: sprintf( /* translators: %d: HTTP status code */ __( 'TackQuote API returned HTTP %d.', 'tackquote-for-woocommerce' ), $code );
+				: sprintf( /* translators: %d: HTTP status code */ __( 'TackQuote API returned HTTP %d.', 'tackquote' ), $code );
 			return new WP_Error( 'tack_http_' . $code, $message );
 		}
 

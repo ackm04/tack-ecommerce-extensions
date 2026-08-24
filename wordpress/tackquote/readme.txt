@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,27 +30,82 @@ Request a quote from WooCommerce for B2B wholesale quoting — sync orders to yo
 
 * It does not replace WooCommerce checkout or turn the cart into a full CPQ workspace.
 * Order sync is **outbound only** — it does not import TackQuote quotes as WooCommerce orders, sync your product catalog, or update inventory.
-* Failed syncs are logged (WooCommerce → Status → Logs, source `tack-quotes`) and never block checkout — each push runs on a background request, not the customer's.
+* Failed syncs are logged (WooCommerce → Status → Logs, source `tackquote`) and never block checkout — each push runs on a background request, not the customer's.
 
-This plugin is distributed via GitHub Releases.
+The plugin's source code is developed in the open at
+https://github.com/ackm04/tack-ecommerce-extensions — issues and pull requests are welcome
+there.
+
+== External services ==
+
+This plugin connects to the TackQuote API, a third-party B2B quoting service operated by
+TackQuote, to send quote requests that shoppers submit on your store and — only if you
+switch it on — to send data about orders placed in your store.
+
+The service is required for the plugin to work. Without a TackQuote account and API key the
+plugin cannot create quotes, and its storefront buttons do nothing. Nothing is sent anywhere
+until you enter an API key.
+
+All requests go to the API base URL set under **TackQuote → TackQuote API URL**, which is
+`https://api.tackquote.com/v1` unless your TackQuote support contact gave you a different
+one. Every request carries your TackQuote API key so the service can identify your account.
+
+1. **Connection test** — `GET /integrations/woocommerce/ping`, falling back to `GET /health`.
+Sent when an administrator clicks "Test TackQuote connection" on the plugin settings screen.
+Sends your API key only: no store, order or customer data.
+
+2. **Quote form field policy** — `GET /integrations/woocommerce/registration-config`.
+Sent when a storefront page showing a quote button is viewed and the cached policy has
+expired (cached for 15 minutes). Sends your API key only: no store, order or customer data.
+
+3. **Quote request** — `POST /integrations/woocommerce/quote-requests`.
+Sent when a shopper submits the quote form on your storefront. Sends what that shopper typed
+into the form, plus the products being quoted: email address, first and last name, phone
+number if given, company name and any company details the seller's registration policy
+requires (legal name, tax/VAT ID, registration number, website, address, city, state, postal
+code, country, company phone, industry, employee count), the free-text note if written, and
+for each requested product its name, SKU, quantity, unit price excluding tax and WooCommerce
+product ID, together with the store's currency code.
+
+4. **Order sync** — `POST /integrations/woocommerce/order-sync`. **Off by default.**
+Sent when an order is created and each time its status changes, but only if the merchant has
+switched on "Sync orders to TackQuote". Sends the WooCommerce order ID, order number and
+status, the order currency and total, the billing email address, the billing first and last
+name, the billing company name, the order's creation date, and for each line item its product
+name, SKU, quantity and line total. It also sends an idempotency key, so a repeated delivery
+of the same order state can be discarded. It does **not** send billing or shipping street
+addresses, and no card numbers, card details or gateway credentials are ever sent. The
+**Privacy** section below lists every field individually.
+
+This plugin sends data to no other external service.
+
+The TackQuote service is provided by TackQuote. By using this plugin you agree to their
+terms. Please review them before entering an API key:
+
+* Terms of Service: https://tackquote.com/terms
+* Privacy Policy: https://tackquote.com/privacy
 
 == Installation ==
 
-= New install =
+WooCommerce must be installed and active first.
 
-1. Download the latest `tack-quotes.zip` from the [GitHub Releases](https://github.com/tackquote/tack-woocommerce/releases) page (or build with `bash bin/build.sh`).
-2. In WP Admin go to **Plugins → Add New → Upload Plugin** and upload the ZIP.
-3. Activate **TackQuote for WooCommerce**.
-4. Open **TackQuote** in the admin menu.
-5. Paste your **TackQuote API Key** (TackQuote → Settings → Developer → API Keys). Leave the API URL as the default unless support gives you another base URL.
-6. Enable or disable the quote button and order sync as needed, then click **Save TackQuote settings**.
-7. Click **Test TackQuote connection** to verify.
+= Install =
 
-= Update from a previous ZIP =
+1. In WP Admin go to **Plugins → Add New**, search for **TackQuote for WooCommerce**, and click **Install Now**.
+2. Activate **TackQuote for WooCommerce**.
+3. Open **TackQuote** in the admin menu.
+4. Paste your **TackQuote API Key** (TackQuote → Settings → Developer → API Keys). Leave the API URL as the default unless support gives you another base URL.
+5. Enable or disable the quote buttons and order sync as needed, then click **Save TackQuote settings**.
+6. Click **Test TackQuote connection** to verify.
 
-1. Download the newer `tack-quotes.zip` from Releases.
-2. Deactivate the old plugin (optional but recommended), then upload the new ZIP via **Plugins → Add New → Upload Plugin** and choose **Replace current with uploaded**.
-3. Activate, open **TackQuote**, confirm settings, and run **Test TackQuote connection**.
+Before you enter an API key, read the **External services** section above: the plugin cannot
+create quotes without sending data to the TackQuote API.
+
+= Manual install =
+
+1. Download `tackquote.zip` from [the releases page](https://github.com/ackm04/tack-ecommerce-extensions/releases), or build it from source with `bash bin/build.sh`.
+2. In WP Admin go to **Plugins → Add New → Upload Plugin**, upload the ZIP, and choose **Replace current with uploaded** if an older copy is already installed.
+3. Activate, then follow steps 3–6 above.
 4. Your API key and toggles are stored as WordPress options and are preserved across updates.
 
 == Privacy ==
@@ -127,6 +182,12 @@ No, and no. "Add to Quote" adds the product to a separate, browser-side quote li
 So shoppers can add multiple products before requesting one combined quote. Use the floating "Quote list" button (bottom-right) once you've added everything you want quoted, then click "Checkout as Quote".
 
 == Changelog ==
+
+= 1.3.3 =
+* The plugin slug, text domain, plugin folder and distributed ZIP are now all `tackquote`, matching the slug assigned on WordPress.org. WordPress requires the text domain to equal the slug, and a plugin folder that disagrees with either is its own defect. The admin page, the enqueued script/style handles, the Action Scheduler group and the WooCommerce log source move with it, so the log source is now `tackquote`.
+* readme.txt now carries an **External services** section disclosing the TackQuote API: that the plugin cannot function without it, that nothing is sent until an API key is entered, and, endpoint by endpoint, what is sent and when — with links to the Terms of Service and Privacy Policy.
+* Fixed the download links, which pointed at a repository that does not exist. The source now lives at https://github.com/ackm04/tack-ecommerce-extensions.
+* Note for anyone updating a manually installed 1.3.2: the folder changed from `tackquote-for-woocommerce/` to `tackquote/`, so WordPress treats the new ZIP as a separate plugin. Deactivate and delete the old copy after installing this one. Your API key and toggles are stored as WordPress options and survive both.
 
 = 1.3.2 =
 * Packaging: the distributed ZIP now unpacks to `tackquote-for-woocommerce/`, matching the plugin slug, and is rebuilt from the current source. The previously published download still contained pre-1.2.0 code, so stores installing it got the old buttons and none of the 1.3.1 security fixes.
