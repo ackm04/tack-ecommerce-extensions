@@ -1,0 +1,37 @@
+{#
+  Quote-only mode: the page a shopper gets instead of checkout.
+
+  Rendered by catalog/controller/quotemode.php::notice() when the checkout routes are
+  refused. It is a REAL page with the store's own header, footer and columns rather than a
+  redirect back to the cart, because a silent bounce leaves the shopper clicking Checkout
+  over and over with nothing telling them why.
+
+  The "Request a quote" button below carries `data-tackquote-request` with no product
+  attached, which catalog/view/javascript/tack/quote-app.js treats as "open the panel" —
+  the same panel the footer event injects into every page. So this page always offers a way
+  to transact, which is the one thing quote-only mode must never take away.
+#}
+{{ header }}
+<div id="product-info" class="container">
+  <ul class="breadcrumb">
+    {% for breadcrumb in breadcrumbs %}
+      <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+    {% endfor %}
+  </ul>
+  <div class="row">{{ column_left }}{{ column_right }}
+    <div id="content" class="col">
+      {{ content_top }}
+      <h1>{{ heading_title }}</h1>
+      <p class="tackquote-blocked__text">{{ text_quote_only }}</p>
+      <div class="tackquote-blocked__actions d-flex flex-wrap gap-2 mb-4">
+        <button type="button" class="btn btn-primary btn-lg" data-tackquote-request aria-haspopup="dialog">
+          {{ request_label }}
+        </button>
+        <a href="{{ continue_href }}" class="btn btn-light btn-lg">{{ continue_label }}</a>
+      </div>
+      <p class="tackquote-blocked__cart"><a href="{{ cart_href }}">{{ text_cart_link }}</a></p>
+      {{ content_bottom }}
+    </div>
+  </div>
+</div>
+{{ footer }}

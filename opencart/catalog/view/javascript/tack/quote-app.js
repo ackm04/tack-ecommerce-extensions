@@ -439,6 +439,21 @@
     }
   }
 
+  // Hides the cart submit button on every category/search tile.
+  //
+  // Anchored on `formaction` rather than on a class: OpenCart's tile template gives the
+  // three buttons no distinguishing class at all, only different formaction URLs
+  // (catalog/view/template/product/thumb.twig:30-32), so matching `checkout/cart.add` is
+  // the only way to hit the cart button and leave wishlist and compare alone. A theme that
+  // renamed the route simply keeps its button, and the server still refuses the POST.
+  function hideTileCartButtons() {
+    var buttons = document.querySelectorAll('.product-thumb form button[formaction*="checkout/cart.add"]');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].hidden = true;
+      buttons[i].setAttribute('data-tackquote-hidden', '1');
+    }
+  }
+
   // ── Category / search tiles ───────────────────────────────────────────────────────────
   //
   // OpenCart's tile markup (catalog/view/template/product/thumb.twig) wraps the cart,
@@ -446,8 +461,35 @@
   // is appended client-side rather than injected server-side because the tile template is
   // rendered once per product inside a loop; string-patching each repetition of a theme's
   // markup is exactly the kind of surgery that breaks on the next theme.
+  //
+  // QUOTE-ONLY MODE, and what this function is NOT.
+  //
+  // When config.quoteOnly is set, the tile's own cart submit button is hidden here. That is
+  // COSMETIC and nothing else: the server refuses index.php?route=checkout/cart.add whether
+  // or not this code ran, whether or not JS is enabled, and whether or not someone deleted
+  // the style with devtools (catalog/controller/quotemode.php::guardCart). Hiding it is
+  // about not offering a shopper a button that is going to fail.
+  //
+  // The add-to-quote tile button is FORCED ON in quote-only mode even if the merchant
+  // switched tile buttons off, for the same reason productPage() overrides the placement
+  // toggle: a tile with a hidden cart button and no quote button offers nothing.
   function bindTiles() {
-    if (!config.listingButtons || !config.listEnabled) {
+    var quoteOnly = !!config.quoteOnly;
+
+    if (quoteOnly) {
+      hideTileCartButtons();
+    }
+
+    // With the multi-product quote list switched off there is no list for a tile button to
+    // add to, so tiles keep only their product links; the product page still carries the
+    // Request a Quote button. Documented in the settings screen rather than worked around,
+    // because inventing a per-tile single-product form here would duplicate the whole
+    // request form once per tile.
+    if (!config.listEnabled) {
+      return;
+    }
+
+    if (!config.listingButtons && !quoteOnly) {
       return;
     }
     // Scoped to `.product-thumb`, core's tile wrapper (thumb.twig:1). The first build
@@ -523,6 +565,30 @@
   }
 
   // ── Wire up ───────────────────────────────────────────────────────────────────────────
+  //
+  // A STANDALONE quote trigger — a `[data-tackquote-request]` button that is not inside a
+  // product block. The blocked-checkout page (catalog/view/template/quote/blocked.twig)
+  // renders one, and a theme may place one anywhere. bindProductControls() only ever binds
+  // the one inside `[data-tackquote-product]`, so without this the blocked page would offer
+  // a "Request a quote" button that did nothing at all — which in quote-only mode is the
+  // last button a shopper has.
+  //
+  // Delegated from the document so it also covers markup added after this file ran.
+  document.addEventListener('click', function (event) {
+    var target = event.target;
+    if (!target || !target.closest) {
+      return;
+    }
+    var trigger = target.closest('[data-tackquote-request]');
+    if (!trigger || trigger.closest('[data-tackquote-product]')) {
+      return;
+    }
+    event.preventDefault();
+    // Always step 1. With no product in hand there is nothing to pre-add, and step 1 is the
+    // step that explains an empty list instead of submitting one.
+    openPanel(1);
+  });
+
   if (els.fab) {
     els.fab.addEventListener('click', function () {
       openPanel(1);
