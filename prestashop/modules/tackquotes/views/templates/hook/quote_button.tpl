@@ -1,9 +1,27 @@
 {*
- * "Request a Quote" button rendered via hookDisplayProductActions.
+ * "Request a Quote" button.
+ *
+ * Rendered by exactly ONE of three hooks per page, chosen in tackquotes.php:
+ *   - displayProductActions          — normal storefront, next to "Add to cart"
+ *   - displayProductAdditionalInfo   — quote-only mode, where the classic theme has
+ *                                      stopped emitting displayProductActions at all
+ *                                      (product-add-to-cart.tpl:26 wraps that hook in
+ *                                      `{if !$configuration.is_catalog}`)
+ *   - displayFooter                  — last-resort net for themes that emit neither
+ *
+ * The ids below are page-unique, which is why the module renders the widget once and
+ * only once ($quoteWidgetRendered).
+ *
  * Submission is handled client-side by views/js/tackquotes.js, which POSTs
  * to {$tackquotes_ajax_url} (controllers/front/quoterequest.php).
  *}
-<div class="tackquotes-widget" id="tackquotes-widget">
+<div class="tackquotes-widget{if $tackquotes_quote_only} tackquotes-widget--quote-only{/if}{if $tackquotes_fallback_placement} tackquotes-widget--fallback{/if}"
+     id="tackquotes-widget">
+    {if $tackquotes_quote_only}
+        <p class="tackquotes-quote-only-note">
+            {l s='This store sells by quotation. Send a request and we will price it for you.' d='Modules.Tackquotes.Shop'}
+        </p>
+    {/if}
     <button type="button"
             class="btn btn-secondary tackquotes-open-btn"
             id="tackquotes-open-btn"
