@@ -70,5 +70,8 @@ check(
 	'manage_options' === ( $registered[ Tack_Settings::PAGE_SLUG ] ?? null )
 );
 
+echo "\n-- quote-only (B2B catalog) mode --\n";
+require __DIR__ . '/catalog-mode-test.php';
+
 echo $failures ? "\n$failures failure(s)\n" : "\nAll checks passed\n";
 exit( $failures ? 1 : 0 );
