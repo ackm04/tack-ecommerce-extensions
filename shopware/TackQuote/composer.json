@@ -3,7 +3,7 @@
   "description": "TackQuote B2B quoting companion for Shopware 6 — storefront Request a Quote button",
   "type": "shopware-platform-plugin",
   "license": "MIT",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "authors": [
     {
       "name": "TackQuote",
