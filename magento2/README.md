@@ -5,7 +5,7 @@ that adds B2B quoting to the storefront: a **"Request a Quote"** button on produ
 multi-product **quote list** with its own drawer, and an admin dashboard with a connection
 test. Submissions create real quote requests — and, where the seller's policy allows it,
 real buyer companies — in TackQuote. It is the Magento counterpart to the TackQuote
-WooCommerce plugin (`integrations/wordpress/tackquote-for-woocommerce/`).
+WooCommerce plugin (`integrations/wordpress/tackquote/`).
 
 Magento's product catalog sync, inventory pull, quote-to-checkout and order import are
 handled entirely outside this module, by

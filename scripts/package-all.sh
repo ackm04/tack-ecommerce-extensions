@@ -50,13 +50,16 @@ pack() { # pack <zipname> <top-level-dir> [extra zip -x args...]
 }
 
 # ── WooCommerce ─────────────────────────────────────────────────────────────
-# Top-level dir MUST be the WordPress.org slug: WP derives the plugin folder from
-# it and a mismatch breaks updates. Delegates to the plugin's own builder so the
-# two cannot drift.
+# Top-level dir MUST be the WordPress.org slug -- `tackquote`, the slug assigned to
+# this submission. WP derives the plugin folder from it, a mismatch breaks updates,
+# and WordPress.org additionally requires the text domain to equal the slug (which
+# is why the plugin's i18n literals are `tackquote` too). Delegates to the plugin's
+# own builder so the two cannot drift; that builder excludes bin/, tests/ and *.md,
+# so THIS is the artifact to submit to WordPress.org.
 say "woocommerce"
-bash wordpress/tackquote-for-woocommerce/bin/build.sh >/dev/null
-cp wordpress/tackquote-for-woocommerce/dist/tackquote-for-woocommerce.zip "$OUT/"
-say "tackquote-for-woocommerce.zip  $(wc -c < "$OUT/tackquote-for-woocommerce.zip" | tr -d ' ') bytes"
+bash wordpress/tackquote/bin/build.sh >/dev/null
+cp wordpress/tackquote/dist/tackquote.zip "$OUT/"
+say "tackquote.zip  $(wc -c < "$OUT/tackquote.zip" | tr -d ' ') bytes"
 
 # ── PrestaShop ──────────────────────────────────────────────────────────────
 # "The `name` attribute ... MUST be the same as the module's folder and main
