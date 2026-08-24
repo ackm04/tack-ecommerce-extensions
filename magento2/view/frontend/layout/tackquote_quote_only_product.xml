@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!--
+  Quote-only mode on the PRODUCT PAGE: remove Add to Cart.
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  READ THIS BEFORE CHANGING EITHER FILE — the coupling that has bitten two other platforms
+  ═══════════════════════════════════════════════════════════════════════════════════════
+
+  The same feature in the WooCommerce plugin nearly shipped a storefront with NO way to
+  transact: its quote button hung off a hook that only fires INSIDE the add-to-cart form, so
+  removing the cart button would silently have removed the quote button too. In the
+  PrestaShop module the theme wraps the CTA hook in `{if !$configuration.is_catalog}`, with
+  the same result. So before removing anything here, Magento's equivalent coupling was
+  checked against 2.4.8 source, and the finding is recorded rather than assumed:
+
+    - Our CTA block `tackquote.request.quote` is a child of the CONTAINER
+      `product.info.main` (view/frontend/layout/catalog_product_view.xml in this module).
+    - The blocks removed below live in a DIFFERENT parent: `product.info.addtocart` is a
+      child of `product.info.form.content`
+      (vendor/magento/module-catalog/view/frontend/layout/catalog_product_view.xml:72), and
+      `product.info.addtocart.additional` is a child of
+      `product.info.options.wrapper.bottom` (same file, line 86).
+    - `remove="true"` unsets the named element. It does not touch other containers, and it
+      does not touch a block whose only relationship to the removed one was an ordering
+      hint: Magento\Framework\View\Layout\Data\Structure::reorderChildElement() reads the
+      sibling's parent (Structure.php:122) and simply returns when the parents differ
+      (Structure.php:130).
+
+  So the CTA survives. Test/Unit/Layout/QuoteOnlyLayoutTest.php asserts that structurally —
+  that the block this module adds is never one of the blocks it removes, and that its parent
+  container is not one of theirs — so a future edit that moves the CTA under
+  `product.info.form.content` (where removing the form WOULD take it with it) fails the
+  suite instead of shipping.
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+
+  BOTH blocks must go. They render the SAME template
+  (Magento_Catalog::product/view/addtocart.phtml); `product.info.addtocart.additional` is the
+  copy shown for products that have custom options. Removing only the first leaves a working
+  Add to Cart button on every configurable and customisable product — which the server would
+  then refuse, producing precisely the "broken shop" impression this mode exists to avoid.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="product.info.addtocart" remove="true"/>
+        <referenceBlock name="product.info.addtocart.additional" remove="true"/>
+    </body>
+</page>

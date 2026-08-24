@@ -552,3 +552,38 @@
   line-height: 1.4;
   color: #b91c1c;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────────────────
+   Quote-only (B2B catalog) mode.
+
+   The `tackquote-quote-only` class is put on <body> by
+   view/frontend/layout/tackquote_quote_only.xml, which Observer\QuoteOnlyLayoutHandle adds
+   only for the visitors the merchant scoped the mode to.
+
+   THIS IS COSMETIC ONLY. The Add to Cart button on a category or search tile is hard-coded
+   in Magento_Catalog::product/list.phtml (line 108, `class="action tocart primary"`) rather
+   than rendered as a removable block, and overriding that template would clobber every theme
+   that has already customised it — so the tile button is hidden here instead. The server
+   refuses the request regardless: see Plugin\Quote\QuoteOnlyCartGuard. Deleting these rules
+   in devtools reveals a button that does not work; it does not enable buying.
+
+   Scoped to `.product-item` on purpose. The product PAGE button is genuinely removed from
+   the layout, and `.action.tocart` is also the class the module's own quote triggers use
+   (view/frontend/templates/button.phtml), so an unscoped rule would hide the quote button
+   too — the exact "no way to transact" failure this feature must never produce.
+   ───────────────────────────────────────────────────────────────────────────────────────── */
+body.tackquote-quote-only .product-item .tocart:not(.tackquote-add-btn):not(.tackquote-request-btn),
+body.tackquote-quote-only .product-item-actions .actions-primary form[data-role="tocart-form"] button.tocart {
+    display: none !important;
+}
+
+body.tackquote-quote-only .tackquote-quote-only-notice {
+    margin-bottom: 2rem;
+}
+
+body.tackquote-quote-only .tackquote-quote-only-notice__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}

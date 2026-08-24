@@ -57,6 +57,51 @@
                     <comment>Save the settings above first, then test.</comment>
                 </field>
             </group>
+            <group id="quote_only" translate="label" type="text" sortOrder="30"
+                   showInDefault="1" showInWebsite="1" showInStore="0">
+                <label>Quote-Only Store (B2B Catalog)</label>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Enable quote-only mode</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Turns the whole storefront into a B2B catalog: Add to
+                        Cart and checkout are <strong>refused by the server</strong>, and
+                        shoppers request a quote instead. This is enforced in PHP, not by
+                        hiding buttons, so a crafted request cannot get around it.<br>
+                        <strong>Existing carts are not emptied.</strong> They can still be
+                        viewed and emptied; they simply cannot grow or be checked out, and
+                        they work normally again the moment you switch this off.<br>
+                        Creating orders from the Admin (Sales &gt; Orders &gt; Create New
+                        Order) is unaffected, and so is TackQuote turning an accepted quote
+                        into a real order.<br>
+                        <em>Requires a saved API key above — without one no quote button can
+                        render, so quote-only mode stays inactive rather than leaving your
+                        storefront with no way to buy AND no way to ask.</em>]]></comment>
+                </field>
+                <field id="applies_to" translate="label comment" type="select" sortOrder="20"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Applies to</label>
+                    <source_model>TackQuote\Quotes\Model\Config\Source\QuoteOnlyScope</source_model>
+                    <comment>Who sees the quote-only storefront. "Guests only" is the usual
+                        B2B setup: the public gets a catalog, and approved customers who have
+                        signed in keep a normal cart and checkout.</comment>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                </field>
+                <field id="customer_groups" translate="label comment" type="multiselect" sortOrder="30"
+                       showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Customer groups</label>
+                    <source_model>Magento\Customer\Model\Config\Source\Group\Multiselect</source_model>
+                    <comment>Used only when "Applies to" is set to selected customer groups.
+                        NOT LOGGED IN is a real group here and can be selected on its own —
+                        that is equivalent to "Guests only".</comment>
+                    <depends>
+                        <field id="enabled">1</field>
+                        <field id="applies_to">groups</field>
+                    </depends>
+                </field>
+            </group>
             <group id="storefront" translate="label" type="text" sortOrder="20"
                    showInDefault="1" showInWebsite="1" showInStore="0">
                 <label>Request a Quote button</label>

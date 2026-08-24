@@ -24,6 +24,7 @@ use Magento\Catalog\Block\Product\ProductList\Item\Block as ItemBlock;
 use Magento\Catalog\Model\Product;
 use TackQuote\Quotes\Model\Config;
 use TackQuote\Quotes\Model\ProductOptionRequirement;
+use TackQuote\Quotes\Model\QuoteOnlyMode;
 
 class ListingButton extends ItemBlock
 {
@@ -38,20 +39,28 @@ class ListingButton extends ItemBlock
     private $optionRequirement;
 
     /**
+     * @var QuoteOnlyMode
+     */
+    private $quoteOnlyMode;
+
+    /**
      * @param Context $context
      * @param Config $tackConfig
      * @param ProductOptionRequirement $optionRequirement
+     * @param QuoteOnlyMode $quoteOnlyMode
      * @param array $data
      */
     public function __construct(
         Context $context,
         Config $tackConfig,
         ProductOptionRequirement $optionRequirement,
+        QuoteOnlyMode $quoteOnlyMode,
         array $data = []
     ) {
         parent::__construct($context, $data);
         $this->tackConfig = $tackConfig;
         $this->optionRequirement = $optionRequirement;
+        $this->quoteOnlyMode = $quoteOnlyMode;
     }
 
     /**
@@ -61,7 +70,22 @@ class ListingButton extends ItemBlock
      */
     public function isEnabled(): bool
     {
-        return $this->tackConfig->isListingButtonEnabled();
+        if ($this->tackConfig->isListingButtonEnabled()) {
+            return true;
+        }
+
+        // Quote-only mode overrides the listing toggle, for the same reason
+        // RequestQuote::isEnabled() overrides `show_button`: the tile's own Add to Cart
+        // button is hidden on a quote-only storefront (the `tackquote-quote-only` body class
+        // plus the rule in view/frontend/web/css/request-quote.css), so leaving this off
+        // would produce a category page whose tiles offer no action at all.
+        //
+        // Still gated on the quote LIST being available, because that is what this tile
+        // button adds to. With the list switched off a tile has nothing to add to, and the
+        // shopper reaches the request form from the product page instead — which is
+        // documented in the setting's own help text rather than worked around by rendering a
+        // second single-product form into every tile.
+        return $this->quoteOnlyMode->isActive() && $this->tackConfig->isAddToQuoteEnabled();
     }
 
     /**

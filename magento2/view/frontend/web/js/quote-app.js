@@ -638,6 +638,27 @@ define([
             openForm('list', null);
         });
 
+        /*
+         * Quote-only mode: the CTA on the cart page (Block\QuoteOnlyNotice).
+         *
+         * Bound on `document`, NOT on $root, and this is the whole point of it existing
+         * separately. $root is the quote-list widget's own element (line 116), so every
+         * delegated handler above only ever sees clicks INSIDE that widget. The cart-page
+         * notice renders into the `content` container, outside $root — reusing
+         * `tackquote-request-list` for it would have produced a button that binds to nothing
+         * and silently does nothing when clicked. On a quote-only storefront that is the
+         * last button the shopper has.
+         *
+         * It also deliberately does NOT bail out on an empty list the way the handler above
+         * does. Someone redirected off checkout may have items in their CART and nothing in
+         * their quote list; openDrawer() shows the drawer's own empty state, which tells
+         * them how to start one. A silent no-op would not.
+         */
+        $(document).on('click', '[data-role="tackquote-quote-only-cta"]', function (event) {
+            event.preventDefault();
+            openDrawer();
+        });
+
         $next.on('click', function () {
             if (validateCurrentStep()) {
                 goToStep(current + 1);

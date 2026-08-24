@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  Adds the quote-only layout handles before layout updates are loaded.
+
+  `layout_load_before` is dispatched by Magento\Framework\View\Layout\Builder at
+  Builder.php:78-82, and core's own comment on that line is "dispatch event for adding
+  handles to layout update" — this is the documented purpose of the event, not a side effect.
+  The handles are added there because Builder::loadLayoutUpdates() calls
+  $this->layout->getUpdate()->load() immediately afterwards (Builder.php:86); a handle added
+  any later would be ignored.
+
+  Frontend area only. The admin has no Add to Cart button to remove.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="layout_load_before">
+        <observer name="tackquote_quote_only_layout_handles"
+                  instance="TackQuote\Quotes\Observer\QuoteOnlyLayoutHandle"/>
+    </event>
+</config>

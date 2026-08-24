@@ -25,6 +25,11 @@ class Config
     private const XML_PATH_SHOW_ON_LISTING = 'tackquote_quotes/storefront/show_on_listing';
     private const XML_PATH_CHECKOUT_LABEL = 'tackquote_quotes/storefront/checkout_button_label';
 
+    // Quote-only / B2B catalog mode (1.3.0).
+    private const XML_PATH_QUOTE_ONLY_ENABLED = 'tackquote_quotes/quote_only/enabled';
+    private const XML_PATH_QUOTE_ONLY_SCOPE = 'tackquote_quotes/quote_only/applies_to';
+    private const XML_PATH_QUOTE_ONLY_GROUPS = 'tackquote_quotes/quote_only/customer_groups';
+
     private const DEFAULT_API_BASE_URL = 'https://api.tackquote.com/v1';
     private const DEFAULT_BUTTON_LABEL = 'Request a Quote';
     private const DEFAULT_ADD_TO_QUOTE_LABEL = 'Add to Quote';
@@ -220,6 +225,65 @@ class Config
      * @param int|null $storeId
      * @return string
      */
+    /**
+     * The merchant's quote-only switch, as stored.
+     *
+     * Raw on purpose: this is only half the question. Whether the mode applies to the
+     * visitor in front of you is QuoteOnlyMode::isActive(), which also refuses to enforce
+     * on a store that has no API key. Calling this directly to decide whether to refuse a
+     * request would skip that guard.
+     *
+     * @param int|null $storeId
+     * @return bool
+     */
+    public function isQuoteOnlyEnabled(?int $storeId = null): bool
+    {
+        return (bool) $this->scopeConfig->isSetFlag(
+            self::XML_PATH_QUOTE_ONLY_ENABLED,
+            ScopeInterface::SCOPE_STORE,
+            $storeId
+        );
+    }
+
+    /**
+     * Who quote-only mode applies to: one of the QuoteOnlyRules::SCOPE_* constants.
+     *
+     * Normalised on read as well as on write. An unrecognised value becomes SCOPE_ALL
+     * rather than throwing or matching nobody — see QuoteOnlyRules::normaliseScope().
+     *
+     * @param int|null $storeId
+     * @return string
+     */
+    public function getQuoteOnlyScope(?int $storeId = null): string
+    {
+        return QuoteOnlyRules::normaliseScope(
+            $this->scopeConfig->getValue(
+                self::XML_PATH_QUOTE_ONLY_SCOPE,
+                ScopeInterface::SCOPE_STORE,
+                $storeId
+            )
+        );
+    }
+
+    /**
+     * The selected customer groups, for the "selected groups" scope.
+     *
+     * Returned RAW (Magento stores a multiselect as "0,1,3"); QuoteOnlyRules::normaliseGroups()
+     * turns it into int[]. Kept raw here so the admin validator and the storefront share one
+     * parser rather than two that can disagree about whether "0" counts.
+     *
+     * @param int|null $storeId
+     * @return string
+     */
+    public function getQuoteOnlyCustomerGroups(?int $storeId = null): string
+    {
+        return (string) $this->scopeConfig->getValue(
+            self::XML_PATH_QUOTE_ONLY_GROUPS,
+            ScopeInterface::SCOPE_STORE,
+            $storeId
+        );
+    }
+
     public function getCheckoutButtonLabel(?int $storeId = null): string
     {
         $value = (string) $this->scopeConfig->getValue(
