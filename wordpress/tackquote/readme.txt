@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.3
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,10 @@ No, and no. "Add to Quote" adds the product to a separate, browser-side quote li
 So shoppers can add multiple products before requesting one combined quote. Use the floating "Quote list" button (bottom-right) once you've added everything you want quoted, then click "Checkout as Quote".
 
 == Changelog ==
+
+= 1.3.4 =
+* Fixed: the **Settings** link on the Plugins screen led to "Sorry, you are not allowed to access this page." even for an administrator. The link carried a hardcoded `page=tack-quotes`, which was the admin page slug up to 1.3.1; the 1.3.2 and 1.3.3 renames moved the slug to `tackquote` and left the link behind. Pointing at an unregistered page makes WordPress emit its permission-denied message, so the failure looked like a capability problem and was not one. The link is now derived from the same constant the menu is registered with, so the two cannot drift again.
+* Added a regression test (`tests/run.php`, no PHPUnit or WordPress install required) asserting the Settings link resolves to a registered admin page that requires `manage_options`.
 
 = 1.3.3 =
 * The plugin slug, text domain, plugin folder and distributed ZIP are now all `tackquote`, matching the slug assigned on WordPress.org. WordPress requires the text domain to equal the slug, and a plugin folder that disagrees with either is its own defect. The admin page, the enqueued script/style handles, the Action Scheduler group and the WooCommerce log source move with it, so the log source is now `tackquote`.
