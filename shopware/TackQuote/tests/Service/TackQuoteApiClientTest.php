@@ -254,4 +254,41 @@ class TackQuoteApiClientTest extends TestCase
             throw $e;
         }
     }
+
+    /**
+     * REGRESSION GUARD for the two-repo drift that produced issue #340.
+     *
+     * `ping()` was added in the monorepo (GitHub #330) to give `getApiKey()` a
+     * consumer: before it, the plugin config asked a merchant to paste a TackQuote
+     * API key and then never read it — a field that looks like a working
+     * credential and is decoration.
+     *
+     * That fix never reached the PUBLISHED copy of this plugin, so every release
+     * up to and including v1.5.0 shipped the decorative field. It has now been
+     * carried across. This test exists so a future re-sync cannot silently drop it
+     * again: if `ping()` disappears, or stops consulting the stored key, this
+     * fails rather than the defect shipping unnoticed.
+     */
+    public function testPingExistsAndConsumesTheStoredApiKey(): void
+    {
+        self::assertTrue(
+            method_exists(TackQuoteApiClient::class, 'ping'),
+            'ping() is missing — the API key field has no consumer again (see #330/#340).'
+        );
+
+        $source = file_get_contents(__DIR__ . '/../../src/Service/TackQuoteApiClient.php');
+        self::assertIsString($source);
+
+        // Strip comments, so prose mentioning getApiKey cannot satisfy this.
+        $code = preg_replace('#/\*.*?\*/#s', '', $source);
+        $code = preg_replace('#//[^\n]*#', '', (string) $code);
+        $ping = strstr((string) $code, 'function ping');
+        self::assertIsString($ping, 'ping() body not found in source');
+
+        self::assertStringContainsString(
+            'getApiKey(',
+            $ping,
+            'ping() no longer reads the stored API key, which is the whole point of it.'
+        );
+    }
 }
