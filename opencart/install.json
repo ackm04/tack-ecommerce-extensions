@@ -1,7 +1,7 @@
 {
   "name": "TackQuote",
   "code": "tack",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "author": "TackQuote",
   "link": "https://tackquote.com",
   "description": "MUST be installed from a file named exactly tack.ocmod.zip \u2014 OpenCart takes the extension code from the ZIP FILENAME, and every namespace and event action in this package hard-codes 'tack', so a zip under any other name installs successfully and then returns 404 on every route. The \"code\" field below is NOT what sets it. Adds a \"Request a Quote\" button to your product pages, and lets TackQuote read this store's catalog and orders and place quote-accepted orders.",

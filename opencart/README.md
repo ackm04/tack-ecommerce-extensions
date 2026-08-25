@@ -11,10 +11,16 @@ The two halves use **different secrets on purpose**. The API key lets this
 store talk to TackQuote; the feed token lets TackQuote talk to this store.
 Neither is usable in the other direction.
 
-Distribution authority: the public GitHub release asset is
-[`tack-opencart.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-opencart.zip).
-It is a source archive. Extract it and follow the build instructions below to create the
-load-bearing `tack.ocmod.zip` installer; do not upload `tack-opencart.zip` to OpenCart.
+Distribution authority: merchants install the public
+[`tack.ocmod.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack.ocmod.zip)
+release asset directly. Keep that exact filename. The optional
+[`tack-opencart-source.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack-opencart-source.zip)
+asset is source-only for review and local builds; do not upload it to OpenCart.
+
+Both links resolve to the newest GitHub release rather than a pinned tag: this repository
+cuts one repo-wide `v*` tag covering every platform, so a tag pinned in this file goes
+stale the next time any *other* extension ships. `scripts/package-all.sh` is what emits
+both assets, under exactly these names.
 
 > ## ⚠️ The package MUST be named `tack.ocmod.zip`
 >
@@ -27,13 +33,25 @@ load-bearing `tack.ocmod.zip` installer; do not upload `tack-opencart.zip` to Op
 > Every namespace in this extension hard-codes `…\Extension\Tack\…`, and the event
 > actions registered at install time are `extension/tack/event/quote.productPage` and
 > `…quote.footer`. So a zip named anything else — `tackquote.ocmod.zip`,
-> `tack-opencart.zip`, `tack.ocmod (1).zip` from a browser re-download — **installs
+> `tack-opencart-source.zip`, `tack.ocmod (1).zip` from a browser re-download — **installs
 > cleanly, reports success, and then 404s on every single route**: no quote button, no
 > settings screen, no catalog feed, and nothing in the error log pointing at the cause.
 >
-> `scripts/package-integrations.sh` now reads the required code out of the admin
-> controller's own namespace and refuses to emit an artifact whose name disagrees, so
-> this can no longer drift silently.
+> The packaging check in `tests/run.php` reads the required code out of the admin
+> controller's own namespace and fails if it no longer matches the shipped
+> `tack.ocmod.zip`, so this cannot drift silently. (The monorepo guarded the same
+> invariant from `scripts/package-integrations.sh`; that script is not part of this
+> repository — `scripts/package-all.sh` builds the artifacts here.)
+
+> **New in 1.3.1 — documentation only, no code change.** Reconciled against the
+> TackQuote monorepo copy of this extension before that copy was retired. The
+> distribution contract above was stale: it named `tack-opencart.zip` at `v1.1.0` and
+> told merchants to build the installer themselves, when `scripts/package-all.sh` has
+> emitted a ready-to-install `tack.ocmod.zip` (plus an optional
+> `tack-opencart-source.zip`) since repo tag `v1.2.0`. The Build, Tests and Layout
+> sections also pointed at monorepo paths (`scripts/package-integrations.sh`,
+> `dist/extensions/`, `integrations/opencart/`) that do not exist in this repository.
+> No PHP, Twig or JavaScript changed; the suite is unchanged at 67 checks.
 
 > **New in 1.2.0 — the button is where buyers look for it, and one quote can hold many
 > products.** Three changes, matching what the WooCommerce and Magento extensions already do:
@@ -81,7 +99,7 @@ load-bearing `tack.ocmod.zip` installer; do not upload `tack-opencart.zip` to Op
 ## Layout
 
 ```
-integrations/opencart/
+opencart/
 ├── install.json
 ├── README.md
 ├── admin/
@@ -306,27 +324,27 @@ sold on: nothing new can enter the cart.
 ## Build
 
 ```
-bash scripts/package-integrations.sh
+bash scripts/package-all.sh
 ```
 
-produces two artifacts in `dist/extensions/`:
+produces two artifacts in `dist/` (pass a directory to override):
 
 | File | What it is |
 |------|------------|
 | **`tack.ocmod.zip`** | What a merchant installs. `install.json` + `admin/` + `catalog/` + `system/` at the zip root. **The filename sets the extension code — do not rename it.** |
-| `tack-opencart.zip` | Source archive for GitHub Releases (adds `README.md`, wrapped in an `opencart/` folder). **Not installable** by OpenCart's installer. |
+| `tack-opencart-source.zip` | Optional source-only archive for GitHub Releases (adds `README.md`, wrapped in an `opencart/` folder, `marketplace/` excluded). **Not installable** by OpenCart's installer. |
 
 To build just the installable one by hand:
 
 ```
-cd integrations/opencart
-zip -r ../../dist/extensions/tack.ocmod.zip install.json admin catalog system
+cd opencart
+zip -r ../dist/tack.ocmod.zip install.json admin catalog system
 ```
 
 ## Tests
 
 ```
-php integrations/opencart/tests/run.php
+php opencart/tests/run.php
 ```
 
 No composer, no phpunit, no database, no store — OpenCart is not a composer

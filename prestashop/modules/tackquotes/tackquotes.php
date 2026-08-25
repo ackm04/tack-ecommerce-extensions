@@ -77,7 +77,7 @@ class TackQuotes extends Module
     {
         $this->name = 'tackquotes';
         $this->tab = 'front_office_features';
-        $this->version = '1.3.0';
+        $this->version = '1.3.1';
         $this->author = 'TackQuote';
         // 1, not 0: PrestaShop skips constructing the module when rendering the Modules
         // page if this is 0, so `$this->warning` set in this constructor would never be

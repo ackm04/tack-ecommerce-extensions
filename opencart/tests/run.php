@@ -2,7 +2,7 @@
 /**
  * TackQuote for OpenCart — save-path regression suite.
  *
- *   php integrations/opencart/tests/run.php
+ *   php opencart/tests/run.php
  *
  * No composer, no phpunit, no database, no store. The extension ships no
  * dependency manifest and OpenCart itself is not a composer package, so a
@@ -1600,6 +1600,118 @@ check('the namespace-derived extension code still matches tack.ocmod.zip', funct
         'OpenCart derives the extension code from the ZIP FILENAME, and the shipped artifact is '
             . 'tack.ocmod.zip. Renaming this namespace without renaming the artifact (and every '
             . 'event action) ships an extension that installs and then 404s on every route.');
+});
+
+// --------------------------------------------- packaging: the documented contract
+//
+// Added when this extension was reconciled against the TackQuote monorepo copy before
+// that copy was retired. The drift these catch is NOT a code defect and no PHP test
+// would have seen it: README.md told merchants to download `tack-opencart.zip` from
+// release `v1.1.0` and build the installer themselves, while scripts/package-all.sh had
+// been emitting a ready-to-install `tack.ocmod.zip` since `v1.2.0`. A merchant
+// following the README got a source archive, uploaded it, and OpenCart derived the
+// extension code from that filename — installs cleanly, then 404s every route.
+//
+// These read README.md only. tests/run.php is run with the extension directory as the
+// mount root (`docker run -v "$PWD/opencart":/p`), so nothing outside it is readable
+// here and scripts/package-all.sh cannot be cross-checked from this suite.
+
+echo "\nTackQuote for OpenCart — the documented contract\n";
+
+check('README names the installable asset the packager actually emits', function () use ($root) {
+    $readme = (string) file_get_contents($root . '/README.md');
+
+    assertTrue(
+        strpos($readme, 'releases/latest/download/tack.ocmod.zip') !== false,
+        'README must link tack.ocmod.zip as the asset a merchant installs'
+    );
+
+    assertTrue(
+        strpos($readme, 'releases/latest/download/tack-opencart-source.zip') !== false,
+        'README must link the source archive under its real name, tack-opencart-source.zip'
+    );
+
+    // `tack-opencart.zip` (no `-source`) is the pre-v1.2.0 name. It is no longer built
+    // and no longer published, so a link to it is a dead download; and if a merchant
+    // does obtain a file under that name, uploading it is precisely the silent failure
+    // the big callout in this README exists to prevent.
+    assertTrue(
+        preg_match('#releases/[^)\s]*/tack-opencart\.zip#', $readme) !== 1,
+        'README still links the retired asset name tack-opencart.zip'
+    );
+});
+
+check('README does not document build or test paths from the retired monorepo', function () use ($root) {
+    $readme = (string) file_get_contents($root . '/README.md');
+
+    // Blockquote lines are dropped first. In this README a `>` block is commentary — the
+    // release notes and the two big callouts — and the reconciliation note has to be able
+    // to NAME the retired paths in order to explain them. Instructions the reader is meant
+    // to follow live in body text and fenced code, which is what stays.
+    $instructions = preg_replace('/^\s*>.*$/m', '', $readme);
+
+    // Each of these resolves inside the monorepo and nowhere in this repository, so a
+    // reader who runs them gets "No such file or directory" and no hint of the real path.
+    $strays = [
+        'bash scripts/package-integrations.sh' => 'the build command; this repo builds with scripts/package-all.sh',
+        'dist/extensions/'                     => 'the output directory; scripts/package-all.sh writes to dist/',
+        'php integrations/opencart/'           => 'the test command; this suite lives at opencart/tests/run.php',
+    ];
+
+    foreach ($strays as $stray => $why) {
+        assertTrue(
+            strpos($instructions, $stray) === false,
+            'README still documents the monorepo path "' . $stray . '" as ' . $why
+        );
+    }
+});
+
+check('the documented test command matches where this suite actually lives', function () use ($root) {
+    $readme = (string) file_get_contents($root . '/README.md');
+
+    // Deliberately NOT derived from basename($root): the documented docker invocation
+    // mounts the extension directory as the container root, so $root is `/p` there and a
+    // basename check would assert the mount point instead of the repository layout.
+    // `opencart/tests/run.php` is the path from the repository root, which is the path a
+    // reader actually types.
+    assertTrue(
+        strpos($readme, 'php opencart/tests/run.php') !== false,
+        'README must document the runner at the path it can actually be invoked from'
+    );
+
+    assertTrue(
+        is_file($root . '/tests/run.php'),
+        'the documented runner filename must be this file'
+    );
+});
+
+check('install.json version matches the newest release note in README', function () use ($root) {
+    $manifest = json_decode((string) file_get_contents($root . '/install.json'), true);
+
+    assertTrue(is_array($manifest) && isset($manifest['version']),
+        'install.json must parse and carry a version');
+
+    $readme = (string) file_get_contents($root . '/README.md');
+
+    assertTrue(
+        preg_match_all('/^> \*\*New in ([0-9]+\.[0-9]+\.[0-9]+)/m', $readme, $m) > 0,
+        'README carries no "New in <version>" note to check the manifest against'
+    );
+
+    $newest = '0.0.0';
+
+    foreach ($m[1] as $version) {
+        if (version_compare($version, $newest, '>')) {
+            $newest = $version;
+        }
+    }
+
+    // OpenCart shows install.json's version in Extensions > Installer, and it is the
+    // only version a merchant can see. A bump with no note leaves them unable to find
+    // out what changed; a note ahead of the manifest ships a version that claims work
+    // it does not contain.
+    assertSame($newest, (string) $manifest['version'],
+        'install.json says ' . $manifest['version'] . ' but the newest "New in" note in README is ' . $newest);
 });
 
 // ------------------------------------------------------------------------ result
