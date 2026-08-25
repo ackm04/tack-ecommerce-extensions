@@ -75,6 +75,70 @@ class TackQuoteApiClient
     // settings straight from config(). That is two sources of truth for one setting, and
     // the PHP copy would silently disagree the moment config.xml's default changed.
 
+    /**
+     * Verify the stored API key against TackQuote (GitHub #330).
+     *
+     * WHY THIS EXISTS: `getApiKey()` had no consumer. The plugin config asked the
+     * merchant to paste a TackQuote API key and then never read it — a field that
+     * looks like a working credential and is decoration. The storefront quote
+     * button was never fake (it posts to the PUBLIC tenant-slug widget endpoint
+     * and still does, unchanged), but the key itself did nothing.
+     *
+     * Hits `GET {apiUrl}/integrations/shopware/ping`, the API-key-authenticated
+     * route added alongside this, which mirrors the proven OpenCart/Woo/Magento
+     * plugin pings. Returns the resolved tenant id so the merchant can tell a key
+     * for the WRONG account from a valid one — `ok: true` alone cannot.
+     *
+     * Returns a structured result rather than throwing: this is called from a
+     * settings screen, where "could not reach" and "key rejected" are different
+     * messages a merchant can act on, and an exception would surface as neither.
+     *
+     * @return array{ok: bool, tenantId?: string, error?: string}
+     */
+    public function ping(?string $salesChannelId = null): array
+    {
+        $apiKey = $this->getApiKey($salesChannelId);
+        if ($apiKey === null) {
+            return ['ok' => false, 'error' => 'No TackQuote API key is configured.'];
+        }
+
+        try {
+            $response = $this->httpClient->request(
+                'GET',
+                $this->getApiUrl($salesChannelId) . '/integrations/shopware/ping',
+                [
+                    'headers' => [
+                        'X-API-Key' => $apiKey,
+                        'Accept' => 'application/json',
+                    ],
+                    'timeout' => 10,
+                ]
+            );
+
+            $status = $response->getStatusCode();
+            if ($status === 401 || $status === 403) {
+                return ['ok' => false, 'error' => 'TackQuote rejected this API key.'];
+            }
+            if ($status >= 400) {
+                // Deliberately does NOT echo the response body: it can carry
+                // request context, and this string reaches the admin UI and logs.
+                return ['ok' => false, 'error' => sprintf('TackQuote returned HTTP %d.', $status)];
+            }
+
+            $payload = $response->toArray(false);
+            $tenantId = isset($payload['tenantId']) ? (string) $payload['tenantId'] : null;
+            if (($payload['ok'] ?? false) !== true || $tenantId === null || $tenantId === '') {
+                // A 200 without a tenant is not a working key. Refusing here keeps
+                // this from becoming the "HTTP 200, nothing happened" shape.
+                return ['ok' => false, 'error' => 'TackQuote responded without a tenant; the key may be invalid.'];
+            }
+
+            return ['ok' => true, 'tenantId' => $tenantId];
+        } catch (TransportExceptionInterface $e) {
+            return ['ok' => false, 'error' => 'Could not reach TackQuote. Check the API URL, DNS and TLS.'];
+        }
+    }
+
     public function isConfigured(?string $salesChannelId = null): bool
     {
         return $this->getTenantSlug($salesChannelId) !== null;
