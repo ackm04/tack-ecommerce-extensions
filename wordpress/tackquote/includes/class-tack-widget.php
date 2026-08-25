@@ -39,9 +39,6 @@ class Tack_Widget {
 	const NOTE_MAX_LENGTH = 2000;
 
 	/**
-	 * Hard ceiling on line items accepted from one quote-list submission.
-	 */
-	/**
 	 * Products whose quote buttons have already been rendered this request, so
 	 * the two mount points in init() cannot double-render.
 	 *
@@ -49,6 +46,9 @@ class Tack_Widget {
 	 */
 	private $rendered_product_ids = array();
 
+	/**
+	 * Hard ceiling on line items accepted from one quote-list submission.
+	 */
 	const ITEMS_MAX = 100;
 
 	/**

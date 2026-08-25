@@ -271,21 +271,12 @@ class Tack_Settings {
 	 */
 	public function section_sync() {
 		echo '<p>' . esc_html__( 'Off by default. When enabled, this plugin pushes order data one-way to TackQuote when an order is created or its status changes. It does not import orders, sync the product catalog, or update inventory.', 'tackquote' ) . '</p>';
-		echo '<p>' . esc_html__( 'Each push is queued and sent on a background request through WooCommerce\'s Action Scheduler, so it never blocks checkout — queued jobs are visible under WooCommerce → Status → Scheduled Actions, and failures are logged under WooCommerce → Status → Logs (source: tack-quotes).', 'tackquote' ) . '</p>';
-		echo '<p>' . esc_html__( 'Personal data leaves your store when this is on. Each order sends: order number and ID, status, currency, total, billing email, billing first and last name, billing company, line items (name, SKU, quantity, line total) and the created date. No payment card data is sent.', 'tackquote' ) . '</p>';
+		echo '<p>' . esc_html__( 'Each push is queued and sent on a background request through WooCommerce\'s Action Scheduler, so it never blocks checkout — queued jobs are visible under WooCommerce → Status → Scheduled Actions, and failures are logged under WooCommerce → Status → Logs (source: tackquote).', 'tackquote' ) . '</p>';
+		echo '<p>' . esc_html__( 'Personal data leaves your store when this is on. Each order sends the whole order: the buyer\'s full billing and shipping addresses, email address and phone numbers, their WooCommerce customer ID and order note, the order number and ID, status, currency, subtotal, discount, shipping, tax and total, coupon codes, the created/modified/paid/completed dates, the payment method and the payment gateway\'s transaction reference, and every line item with its name, SKU, product and variation IDs, quantity, subtotal, total, tax and item meta (for example “Size: Large”). No card numbers, card details or gateway credentials are ever sent.', 'tackquote' ) . '</p>';
 	}
 
 	// ── Field renderers (escape all output) ─────────────────────────────────────
 
-	/**
-	 * The API key field. Renders EMPTY — never the stored key.
-	 *
-	 * `type="password"` only hides characters on screen. The value still sits in the page
-	 * source, so the key leaked into browser "save page" output, password-manager autofill,
-	 * screen shares and recordings, proxy caches, and anything able to read the DOM of an
-	 * admin page. A masked hint in the description gives an administrator the one thing they
-	 * actually need — confirmation of WHICH key is stored — without shipping the secret.
-	 */
 	/**
 	 * Intro copy for the Store mode section.
 	 */
@@ -413,6 +404,9 @@ class Tack_Settings {
 	}
 
 	/**
+	 * Only the three known scopes are storable; anything else falls back to the
+	 * widest one, which is the value the mode switch itself defaults to.
+	 *
 	 * @param mixed $value Raw value.
 	 * @return string
 	 */
@@ -449,6 +443,15 @@ class Tack_Settings {
 		return $clean;
 	}
 
+	/**
+	 * The API key field. Renders EMPTY — never the stored key.
+	 *
+	 * `type="password"` only hides characters on screen. The value still sits in the page
+	 * source, so the key leaked into browser "save page" output, password-manager autofill,
+	 * screen shares and recordings, proxy caches, and anything able to read the DOM of an
+	 * admin page. A masked hint in the description gives an administrator the one thing they
+	 * actually need — confirmation of WHICH key is stored — without shipping the secret.
+	 */
 	public function field_api_key() {
 		$value  = (string) get_option( 'tack_quotes_api_key', '' );
 		$masked = '' !== $value ? str_repeat( '•', 8 ) . substr( $value, -4 ) : '';
