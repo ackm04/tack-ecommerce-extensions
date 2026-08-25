@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,13 +69,13 @@ product ID, together with the store's currency code.
 
 4. **Order sync** — `POST /integrations/woocommerce/order-sync`. **Off by default.**
 Sent when an order is created and each time its status changes, but only if the merchant has
-switched on "Sync orders to TackQuote". Sends the WooCommerce order ID, order number and
-status, the order currency and total, the billing email address, the billing first and last
-name, the billing company name, the order's creation date, and for each line item its product
-name, SKU, quantity and line total. It also sends an idempotency key, so a repeated delivery
-of the same order state can be discarded. It does **not** send billing or shipping street
-addresses, and no card numbers, card details or gateway credentials are ever sent. The
-**Privacy** section below lists every field individually.
+switched on "Sync orders to TackQuote". Sends the whole order: the customer's billing and
+shipping addresses, email address and phone numbers, WooCommerce customer ID, their order
+note, the order ID, number and status, currency and totals, coupon codes, timestamps, the
+payment method ID and title, the payment gateway's transaction ID, and every line item with
+its name, SKU, product and variation IDs, quantities, totals, taxes and item meta. No card
+numbers, no card details and no gateway credentials are ever sent. The **Privacy** section
+below lists every field individually.
 
 This plugin sends data to no other external service.
 
@@ -135,16 +135,52 @@ Sent when a shopper submits the quote form, using only what they typed into it:
 
 = What order sync sends (off by default) =
 
-Sent for each order when it is created and when its status changes, if the merchant has enabled **Sync orders to TackQuote**:
+Sent for each order when it is created and when its status changes, if the merchant
+has enabled **Sync orders to TackQuote**. This is the whole order, because a quote
+that becomes an order is only useful to the seller if it carries who is buying and
+where it is going. Read this list before switching order sync on.
 
-* WooCommerce order ID and order number
-* Order status, currency, and order total
-* Billing email address
-* Billing first and last name
-* Billing company name
-* Line items: product name, SKU, quantity, line total
-* Order created date
+**The customer's identity and addresses**
+
+* Billing address in full: first name, last name, company, street (both lines), city, state or county, postal code, country, email address and phone number
+* Shipping address in full: the same fields, including shipping phone where WooCommerce holds one
+* The WooCommerce customer ID, or `0` for a guest order
+* The customer's order note, as they wrote it
+
+**The order**
+
+* WooCommerce order ID, order number and status
+* Currency, item subtotal, discount total, shipping total, tax total and order total
+* Coupon codes applied
+* A purchase-order number, only if your store fills the `tack_quotes_order_po_number` filter — WooCommerce core has no purchase-order field, so nothing is sent unless you wire one up
+* Created, last-modified, paid and completed timestamps
 * An idempotency key, so a repeated delivery of the same order state can be discarded
+
+**Payment**
+
+* Payment method ID and its display title (for example `stripe` / "Credit Card")
+* The gateway transaction ID, where the gateway recorded one
+* Whether the order still needs payment, and when it was paid
+
+**No card numbers, no card details, and no gateway credentials are ever sent.** The
+transaction ID is a reference the gateway issued, not an instrument.
+
+**Line items**
+
+* Product name, SKU, WooCommerce product ID and variation ID
+* Quantity, line subtotal, line total and line tax
+* Item meta — the variation attributes and any custom item fields your store records on a line (for example "Size: Large", "Colour: Blue"). If your checkout writes customer-supplied text onto a line item, it is included here
+* Shipping lines: method title and cost. Fee lines: name and amount
+
+= If you are a merchant in the EU, UK or another jurisdiction with a transfer regime =
+
+Order sync sends personal data about your customers to TackQuote, which makes
+TackQuote a processor acting on your instructions. That is why it ships switched
+**off** and why enabling it is a deliberate act rather than a default. Before you
+enable it, satisfy yourself that you have a lawful basis and, where required, a data
+processing agreement in place with TackQuote. Your own privacy policy should name
+TackQuote as a recipient; the plugin adds suggested wording to
+**Settings → Privacy** for you to review and adapt.
 
 = What is stored on your own site =
 
@@ -173,6 +209,18 @@ Yes. The plugin declares HPOS (`custom_order_tables`) compatibility via WooComme
 
 No. Sync is one-way: WooCommerce → TackQuote on order create and status change. Turning the toggle off stops new pushes; it does not delete data already in TackQuote.
 
+= My store collects a purchase-order number at checkout. Can it be synced? =
+
+Yes, with one line of code. WooCommerce core has no purchase-order field, and there is no
+meta key this plugin could guess that would be right for every B2B extension — a guess that
+looks correct and silently returns nothing is worse than an empty field. So the value is
+read through a filter your theme or a small site plugin fills in:
+
+`add_filter( 'tack_quotes_order_po_number', function ( $po, $order ) { return $order->get_meta( '_my_checkout_po_field' ); }, 10, 2 );`
+
+Replace `_my_checkout_po_field` with the meta key your checkout writes. Without this filter
+nothing is sent and TackQuote records no purchase-order number.
+
 = Do the quote buttons replace checkout, or touch the WooCommerce cart? =
 
 No, and no. "Add to Quote" adds the product to a separate, browser-side quote list — it never touches the WooCommerce cart, stock, or totals. "Checkout as Quote" creates a quote request in TackQuote from that list's contents. Customers can still shop and check out through WooCommerce completely normally, at the same time, with no interaction between the two.
@@ -182,6 +230,16 @@ No, and no. "Add to Quote" adds the product to a separate, browser-side quote li
 So shoppers can add multiple products before requesting one combined quote. Use the floating "Quote list" button (bottom-right) once you've added everything you want quoted, then click "Checkout as Quote".
 
 == Changelog ==
+
+= 1.5.0 =
+* Order sync now sends the whole order, not eleven fields of it. Previously the payload carried no address of any kind — a merchant testing it in production reported "no name, not address information, nothing", and they were right. It now carries both addresses in full, phone numbers, the WooCommerce customer ID and order note, the real item subtotal alongside discount/shipping/tax/total, coupon codes, payment method and gateway transaction reference, the created/modified/paid/completed timestamps, shipping and fee lines, and per-line product/variation IDs, line subtotal, tax and item meta (so "Large / Blue" survives the sync).
+* Fixed: `subtotal` was never sent, so the receiving end recorded `subtotal = total` — meaning every order from a store that charges tax or shipping claimed its goods cost what the customer paid.
+* New: `tack_quotes_order_po_number` filter. WooCommerce core has no purchase-order field, so nothing is sent unless your store wires one up; see the FAQ. Previously a purchase-order number could never be reported at all.
+* Fixed: `modifiedAt` is sent but deliberately excluded from the idempotency hash. Under HPOS, recording a successful push writes order meta, and that stamps a new modified date — so hashing it would have invalidated the key the push just recorded and de-duplication would never have converged.
+* The privacy disclosure on the settings screen, the wording offered to **Settings → Privacy**, and the **External services** and **Privacy** sections of this readme now describe the payload that is actually sent. An under-disclosure is worse than none: a merchant reads it and concludes the transfer is narrower than it is.
+* Fixed: the settings screen named the WooCommerce log source as `tack-quotes`; it has been `tackquote` since the 1.3.3 slug rename.
+* Added `tests/test-order-payload.php`, a WP-CLI contract test that names every required payload field against a real WooCommerce order, and offline payload coverage in `tests/run.php`.
+* Tests: the quote-only mode suite now asserts that `woocommerce_is_purchasable` is actually hooked, not just that the callback decides correctly. It previously proved only the latter, so a wiring mistake would have hidden the buttons while the Store API kept taking orders. No behaviour change — the wiring was already correct.
 
 = 1.4.0 =
 * New: **Store mode**. A single setting turns the whole storefront into a B2B catalogue — "Add to cart" is withdrawn and customers request a quote instead. Choose whether it applies to every customer, to signed-out visitors only (so approved trade customers keep a normal cart), or to specific roles. Optionally replace prices with "Price on request".

@@ -73,5 +73,8 @@ check(
 echo "\n-- quote-only (B2B catalog) mode --\n";
 require __DIR__ . '/catalog-mode-test.php';
 
+echo "\n-- order-sync payload contract --\n";
+require __DIR__ . '/order-payload-test.php';
+
 echo $failures ? "\n$failures failure(s)\n" : "\nAll checks passed\n";
 exit( $failures ? 1 : 0 );

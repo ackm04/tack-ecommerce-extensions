@@ -8,6 +8,8 @@ Add a **Request a Quote** button to your WooCommerce store and sync orders with 
 - 🛡️ HPOS- and Cart/Checkout-blocks-compatible; nonce, capability and rate-limit protected; removes its own options and transients on uninstall
 
 See the `== External services ==` and `== Privacy ==` sections of [`readme.txt`](readme.txt) for exactly which fields are sent to TackQuote, when, and what the plugin stores locally.
+TackQuote's [Terms of Service](https://tackquote.com/terms) and
+[Privacy Policy](https://tackquote.com/privacy) govern use of the service.
 
 ## Installation
 

@@ -23,12 +23,31 @@ function esc_html__( $text, $domain = null ) { return $text; }
 function __( $text, $domain = null ) { return $text; }
 $GLOBALS['TACK_HOOKS']   = array();
 $GLOBALS['TACK_REMOVED'] = array();
+$GLOBALS['TACK_FILTERS'] = array();
 
 function add_action( $hook, $callback = null, $priority = 10, $args = 1 ) {
 	$GLOBALS['TACK_HOOKS'][] = array( 'hook' => $hook, 'priority' => $priority );
 }
 function add_filter( $hook, $callback = null, $priority = 10, $args = 1 ) {
 	$GLOBALS['TACK_HOOKS'][] = array( 'hook' => $hook, 'priority' => $priority );
+	if ( null !== $callback ) {
+		$GLOBALS['TACK_FILTERS'][ $hook ][] = $callback;
+	}
+}
+
+/**
+ * Dispatches whatever add_filter() registered, in registration order.
+ *
+ * Priority is recorded but not honoured: nothing under test registers two
+ * callbacks on one filter, and a stub that pretended to order them would be
+ * asserting its own invented rule rather than WordPress's.
+ */
+function apply_filters( $hook, $value ) {
+	$args = array_slice( func_get_args(), 2 );
+	foreach ( (array) ( $GLOBALS['TACK_FILTERS'][ $hook ] ?? array() ) as $callback ) {
+		$value = call_user_func_array( $callback, array_merge( array( $value ), $args ) );
+	}
+	return $value;
 }
 function remove_action( $hook, $callback, $priority = 10 ) {
 	$GLOBALS['TACK_REMOVED'][] = $hook . '|' . ( is_string( $callback ) ? $callback : 'closure' ) . '|' . $priority;
@@ -80,3 +99,11 @@ function add_submenu_page( $parent, $page_title, $menu_title, $capability, $menu
 	$GLOBALS['TACK_REGISTERED_PAGES'][ $menu_slug ] = $capability;
 	return $parent . '_page_' . $menu_slug;
 }
+
+/**
+ * `home_url()` scopes the idempotency key to one site. A fixed value is enough
+ * here; the key is asserted for STABILITY, not for its contents.
+ */
+function home_url( $path = '' ) { return 'https://shop.example' . $path; }
+function wp_json_encode( $data, $options = 0, $depth = 512 ) { return json_encode( $data, $options, $depth ); }
+function wp_strip_all_tags( $text, $remove_breaks = false ) { return trim( strip_tags( (string) $text ) ); }

@@ -102,6 +102,43 @@ check(
 );
 check( 'and it keeps its normal-mode mount point too', in_array( 'woocommerce_after_add_to_cart_button', $mounts, true ) );
 
+/*
+ * REGISTRATION, not just behaviour.
+ *
+ * Every check above calls the callbacks directly, which proves they DECIDE
+ * correctly and proves nothing about whether WooCommerce ever asks them. A
+ * mutation that renamed the hook in init() — leaving filter_is_purchasable()
+ * intact and never wired — survived the whole suite: quote-only mode would have
+ * hidden the buttons while the Store API happily kept taking orders.
+ *
+ * Both filter names are WooCommerce's own, verified against
+ * `includes/abstracts/abstract-wc-product.php`: `is_purchasable()` returns
+ * `apply_filters( 'woocommerce_is_purchasable', ..., $this )` and
+ * `get_price_html()` returns `apply_filters( 'woocommerce_get_price_html', $price, $this )`
+ * — two arguments each, which is why both are registered with an arg count of 2.
+ */
+$GLOBALS['TACK_HOOKS'] = array();
+( new Tack_Catalog_Mode() )->init();
+$registered = array();
+foreach ( $GLOBALS['TACK_HOOKS'] as $h ) {
+	$registered[ $h['hook'] ] = $h['priority'];
+}
+
+check(
+	'init() actually registers the purchasability control on woocommerce_is_purchasable',
+	array_key_exists( 'woocommerce_is_purchasable', $registered ),
+	'registered: ' . implode( ', ', array_keys( $registered ) )
+);
+check(
+	'...late enough (priority 99) to override a plugin that made the product purchasable',
+	99 === ( $registered['woocommerce_is_purchasable'] ?? null )
+);
+check(
+	'init() registers the cart-hole guard and the price-on-request filter too',
+	array_key_exists( 'woocommerce_check_cart_items', $registered )
+		&& array_key_exists( 'woocommerce_get_price_html', $registered )
+);
+
 // ── Fail safe: a malformed POST must never close a store's checkout ─────────
 $settings = new Tack_Settings();
 check( 'garbage store mode falls back to a working shop', Tack_Catalog_Mode::MODE_CART === $settings->sanitize_store_mode( 'wat' ) );
