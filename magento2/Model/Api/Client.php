@@ -34,7 +34,20 @@ class Client
     private const PATH_REGISTRATION_CONFIG = '/integrations/magento/registration-config';
     private const PATH_QUOTE_REQUESTS = '/integrations/magento/quote-requests';
 
-    private const TIMEOUT_SECONDS = 20;
+    /**
+     * Creating a quote is a WRITE the buyer is waiting on, and it cannot safely be cut
+     * short: an aborted POST may already have created the quote server-side. It keeps the
+     * generous budget.
+     */
+    private const WRITE_TIMEOUT_SECONDS = 20;
+
+    /**
+     * Reads get a far smaller budget, because a read is always recoverable — the caller
+     * either has a cached copy or degrades gracefully. The registration-config read used
+     * to share the 20-second write budget, which is how a hung TackQuote could hold a
+     * storefront page open for twenty seconds on a cache miss.
+     */
+    private const READ_TIMEOUT_SECONDS = 3;
 
     /**
      * @var Config
@@ -171,7 +184,14 @@ class Client
 
         $url = $this->config->getApiBaseUrl($storeId) . $path;
 
-        $this->curl->setTimeout(self::TIMEOUT_SECONDS);
+        /*
+         * GET here is only ever the ping or the registration-config read, and POST is only
+         * ever quote creation, so keying the budget off the verb needs no extra parameter
+         * and cannot drift out of sync with the call sites.
+         */
+        $this->curl->setTimeout(
+            $method === 'GET' ? self::READ_TIMEOUT_SECONDS : self::WRITE_TIMEOUT_SECONDS
+        );
         $this->curl->addHeader('Authorization', 'Bearer ' . $apiKey);
         $this->curl->addHeader('X-Api-Key', $apiKey);
         $this->curl->addHeader('Content-Type', 'application/json');
@@ -223,7 +243,14 @@ class Client
             $message = is_array($decoded) && isset($decoded['message'])
                 ? (is_array($decoded['message']) ? implode(', ', $decoded['message']) : (string) $decoded['message'])
                 : sprintf('TackQuote API returned HTTP %d.', $status);
-            $this->logger->warning('TackQuote API error ' . $status . ': ' . $rawBody);
+            /*
+             * The PARSED message only — never $rawBody. TackQuote echoes the submitted
+             * document back in a validation error, so logging the body wrote the buyer's
+             * email address, company name and postal address into var/log/ on every 400.
+             * The status plus the API's own message is everything an operator needs to
+             * tell "wrong key" from "missing field" from "TackQuote is down".
+             */
+            $this->logger->warning(sprintf('TackQuote API error %d: %s', $status, $message));
 
             return ['ok' => false, 'message' => $message];
         }

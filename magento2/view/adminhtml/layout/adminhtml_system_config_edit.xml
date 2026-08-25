@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+  Loads the stylesheet for the "Verify" control that TackQuote adds to its own
+  configuration group.
+
+  `adminhtml_system_config_edit` is the ONLY layout handle Magento_Config declares for the
+  configuration screen — there is no per-section handle — so this 700-byte stylesheet is
+  requested on every Stores > Configuration page rather than only on TackQuote's. That is
+  the trade for not inlining a <style> block, which Magento_Csp cannot whitelist (see
+  view/adminhtml/web/css/config-test-connection.css). Every rule is namespaced under
+  .tq-config-result, so it cannot affect any other section's markup.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="TackQuote_Quotes::css/config-test-connection.css"/>
+    </head>
+</page>

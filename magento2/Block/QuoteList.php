@@ -45,6 +45,20 @@ class QuoteList extends Template
     private $registrationConfig;
 
     /**
+     * @var array<string, mixed>|null
+     */
+    private $policy;
+
+    /**
+     * Null is a meaningful policy value ("unavailable"), so memoisation needs its own
+     * flag. The template asks five separate questions of the policy per render and each
+     * one used to be a fresh cache round trip.
+     *
+     * @var bool
+     */
+    private $policyLoaded = false;
+
+    /**
      * @param Context $context
      * @param Config $config
      * @param RegistrationConfigProvider $registrationConfig
@@ -127,7 +141,21 @@ class QuoteList extends Template
      */
     public function getRegistrationConfig(): ?array
     {
-        return $this->registrationConfig->get((int) $this->_storeManager->getStore()->getId());
+        if (!$this->policyLoaded) {
+            /*
+             * getCached(), NOT get(). This block renders in `before.body.end` on every
+             * storefront page, so a fetch here is a fetch inside a shopper's page render:
+             * on a cold cache that blocked the response on an outbound call to TackQuote.
+             * Cron\WarmRegistrationConfig owns the fetching now; a cache miss here just
+             * degrades the form to contact fields, exactly as a TackQuote outage does.
+             */
+            $this->policy = $this->registrationConfig->getCached(
+                (int) $this->_storeManager->getStore()->getId()
+            );
+            $this->policyLoaded = true;
+        }
+
+        return $this->policy;
     }
 
     /**

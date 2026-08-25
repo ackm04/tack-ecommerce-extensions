@@ -2,75 +2,65 @@
 /**
  * "Test connection" control inside Stores > Configuration > TackQuote.
  *
+ * CSP — the behaviour script is emitted through SecureHtmlRenderer, never as a literal
+ * <script> tag. renderTag() is what routes the tag into Magento\Csp\Helper\InlineUtil,
+ * which stamps it with the request's nonce the moment a merchant drops 'unsafe-inline'
+ * from script-src. A literal tag gets no nonce, is refused by the browser outright, and
+ * leaves this button dead with nothing at all in var/log to explain why. $secureRenderer
+ * needs no injection: app/etc/di.xml hands it to every .phtml as a block variable.
+ *
+ * The endpoint travels as a data attribute rather than being interpolated into the script,
+ * which keeps the script a server-side constant with no JS escaping to get wrong.
+ *
  * @var \TackQuote\Quotes\Block\Adminhtml\System\Config\TestConnection $block
  * @var \Magento\Framework\Escaper $escaper
+ * @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer
  * @package TackQuote_Quotes
  */
-?>
-<?= /* @noEscape */ $block->getButtonHtml() ?>
-<span class="tq-config-result" id="tackquote_test_connection_result" role="status" aria-live="polite" hidden></span>
 
-<script>
-    require(['jquery', 'mage/translate'], function ($, $t) {
-        'use strict';
+$script = <<<'JS'
+require(['jquery', 'mage/translate'], function ($, $t) {
+    'use strict';
 
-        var $btn = $('#tackquote_test_connection_button'),
-            $out = $('#tackquote_test_connection_result');
+    var $btn = $('#tackquote_test_connection_button'),
+        $out = $('#tackquote_test_connection_result'),
+        url = $out.data('testUrl');
 
-        $btn.on('click', function () {
-            $btn.prop('disabled', true);
-            $out.prop('hidden', false)
-                .attr('class', 'tq-config-result tq-config-result--pending')
-                .text($t('Testing…'));
+    if (!$btn.length || !$out.length || !url) {
+        return;
+    }
 
-            $.ajax({
-                url: '<?= $escaper->escapeJs($block->getAjaxUrl()) ?>',
-                type: 'POST',
-                dataType: 'json',
-                data: { form_key: window.FORM_KEY }
-            }).done(function (data) {
-                $out.attr(
-                    'class',
-                    'tq-config-result tq-config-result--' + (data && data.success ? 'ok' : 'error')
-                ).text((data && data.message) || $t('Unexpected response.'));
-            }).fail(function () {
-                $out.attr('class', 'tq-config-result tq-config-result--error')
-                    .text($t('Could not reach the server.'));
-            }).always(function () {
-                $btn.prop('disabled', false);
-            });
+    $btn.on('click', function () {
+        $btn.prop('disabled', true);
+        $out.prop('hidden', false)
+            .attr('class', 'tq-config-result tq-config-result--pending')
+            .text($t('Testing…'));
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'json',
+            data: { form_key: window.FORM_KEY }
+        }).done(function (data) {
+            $out.attr(
+                'class',
+                'tq-config-result tq-config-result--' + (data && data.success ? 'ok' : 'error')
+            ).text((data && data.message) || $t('Unexpected response.'));
+        }).fail(function () {
+            $out.attr('class', 'tq-config-result tq-config-result--error')
+                .text($t('Could not reach the server.'));
+        }).always(function () {
+            $btn.prop('disabled', false);
         });
     });
-</script>
-
-<style>
-    /*
-     * Scoped to this control. The configuration screen has no styling hook of its own for
-     * an inline async result, and loading the whole dashboard stylesheet here would pull
-     * in layout rules that do not belong on a config form.
-     */
-    .tq-config-result {
-        display: inline-block;
-        margin-left: 12px;
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-size: 1.2rem;
-        line-height: 1.6;
-        vertical-align: middle;
-    }
-    .tq-config-result[hidden] {
-        display: none !important;
-    }
-    .tq-config-result--pending {
-        background: #f5f5f5;
-        color: #555;
-    }
-    .tq-config-result--ok {
-        background: #ecfdf5;
-        color: #047857;
-    }
-    .tq-config-result--error {
-        background: #fef2f2;
-        color: #b91c1c;
-    }
-</style>
+});
+JS;
+?>
+<?= /* @noEscape */ $block->getButtonHtml() ?>
+<span class="tq-config-result"
+      id="tackquote_test_connection_result"
+      data-test-url="<?= $escaper->escapeHtmlAttr($block->getAjaxUrl()) ?>"
+      role="status"
+      aria-live="polite"
+      hidden></span>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $script, false) ?>

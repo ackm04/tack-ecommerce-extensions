@@ -69,6 +69,58 @@ class QuoteOnlyLayoutTest extends TestCase
         return $names;
     }
 
+    public function testTheQuoteCtaIsOrderedAgainstASiblingMagentoCanActuallyReorderAgainst(): void
+    {
+        // Magento's `after` is a SIBLING hint: Structure::reorderChildElement() reads the
+        // sibling's parent (framework/View/Layout/Data/Structure.php:122) and returns
+        // without moving anything when the parents differ (:130), logging "Broken
+        // reference: … their parents are different" on every render in developer mode
+        // (:126). The CTA therefore has to name a child of the container it is declared in.
+        //
+        // It used to name `product.info.addtocart`, which lives in
+        // `product.info.form.content` — inert, and it is the position that silently
+        // regressed. `product.info` is a direct child of `product.info.main` (core
+        // catalog_product_view.xml:70), so it is a sibling and the hint is honoured.
+        $xml = $this->xml('view/frontend/layout/catalog_product_view.xml');
+
+        $blocks = $xml->xpath(
+            '//referenceContainer[@name="product.info.main"]/block[@name="tackquote.request.quote"]'
+        ) ?: [];
+
+        self::assertCount(
+            1,
+            $blocks,
+            'The quote CTA must stay a direct child of product.info.main — that independence '
+            . 'from the add-to-cart container is what lets quote-only mode remove Add to Cart '
+            . 'without removing the CTA.'
+        );
+
+        self::assertSame(
+            'product.info',
+            (string) $blocks[0]['after'],
+            'The CTA must be ordered after `product.info`, a real sibling. Naming a block '
+            . 'from another container (such as product.info.addtocart) is silently ignored '
+            . 'and drops the CTA to the bottom of the column.'
+        );
+    }
+
+    public function testTheCtaIsNotDeclaredInsideTheContainerQuoteOnlyModeRemoves(): void
+    {
+        // The other half of the same invariant, asserted negatively so that "fixing" the
+        // ordering by moving the block next to the button cannot pass unnoticed: doing so
+        // puts the CTA inside product.info.form.content, which
+        // tackquote_quote_only_product.xml empties out.
+        $xml = $this->xml('view/frontend/layout/catalog_product_view.xml');
+
+        foreach (self::REMOVED_BLOCK_PARENTS as $parent) {
+            self::assertSame(
+                [],
+                $xml->xpath(sprintf('//referenceContainer[@name="%s"]//block[@name="tackquote.request.quote"]', $parent)) ?: [],
+                sprintf('The CTA must not be declared inside %s — quote-only mode strips it.', $parent)
+            );
+        }
+    }
+
     public function testBothCoreAddToCartBlocksAreRemoved(): void
     {
         // Magento renders addtocart.phtml TWICE: `product.info.addtocart` for the plain case

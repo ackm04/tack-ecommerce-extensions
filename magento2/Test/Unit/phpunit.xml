@@ -28,6 +28,9 @@
             <directory suffix=".php">../../Model</directory>
             <directory suffix=".php">../../Controller</directory>
             <directory suffix=".php">../../Block</directory>
+            <directory suffix=".php">../../Cron</directory>
+            <directory suffix=".php">../../Observer</directory>
+            <directory suffix=".php">../../Plugin</directory>
         </include>
     </source>
     <php>

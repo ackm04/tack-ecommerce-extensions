@@ -30,6 +30,30 @@ define([
         MAX_ITEMS = 50;
 
     /**
+     * Substitute %1 in a translated phrase.
+     *
+     * Phrases carry a placeholder instead of being built by concatenation. Concatenation
+     * handed translators dangling fragments ("Quantity for ") that mean nothing on their
+     * own, and it hard-codes English word order, so any language that puts the subject
+     * first could not be rendered correctly at all. It also kept the fragments out of
+     * i18n/en_US.csv in a form anybody could translate.
+     *
+     * The substitution goes through a replacer FUNCTION deliberately: passing a string to
+     * String.replace() makes `$&`, `$'` and `$1` inside it act as backreferences, so a
+     * product genuinely named "Bolt $& Nut" would come out mangled. A function's return
+     * value is taken verbatim.
+     *
+     * @param {String} phrase Translated phrase containing %1.
+     * @param {String} value
+     * @return {String}
+     */
+    function fill(phrase, value) {
+        return phrase.replace('%1', function () {
+            return value;
+        });
+    }
+
+    /**
      * The form key must be read at submit time, never from server-rendered HTML: pages are
      * full-page-cached, so a baked-in key is stale for every visitor.
      * Magento_PageCache's form-key-provider.js fills the input from the form_key cookie.
@@ -176,9 +200,9 @@ define([
                     $name = $('<span class="tackquote-drawer__name"></span>').text(item.name),
                     $qty = $('<input type="number" min="1" class="input-text tackquote-drawer__qty">')
                         .val(item.qty)
-                        .attr('aria-label', $t('Quantity for ') + item.name),
+                        .attr('aria-label', fill($t('Quantity for %1'), item.name)),
                     $remove = $('<button type="button" class="action tackquote-drawer__remove">&times;</button>')
-                        .attr('aria-label', $t('Remove ') + item.name);
+                        .attr('aria-label', fill($t('Remove %1'), item.name));
 
                 $qty.on('change', function () {
                     updateQty(item.sku, parseInt($(this).val(), 10));
@@ -464,8 +488,10 @@ define([
             } else {
                 title = $t('Quote request sent');
                 body = data.quoteNumber ?
-                    $t('Your reference is ') + data.quoteNumber + '. ' +
-                        $t('A sales rep will be in touch shortly.') :
+                    fill(
+                        $t('Your reference is %1. A sales rep will be in touch shortly.'),
+                        data.quoteNumber
+                    ) :
                     $t('A sales rep will be in touch shortly.');
             }
 

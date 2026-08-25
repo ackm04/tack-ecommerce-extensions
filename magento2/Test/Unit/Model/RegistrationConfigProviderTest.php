@@ -193,7 +193,11 @@ class RegistrationConfigProviderTest extends TestCase
         $this->assertCount(1, $this->saves);
         $this->assertSame(self::CACHE_KEY, $this->saves[0]['id']);
         $this->assertSame(['TACKQUOTE_CONFIG'], $this->saves[0]['tags']);
-        $this->assertSame(900, $this->saves[0]['ttl']);
+        $this->assertSame(
+            3600,
+            $this->saves[0]['ttl'],
+            'the TTL must outlast the cron interval that rewrites it, so a running store has no gap'
+        );
         $this->assertSame($data, json_decode((string) $this->saves[0]['data'], true));
     }
 
@@ -251,5 +255,103 @@ class RegistrationConfigProviderTest extends TestCase
         $this->provider->flush();
 
         $this->assertSame([['TACKQUOTE_CONFIG']], $this->cleans);
+    }
+    /**
+     * THE render-path guarantee. Block\QuoteList renders in `before.body.end` on every
+     * storefront page, so anything it calls must not be able to make an HTTP request:
+     * a cold cache used to mean a shopper's page waited on TackQuote answering.
+     */
+    public function testGetCachedNeverCallsTheApiEvenOnAColdCache(): void
+    {
+        $this->client->expects($this->never())->method('getRegistrationConfig');
+
+        $this->assertNull($this->provider->getCached());
+        $this->assertSame([], $this->saves, 'a cache miss must not even write a failure marker');
+    }
+
+    public function testGetCachedReturnsAPolicyThatIsAlreadyCached(): void
+    {
+        $data = ['mode' => 'company_only', 'requiredCompanyFields' => ['country']];
+        $this->store[self::CACHE_KEY] = json_encode($data);
+
+        $this->client->expects($this->never())->method('getRegistrationConfig');
+
+        $this->assertSame($data, $this->provider->getCached());
+    }
+
+    public function testGetCachedTreatsTheFailureMarkerAsNoPolicy(): void
+    {
+        $this->store[self::CACHE_KEY] = self::FAILURE_MARKER;
+
+        $this->assertNull($this->provider->getCached());
+    }
+
+    /**
+     * A failed refresh must NOT discard a policy that is already cached. The cron job runs
+     * every five minutes; letting one unreachable run overwrite a good policy with the
+     * failure marker would strip the company step off a working storefront because of a
+     * momentary blip. Last-known-good beats degraded.
+     */
+    public function testARefreshFailureKeepsThePreviouslyCachedPolicy(): void
+    {
+        $data = ['mode' => 'company_only'];
+        $this->store[self::CACHE_KEY] = json_encode($data);
+
+        $this->client->method('getRegistrationConfig')
+            ->willReturn(['ok' => false, 'message' => 'gateway timeout']);
+
+        $this->assertSame($data, $this->provider->refresh());
+        $this->assertSame([], $this->saves, 'nothing may be written over a good policy');
+        $this->assertSame($data, $this->provider->getCached());
+    }
+
+    /**
+     * With nothing cached there is nothing to protect, so the marker is written and the
+     * on-demand path stops re-requesting for a minute.
+     */
+    public function testARefreshFailureWithAnEmptyCacheWritesTheFailureMarker(): void
+    {
+        $this->client->method('getRegistrationConfig')
+            ->willReturn(['ok' => false, 'message' => 'gateway timeout']);
+
+        $this->assertNull($this->provider->refresh());
+        $this->assertCount(1, $this->saves);
+        $this->assertSame(self::FAILURE_MARKER, $this->saves[0]['data']);
+        $this->assertSame(60, $this->saves[0]['ttl']);
+    }
+
+    public function testRefreshBypassesTheCacheAndRewritesIt(): void
+    {
+        $this->store[self::CACHE_KEY] = json_encode(['mode' => 'buyer_only']);
+
+        $fresh = ['mode' => 'company_only'];
+        $this->client->expects($this->once())
+            ->method('getRegistrationConfig')
+            ->willReturn(['ok' => true, 'data' => $fresh]);
+
+        $this->assertSame($fresh, $this->provider->refresh());
+        $this->assertSame($fresh, $this->provider->getCached());
+    }
+
+    public function testRefreshDoesNotCallTheApiForAnUnconfiguredStore(): void
+    {
+        $config = $this->getMockBuilder(Config::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['isConfigured'])
+            ->getMock();
+        $config->method('isConfigured')->willReturn(false);
+
+        $this->client->expects($this->never())->method('getRegistrationConfig');
+
+        $provider = new RegistrationConfigProvider(
+            $this->client,
+            $this->cache,
+            new Json(),
+            $config,
+            $this->logger
+        );
+
+        $this->assertNull($provider->refresh());
+        $this->assertNull($provider->getCached());
     }
 }

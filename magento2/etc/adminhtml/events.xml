@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  Adminhtml only: this event is dispatched by Magento\Config\Model\Config::save()
+  (module-config/Model/Config.php:225), whose only callers are the Stores > Configuration
+  controllers and `bin/magento config:set`. Scoping the observer to the adminhtml area keeps
+  it out of every storefront request's event graph.
+
+  The CLI path still reaches it, which is the reason to scope by area rather than by caller:
+  ConfigSetCommand wraps its work in EmulatedAdminhtmlAreaProcessor::process()
+  (module-config/Console/Command/ConfigSetCommand.php:182), and that emulates
+  Area::AREA_ADMINHTML AND sets the config scope to match
+  (.../EmulatedAdminhtmlAreaProcessor.php:58-59) — so an API key pasted at the command line
+  flushes the cached policy exactly as one pasted in the admin does.
+
+  `tackquote_quotes` is the section id from etc/adminhtml/system.xml:14; the event name is
+  built as "admin_system_config_changed_section_{$this->getSection()}", so the two must be
+  kept in step.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="admin_system_config_changed_section_tackquote_quotes">
+        <observer name="tackquote_flush_registration_config"
+                  instance="TackQuote\Quotes\Observer\FlushRegistrationConfig"/>
+    </event>
+</config>

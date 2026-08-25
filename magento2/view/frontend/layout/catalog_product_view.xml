@@ -16,6 +16,11 @@
   form, so ordering after it puts the quote controls exactly where the comment above always
   claimed they were.
 
+  The inert hint was not merely cosmetic: reorderChildElement() logs "tries to reorder
+  itself towards 'product.info.addtocart', but their parents are different" on EVERY
+  product-page render in developer mode (Structure.php:126). Naming a real sibling silences
+  that too, so var/log is quiet on product-page loads without giving up the ordering.
+
   This independence is also what makes quote-only mode safe: because the CTA hangs off
   `product.info.main` and not off the add-to-cart block or its container, removing
   `product.info.addtocart` cannot take it with it. See

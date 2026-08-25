@@ -1,0 +1,41 @@
+/*
+ * Styling for the "Verify" control in Stores > Configuration > TackQuote.
+ *
+ * This lives in a stylesheet rather than a <style> block in test-connection.phtml because
+ * a literal inline <style> never passes through
+ * Magento\Framework\View\Helper\SecureHtmlRenderer, so Magento_Csp cannot register a hash
+ * for it — once a merchant drops 'unsafe-inline' from style-src the rule is dropped and
+ * the result pill renders unstyled.
+ *
+ * It is kept separate from dashboard.css: the configuration screen needs only this one
+ * control, and pulling the dashboard stylesheet in would apply page-layout rules to a
+ * config form they were never written for.
+ */
+.tq-config-result {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    vertical-align: middle;
+}
+
+.tq-config-result[hidden] {
+    display: none !important;
+}
+
+.tq-config-result--pending {
+    background: #f5f5f5;
+    color: #555;
+}
+
+.tq-config-result--ok {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.tq-config-result--error {
+    background: #fef2f2;
+    color: #b91c1c;
+}
