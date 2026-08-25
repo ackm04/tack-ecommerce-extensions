@@ -3,7 +3,7 @@
 A PrestaShop 1.7 / 8.x module that adds a "Request a Quote" button to product
 pages and connects the store to a TackQuote B2B quoting account (API base URL
 + API key). It mirrors the pattern used by the TackQuote WooCommerce plugin at
-`integrations/wordpress/tackquote/`.
+`wordpress/tackquote/`.
 
 This module is **separate** from `apps/api/src/modules/integrations/prestashop/prestashop.service.ts`.
 That service is Tack acting as a client of *your* store's PrestaShop
@@ -15,14 +15,16 @@ key, the same way the WooCommerce plugin does.
 ## Installation
 
 Distribution authority: the public GitHub release asset is
-[`tack-prestashop.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-prestashop.zip).
-This monorepo directory is build/source only. No PrestaShop Addons listing is claimed.
+[`tack-prestashop.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack-prestashop.zip),
+built by `scripts/package-all.sh`. The link resolves to the newest release rather than a
+pinned tag, because this repository cuts one repo-wide `v*` tag covering every platform.
+This directory is source only. No PrestaShop Addons listing is claimed.
 
 1. Download `tack-prestashop.zip` and follow the included README, or zip the
    `tackquotes/` directory itself (not its parent) if you are packaging from this
    checkout:
    ```
-   cd integrations/prestashop/modules
+   cd prestashop/modules
    zip -r tackquotes.zip tackquotes
    ```
 2. In your PrestaShop back office, go to **Modules > Module Manager > Upload a module**
@@ -286,3 +288,34 @@ docker run --rm -v "$PWD":/p -w /p php:8.3-cli \
   included.
 - A cart-level "Request a Quote" button (only the single-product page button
   is implemented, matching the task's storefront button requirement).
+
+## Changelog
+
+### 1.3.1 — documentation and manifest guards only, no runtime change
+
+Reconciled against the TackQuote monorepo copy of this module before that copy was
+retired. Nothing in `tackquotes.php`, `classes/`, `controllers/` or `views/` changed.
+
+Carried across from the monorepo:
+
+- The distribution link above pointed at release `v1.1.0`. It now resolves to the newest
+  release, which is what `scripts/package-all.sh` publishes `tack-prestashop.zip` to.
+
+Corrected in this copy rather than taken from the monorepo:
+
+- The packaging step said `cd integrations/prestashop/modules` and the intro pointed at
+  `integrations/wordpress/tackquote/`. Both carry the monorepo's directory prefix, which
+  does not exist in this repository. (The monorepo copy additionally spelled the
+  WooCommerce plugin `tack-quotes/`; that directory does not exist in either repository,
+  so that change was **not** taken.)
+
+Newly pinned by `tests/QuoteOnlyModeTest.php`, because all three of these shipped once
+and nothing could see them:
+
+- `config.xml` `<version>` must equal `$this->version`. They disagreed through two
+  releases, and PrestaShop keys upgrades off that value — merchants were never offered
+  an upgrade.
+- `config.xml` `need_instance` must be `1`, or the module's own "no API key is set"
+  warning is never constructed and never shown.
+- The module description must not advertise order sync. It does not do order sync — see
+  *Not implemented* above — and the monorepo copy still claims it does.

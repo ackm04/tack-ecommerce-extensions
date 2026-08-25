@@ -351,6 +351,89 @@ check('isCartMutationRequest: delete is not a mutation we block', !TackQuoteOnly
 check('isCartMutationRequest: plain cart view', !TackQuoteOnlyMode::isCartMutationRequest(['action' => 'show'], []));
 
 // ---------------------------------------------------------------------------
+// 10. The manifest and the documented contract.
+//
+// Added when this module was reconciled against the TackQuote monorepo copy before that
+// copy was retired. None of these are behavioural, and that is the point: every defect
+// they pin shipped happily past `php -l`, past the 49 tests above, and past a merchant
+// clicking through the back office.
+//
+//   - `$this->version` sat at 1.0.0 through the v1.0.0 AND v1.1.0 releases. PrestaShop
+//     keys upgrades off that value against `ps_module.version`, so merchants were never
+//     offered an upgrade at all. Nothing in the module could notice.
+//   - config.xml said `need_instance=0` while the class said 1. PrestaShop reads
+//     config.xml for the module list, so the constructor never ran there and the
+//     module's own "no API key is set" warning was unreachable: it installed, reported
+//     itself active, rendered no button, and explained nothing.
+//   - The description advertised order sync that does not exist — the module registers
+//     display hooks and one front controller, and pushes no orders anywhere.
+//
+// The monorepo copy still carries all three. They are pinned here so a future sync from
+// any source cannot quietly reintroduce them.
+// ---------------------------------------------------------------------------
+$moduleRoot = dirname(__DIR__);
+$manifest = simplexml_load_file($moduleRoot . '/config.xml');
+$moduleSource = file_get_contents($moduleRoot . '/tackquotes.php');
+
+preg_match("/\\\$this->version\\s*=\\s*'([^']+)'/", $moduleSource, $versionMatch);
+$classVersion = isset($versionMatch[1]) ? $versionMatch[1] : '';
+
+check('config.xml parses', $manifest !== false);
+check(
+    'config.xml <version> matches $this->version (PrestaShop offers upgrades off this)',
+    $manifest !== false && (string) $manifest->version === $classVersion && $classVersion !== ''
+);
+// Deliberately NOT basename($moduleRoot): the documented docker invocation mounts this
+// module as the container root, where basename() is the mount point and not the module
+// folder. `tackquotes` is asserted as a literal on both sides instead — PrestaShop
+// requires <name>, $this->name and the folder to agree, and the folder name is fixed by
+// the repository layout and by the zip scripts/package-all.sh builds.
+preg_match("/\\\$this->name\\s*=\\s*'([^']+)'/", $moduleSource, $nameMatch);
+
+check(
+    'config.xml <name>, $this->name and the module folder all read tackquotes',
+    $manifest !== false
+        && (string) $manifest->name === 'tackquotes'
+        && isset($nameMatch[1]) && $nameMatch[1] === 'tackquotes'
+);
+check(
+    'config.xml need_instance is 1, so the no-API-key warning is reachable',
+    $manifest !== false && (string) $manifest->need_instance === '1'
+);
+check(
+    'the module description does not advertise order sync it cannot do',
+    strpos($moduleSource, 'sync orders with') === false
+);
+check(
+    'the class description matches the one merchants see in the module list',
+    $manifest !== false
+        && strpos($moduleSource, (string) $manifest->description) !== false
+);
+
+$readme = file_get_contents($moduleRoot . '/README.md');
+
+// Everything from "## Changelog" down is a record of what was corrected, and it has to
+// be able to NAME the retired paths in order to explain them. Only the live instructions
+// above it are scanned.
+$changelogAt = strpos($readme, '## Changelog');
+$readmeInstructions = $changelogAt === false ? $readme : substr($readme, 0, $changelogAt);
+
+check(
+    'README links the release asset scripts/package-all.sh actually builds',
+    strpos($readme, 'releases/latest/download/tack-prestashop.zip') !== false
+);
+check(
+    'README does not pin a version tag that goes stale on any other platform release',
+    preg_match('#releases/download/v[0-9.]+/tack-prestashop\.zip#', $readme) !== 1
+);
+check(
+    // `integrations/` is the monorepo prefix; a reader who types it here gets nothing.
+    'README does not document packaging paths from the retired monorepo',
+    strpos($readmeInstructions, 'cd integrations/prestashop') === false
+        && strpos($readmeInstructions, '`integrations/wordpress/') === false
+);
+
+// ---------------------------------------------------------------------------
 echo 'passed: ' . $passed . ', failed: ' . count($failures) . PHP_EOL;
 foreach ($failures as $failure) {
     echo '  FAIL: ' . $failure . PHP_EOL;
