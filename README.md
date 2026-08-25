@@ -7,9 +7,25 @@ Official downloadable plugins and extensions for embedding **TackQuote B2B Whole
 
 📖 **[Browse the platforms, install steps and verification evidence →](https://ackm04.github.io/tack-ecommerce-extensions/)**
 
-The public [`ackm04/tack-ecommerce-extensions`](https://github.com/ackm04/tack-ecommerce-extensions)
-release is the distribution authority. This monorepo directory is build/source material only; do
-not direct merchants to download files from a TackQuote application checkout.
+## This repository is the single source of truth
+
+Every extension here is edited **here**. There is no second copy to keep in step:
+WordPress.org publishes the WooCommerce plugin from this repository, and every
+release artifact is built from it by `scripts/package-all.sh`.
+
+The extensions used to live in the TackQuote application monorepo as well, and
+the two copies diverged silently for weeks — the published WooCommerce plugin
+ran a 270-line order sync while the monorepo had a 626-line one, and the
+published Shopware plugin was missing the method that gave its API-key field a
+consumer, so merchants pasted a credential the plugin never read. Nothing
+detected it: no build broke, no test failed, the wrong artifact simply shipped.
+
+The monorepo copies have therefore been removed (`ackm04/tack` issue #340). If
+you are about to add an extension copy to another repository, don't — that is
+the exact failure this arrangement exists to prevent.
+
+Do not direct merchants to download files from a TackQuote application
+checkout; point them at the releases here.
 
 ---
 
