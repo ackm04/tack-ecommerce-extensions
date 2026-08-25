@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,28 +13,27 @@ Request a quote from WooCommerce for B2B wholesale quoting — sync orders to yo
 
 == Description ==
 
-**TackQuote for WooCommerce** adds storefront RFQ buttons — a configurable mix of **Add to Quote** and **Request a Quote** on product pages, plus a floating **quote list** with **Checkout as Quote** — and optional one-way order sync, so B2B and wholesale merchants can capture quote demand without leaving WooCommerce.
+**TackQuote for WooCommerce** adds request-a-quote buttons to your products, so B2B and wholesale shoppers can ask for a price instead of checking out — and optionally syncs orders one-way to your TackQuote account.
+
+[Learn more about the WooCommerce integration](https://tackquote.com/integrations/woocommerce) &middot; [Create a free TackQuote account](https://app.tackquote.com/register)
 
 = What you get =
 
-* **Add to Quote** on product pages — adds the product to a separate quote list (never the WooCommerce cart), so shoppers can add several products before requesting one quote without affecting stock or checkout.
-* **Request a Quote** on product pages — submits a quote for just that product immediately, without adding it anywhere.
-* Show either button, both, or neither — per-store, from Settings → TackQuote.
-* A floating **quote list** (bottom-right, site-wide) with **Checkout as Quote** — submits everything currently in the list as a single quote request.
-* Shopper quote requests sent securely to your TackQuote B2B quoting account.
-* Optional automatic **order sync** (create + status change) pushed one-way to TackQuote — **off by default**, and queued through Action Scheduler so it never runs inside checkout.
-* Simple setup: paste your TackQuote API key (and optionally a custom API URL).
-* Compatible with WooCommerce **High-Performance Order Storage (HPOS)**.
+* **Add to Quote** and **Request a Quote** buttons on product pages. Show either, both, or neither.
+* A floating **quote list** with **Checkout as Quote** — several products, one request. It is separate from the WooCommerce cart, so stock and checkout are untouched.
+* **Quote only (B2B catalogue) mode** — switch Add to Cart off across the whole store and take quotes instead. Your products, categories and search keep working; only checkout goes away. Apply it to everyone, to signed-out visitors only, or to chosen roles.
+* Optional one-way **order sync** to TackQuote — off by default, and queued through Action Scheduler so it never runs inside checkout.
+* Works with WooCommerce **High-Performance Order Storage (HPOS)**.
 
-= What this plugin does not do =
+Setup is one field: paste your TackQuote API key. You can [create an account here](https://app.tackquote.com/register).
 
-* It does not replace WooCommerce checkout or turn the cart into a full CPQ workspace.
-* Order sync is **outbound only** — it does not import TackQuote quotes as WooCommerce orders, sync your product catalog, or update inventory.
-* Failed syncs are logged (WooCommerce → Status → Logs, source `tackquote`) and never block checkout — each push runs on a background request, not the customer's.
+= What it does not do =
 
-The plugin's source code is developed in the open at
-https://github.com/ackm04/tack-ecommerce-extensions — issues and pull requests are welcome
-there.
+* It does not replace WooCommerce checkout or act as a full CPQ workspace.
+* Order sync is **outbound only** — it does not import quotes as orders, sync your catalogue, or touch inventory.
+* Failed syncs are logged (WooCommerce → Status → Logs, source `tackquote`) and never block checkout.
+
+Source code is developed in the open at [github.com/ackm04/tack-ecommerce-extensions](https://github.com/ackm04/tack-ecommerce-extensions).
 
 == External services ==
 
@@ -87,7 +86,8 @@ terms. Please review them before entering an API key:
 
 == Installation ==
 
-WooCommerce must be installed and active first.
+WooCommerce must be installed and active first, and you need a TackQuote account —
+[create one here](https://app.tackquote.com/register) if you do not have one yet.
 
 = Install =
 
@@ -229,7 +229,18 @@ No, and no. "Add to Quote" adds the product to a separate, browser-side quote li
 
 So shoppers can add multiple products before requesting one combined quote. Use the floating "Quote list" button (bottom-right) once you've added everything you want quoted, then click "Checkout as Quote".
 
+== Screenshots ==
+
+1. Quote buttons sit beside Add to Cart on the product page, so a shopper can buy or ask for a price without leaving the page.
+2. The quote list collects several products, then sends them to TackQuote as one request.
+3. Store mode in the plugin settings: run a normal shop that also takes quotes, or switch the whole store to a B2B catalogue.
+4. Quote-only mode on the storefront. Add to Cart is withdrawn and the quote buttons remain, so the catalogue still works and only checkout goes away.
+
 == Changelog ==
+
+= 1.5.1 =
+* Shortened the description and added links to the WooCommerce integration page and to account signup, so it is clear where to get an API key.
+* No code changes.
 
 = 1.5.0 =
 * Order sync now sends the whole order, not eleven fields of it. Previously the payload carried no address of any kind — a merchant testing it in production reported "no name, not address information, nothing", and they were right. It now carries both addresses in full, phone numbers, the WooCommerce customer ID and order note, the real item subtotal alongside discount/shipping/tax/total, coupon codes, payment method and gateway transaction reference, the created/modified/paid/completed timestamps, shipping and fee lines, and per-line product/variation IDs, line subtotal, tax and item meta (so "Large / Blue" survives the sync).
