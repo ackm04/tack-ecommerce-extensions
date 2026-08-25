@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!--
+  Coding-standard configuration for TackQuote_Quotes.
+
+  This exists so that a bare `vendor/bin/phpcs` run from the module root reproduces the
+  standard the Adobe Commerce Marketplace code sniffer applies to a submitted package,
+  rather than whatever happens to be a developer's phpcs default. Marketplace runs
+  PHP_CodeSniffer with magento/magento-coding-standard's `Magento2` ruleset and blocks
+  publication only on violations of type Error (severity >= 10), over .php and .phtml.
+
+  Deliberately NO `extensions` argument here. An `<arg>` in an INCLUDED ruleset overrides
+  one set by the including ruleset, so `Magento2`'s own
+  `php,phtml,graphqls/GraphQL,less/CSS,html/PHP,xml,js/PHP` wins regardless of what this
+  file says — verified by counting the files phpcs reports processing. Setting it would
+  therefore be a lie in the config rather than a constraint, and the wider set is what we
+  want anyway: it puts the layout XML and quote-app.js in scope too.
+
+  The whole `Magento2` ruleset is included with NO sniff exclusions. If a sniff ever has
+  to be switched off, put the reason here — an unexplained exclusion is indistinguishable
+  from a finding somebody hid.
+-->
+<ruleset name="TackQuote_Quotes">
+    <description>Magento 2 coding standard for the TackQuote_Quotes module.</description>
+
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <!-- Scanning the module root means a bare `phpcs` covers everything. -->
+    <file>.</file>
+
+    <!--
+      A developer who runs `composer install` here to get require-dev gets a local
+      vendor/ tree; sniffing third-party code would bury this module's own findings.
+    -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/.phpunit.cache/*</exclude-pattern>
+
+    <rule ref="Magento2"/>
+</ruleset>

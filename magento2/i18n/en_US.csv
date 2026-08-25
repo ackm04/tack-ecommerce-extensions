@@ -1,42 +1,42 @@
-"TackQuote","TackQuote"
-"TackQuote Settings","TackQuote Settings"
-"TackQuote Section","TackQuote Section"
-"Dashboard","Dashboard"
-"Settings","Settings"
-"B2B quoting and CPQ for your Magento storefront.","B2B quoting and CPQ for your Magento storefront."
-"Connection","Connection"
-"Setup","Setup"
+"TackQuote is enabled","TackQuote is enabled"
+"Turn on ""Enable TackQuote"" in Settings.","Turn on ""Enable TackQuote"" in Settings."
+"API key is set","API key is set"
+"Create a key in TackQuote under Settings > Developer > API Keys, with the quotes:write scope.","Create a key in TackQuote under Settings > Developer > API Keys, with the quotes:write scope."
+"Quote button is turned on","Quote button is turned on"
+"Enable ""Show quote button on product pages"" in Settings. It also needs an API key.","Enable ""Show quote button on product pages"" in Settings. It also needs an API key."
 "Test connection","Test connection"
-"Testing…","Testing…"
-"Connected to TackQuote at %1.","Connected to TackQuote at %1."
-"Could not reach TackQuote.","Could not reach TackQuote."
-"Could not reach the server.","Could not reach the server."
-"Unexpected response.","Unexpected response."
 "TackQuote is disabled. Enable it in Settings first.","TackQuote is disabled. Enable it in Settings first."
 "No API key is set. Add one in Settings.","No API key is set. Add one in Settings."
-"TackQuote is enabled","TackQuote is enabled"
-"API key is set","API key is set"
-"Quote button is turned on","Quote button is turned on"
-"API base URL","API base URL"
-"API key","API key"
-"Button label","Button label"
-"Set","Set"
-"Not set","Not set"
+"Connected to TackQuote at %1.","Connected to TackQuote at %1."
+"Could not reach TackQuote.","Could not reach TackQuote."
+"TackQuote","TackQuote"
+"TackQuote is not configured for this store.","TackQuote is not configured for this store."
+"Too many quote requests. Please wait a minute and try again.","Too many quote requests. Please wait a minute and try again."
+"A valid email address is required.","A valid email address is required."
+"Your first name is required.","Your first name is required."
+"Enter a quantity of at least 1.","Enter a quantity of at least 1."
+"Choose the available options for %1 on its product page before requesting a quote.","Choose the available options for %1 on its product page before requesting a quote."
+"No products to quote.","No products to quote."
+"Buyer could not specify options for: %1","Buyer could not specify options for: %1"
+"Could not create the quote. Please try again.","Could not create the quote. Please try again."
+"Invalid form key. Please reload the page and try again.","Invalid form key. Please reload the page and try again."
+"Everyone","Everyone"
+"Guests only (signed-in customers keep the cart)","Guests only (signed-in customers keep the cart)"
+"Selected customer groups","Selected customer groups"
+"This store is quote-only. Request a quote for your items and we will send you a price.","This store is quote-only. Request a quote for your items and we will send you a price."
+"This store is quote-only. You can review or empty your basket, but it cannot be increased or checked out — request a quote instead.","This store is quote-only. You can review or empty your basket, but it cannot be increased or checked out — request a quote instead."
+"This store is quote-only. Add the products you need to your quote list and request a price — checkout is not available here.","This store is quote-only. Add the products you need to your quote list and request a price — checkout is not available here."
+"B2B quoting and CPQ for your Magento storefront.","B2B quoting and CPQ for your Magento storefront."
+"Settings","Settings"
 "Ready — the quote button is live on your product pages.","Ready — the quote button is live on your product pages."
 "Not live yet — finish the steps below to show the quote button.","Not live yet — finish the steps below to show the quote button."
-"Turn on ""Enable TackQuote"" in Settings.","Turn on ""Enable TackQuote"" in Settings."
-"Create a key in TackQuote under Settings > Developer > API Keys, with the quotes:write scope.","Create a key in TackQuote under Settings > Developer > API Keys, with the quotes:write scope."
-"Enable ""Show quote button on product pages"" in Settings. It also needs an API key.","Enable ""Show quote button on product pages"" in Settings. It also needs an API key."
-"Request a Quote","Request a Quote"
-"Your details","Your details"
-"Company","Company"
-"Your request","Your request"
-"First name","First name"
-"Last name","Last name"
-"Work email","Work email"
-"Phone","Phone"
-"Company name","Company name"
-"Leave blank if you are buying as an individual.","Leave blank if you are buying as an individual."
+"Setup","Setup"
+"Connection","Connection"
+"API base URL","API base URL"
+"API key","API key"
+"Set","Set"
+"Not set","Not set"
+"Button label","Button label"
 "Company phone","Company phone"
 "Company website","Company website"
 "Tax / VAT registration number","Tax / VAT registration number"
@@ -47,38 +47,128 @@
 "Postal code","Postal code"
 "Country","Country"
 "Your job title","Your job title"
+"Quote list","Quote list"
+"Your quote list","Your quote list"
+"Close","Close"
+"No products added yet.","No products added yet."
+"Your details","Your details"
+"Company","Company"
+"Your request","Your request"
+"First name","First name"
+"Last name","Last name"
+"Work email","Work email"
+"Phone","Phone"
+"Company name","Company name"
+"Leave blank if you are buying as an individual.","Leave blank if you are buying as an individual."
 "Please choose","Please choose"
-"Product","Product"
-"Quantity","Quantity"
 "Notes","Notes"
 "Target price, delivery date, or anything else the seller should know.","Target price, delivery date, or anything else the seller should know."
 "Back","Back"
 "Continue","Continue"
 "Send request","Send request"
-"Close","Close"
-"This field is required.","This field is required."
-"Please tick this box to continue.","Please tick this box to continue."
-"Please enter a valid email address.","Please enter a valid email address."
-"Could not verify the form. Please reload the page and try again.","Could not verify the form. Please reload the page and try again."
-"Quote request sent.","Quote request sent."
-"Quote request sent. Reference: ","Quote request sent. Reference: "
-"Quote request sent. Your company account needs approval before you can see pricing — we will email you once it is reviewed.","Quote request sent. Your company account needs approval before you can see pricing — we will email you once it is reviewed."
-"Could not create the quote. Please try again.","Could not create the quote. Please try again."
-"Could not reach TackQuote. Please try again.","Could not reach TackQuote. Please try again."
-"TackQuote is not configured for this store.","TackQuote is not configured for this store."
-"Too many quote requests. Please wait a minute and try again.","Too many quote requests. Please wait a minute and try again."
-"A valid email address is required.","A valid email address is required."
-"Your first name is required.","Your first name is required."
-"No product to quote.","No product to quote."
-"That product could not be found.","That product could not be found."
-"Enter a quantity of at least 1.","Enter a quantity of at least 1."
-"Invalid form key. Please reload the page and try again.","Invalid form key. Please reload the page and try again."
-"This store is quote-only. Add the products you need to your quote list and request a price — checkout is not available here.","This store is quote-only. Add the products you need to your quote list and request a price — checkout is not available here."
-"This store is quote-only. You can review or empty your basket, but it cannot be increased or checked out — request a quote instead.","This store is quote-only. You can review or empty your basket, but it cannot be increased or checked out — request a quote instead."
-"This store is quote-only. Request a quote for your items and we will send you a price.","This store is quote-only. Request a quote for your items and we will send you a price."
 "This store works by quote","This store works by quote"
 "Checkout is not available here. Tell us what you need and we will send you a priced quote. Anything already in your basket stays where it is.","Checkout is not available here. Tell us what you need and we will send you a priced quote. Anything already in your basket stays where it is."
 "Continue shopping","Continue shopping"
-"Everyone","Everyone"
-"Guests only (signed-in customers keep the cart)","Guests only (signed-in customers keep the cart)"
-"Selected customer groups","Selected customer groups"
+"Testing…","Testing…"
+"Unexpected response.","Unexpected response."
+"Could not reach the server.","Could not reach the server."
+"Request a Quote","Request a Quote"
+"Quantity for %1","Quantity for %1"
+"Remove %1","Remove %1"
+"Your quote list is full. Remove an item before adding another.","Your quote list is full. Remove an item before adding another."
+"Please tick this box to continue.","Please tick this box to continue."
+"This field is required.","This field is required."
+"Please enter a valid email address.","Please enter a valid email address."
+"Request received — your account needs approval","Request received — your account needs approval"
+"Quote request sent","Quote request sent"
+"Your reference is %1. A sales rep will be in touch shortly.","Your reference is %1. A sales rep will be in touch shortly."
+"A sales rep will be in touch shortly.","A sales rep will be in touch shortly."
+"Could not verify the form. Please reload the page and try again.","Could not verify the form. Please reload the page and try again."
+"Could not reach TackQuote. Please try again.","Could not reach TackQuote. Please try again."
+"Please choose the options you need, then add to your quote.","Please choose the options you need, then add to your quote."
+"This product has to be configured on its own page before it can be quoted.","This product has to be configured on its own page before it can be quoted."
+"Please choose the options you need, then request a quote.","Please choose the options you need, then request a quote."
+"Dashboard","Dashboard"
+"TackQuote Section","TackQuote Section"
+"TackQuote Settings","TackQuote Settings"
+"Enable TackQuote","Enable TackQuote"
+"Turns the storefront ""Request a Quote"" button and quote-request calls
+                        on or off.","Turns the storefront ""Request a Quote"" button and quote-request calls
+                        on or off."
+"TackQuote API Base URL","TackQuote API Base URL"
+"Default is https://api.tackquote.com/v1. Include the /v1 path, no
+                        trailing slash. Change only for a staging/custom deployment.","Default is https://api.tackquote.com/v1. Include the /v1 path, no
+                        trailing slash. Change only for a staging/custom deployment."
+"TackQuote API Key","TackQuote API Key"
+"Create an API key in TackQuote under
+                        <strong>Settings &gt; Developer &gt; API Keys</strong> with the
+                        <code>quotes:write</code> scope, then paste it here. Stored encrypted
+                        using Magento's crypt key.<br>
+                        <em>Until a key is saved the storefront quote button stays hidden.</em>","Create an API key in TackQuote under
+                        <strong>Settings &gt; Developer &gt; API Keys</strong> with the
+                        <code>quotes:write</code> scope, then paste it here. Stored encrypted
+                        using Magento's crypt key.<br>
+                        <em>Until a key is saved the storefront quote button stays hidden.</em>"
+"Verify","Verify"
+"Quote-Only Store (B2B Catalog)","Quote-Only Store (B2B Catalog)"
+"Enable quote-only mode","Enable quote-only mode"
+"Turns the whole storefront into a B2B catalog: Add to
+                        Cart and checkout are <strong>refused by the server</strong>, and
+                        shoppers request a quote instead. This is enforced in PHP, not by
+                        hiding buttons, so a crafted request cannot get around it.<br>
+                        <strong>Existing carts are not emptied.</strong> They can still be
+                        viewed and emptied; they simply cannot grow or be checked out, and
+                        they work normally again the moment you switch this off.<br>
+                        Creating orders from the Admin (Sales &gt; Orders &gt; Create New
+                        Order) is unaffected, and so is TackQuote turning an accepted quote
+                        into a real order.<br>
+                        <em>Requires a saved API key above — without one no quote button can
+                        render, so quote-only mode stays inactive rather than leaving your
+                        storefront with no way to buy AND no way to ask.</em>","Turns the whole storefront into a B2B catalog: Add to
+                        Cart and checkout are <strong>refused by the server</strong>, and
+                        shoppers request a quote instead. This is enforced in PHP, not by
+                        hiding buttons, so a crafted request cannot get around it.<br>
+                        <strong>Existing carts are not emptied.</strong> They can still be
+                        viewed and emptied; they simply cannot grow or be checked out, and
+                        they work normally again the moment you switch this off.<br>
+                        Creating orders from the Admin (Sales &gt; Orders &gt; Create New
+                        Order) is unaffected, and so is TackQuote turning an accepted quote
+                        into a real order.<br>
+                        <em>Requires a saved API key above — without one no quote button can
+                        render, so quote-only mode stays inactive rather than leaving your
+                        storefront with no way to buy AND no way to ask.</em>"
+"Applies to","Applies to"
+"Who sees the quote-only storefront. ""Guests only"" is the usual
+                        B2B setup: the public gets a catalog, and approved customers who have
+                        signed in keep a normal cart and checkout.","Who sees the quote-only storefront. ""Guests only"" is the usual
+                        B2B setup: the public gets a catalog, and approved customers who have
+                        signed in keep a normal cart and checkout."
+"Customer groups","Customer groups"
+"Used only when ""Applies to"" is set to selected customer groups.
+                        NOT LOGGED IN is a real group here and can be selected on its own —
+                        that is equivalent to ""Guests only"".","Used only when ""Applies to"" is set to selected customer groups.
+                        NOT LOGGED IN is a real group here and can be selected on its own —
+                        that is equivalent to ""Guests only""."
+"Request a Quote button","Request a Quote button"
+"Show quote button on product pages","Show quote button on product pages"
+"When enabled, shoppers see a ""Request a Quote"" button on the product
+                        view page. Submitting it creates a quote request in TackQuote — it
+                        does not add to cart or affect checkout.","When enabled, shoppers see a ""Request a Quote"" button on the product
+                        view page. Submitting it creates a quote request in TackQuote — it
+                        does not add to cart or affect checkout."
+"Show ""Add to Quote"" button","Show ""Add to Quote"" button"
+"Lets shoppers collect several products into a quote list and submit
+                        them as one request. The list is held in the browser and never touches
+                        the Magento cart, so stock, cart totals and checkout are unaffected.","Lets shoppers collect several products into a quote list and submit
+                        them as one request. The list is held in the browser and never touches
+                        the Magento cart, so stock, cart totals and checkout are unaffected."
+"""Add to Quote"" label","""Add to Quote"" label"
+"Show on category and search results","Show on category and search results"
+"Adds ""Add to Quote"" to product listings, so a buyer can build a large
+                        request without opening every product page. Products with required
+                        options (configurable, bundle) link to the product page instead, since
+                        a quote needs the chosen variant.","Adds ""Add to Quote"" to product listings, so a buyer can build a large
+                        request without opening every product page. Products with required
+                        options (configurable, bundle) link to the product page instead, since
+                        a quote needs the chosen variant."
+"Quote list submit label","Quote list submit label"

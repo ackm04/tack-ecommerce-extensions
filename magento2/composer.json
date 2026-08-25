@@ -3,7 +3,7 @@
   "description": "TackQuote for Magento 2 — \"Request a Quote\" and multi-product \"Add to Quote\" storefront controls that create real TackQuote B2B quote requests. Companion to the TackQuote WooCommerce plugin.",
   "type": "magento2-module",
   "license": "GPL-2.0-or-later",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "require": {
     "php": "~8.1.0||~8.2.0||~8.3.0||~8.4.0",
     "magento/framework": "103.0.*",
@@ -13,15 +13,34 @@
     "magento/module-checkout": "100.4.*",
     "magento/module-config": "101.2.*",
     "magento/module-configurable-product": "100.4.*",
+    "magento/module-cron": "100.4.*",
     "magento/module-customer": "103.0.*",
     "magento/module-quote": "101.2.*",
     "magento/module-store": "101.1.*",
     "magento/module-ui": "101.2.*"
   },
+  "require-dev": {
+    "magento/magento-coding-standard": "^40",
+    "phpunit/phpunit": "^10.5"
+  },
   "autoload": {
     "files": ["registration.php"],
     "psr-4": {
-      "TackQuote\\Quotes\\": ""
+      "TackQuote\\Quotes\\Block\\": "Block/",
+      "TackQuote\\Quotes\\Controller\\": "Controller/",
+      "TackQuote\\Quotes\\Cron\\": "Cron/",
+      "TackQuote\\Quotes\\Model\\": "Model/",
+      "TackQuote\\Quotes\\Observer\\": "Observer/",
+      "TackQuote\\Quotes\\Plugin\\": "Plugin/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "TackQuote\\Quotes\\Test\\": "Test/"
+    }
+  },
+  "scripts": {
+    "lint": "phpcs --standard=Magento2 .",
+    "test": "phpunit --configuration Test/Unit/phpunit.xml"
   }
 }

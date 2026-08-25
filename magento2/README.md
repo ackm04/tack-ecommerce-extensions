@@ -70,9 +70,14 @@ quote note as human-readable text ("Size: M, Color: Blue").
   than hardcoded: whether companies and/or individuals are accepted (`mode`,
   `allowCompany`), which built-in company fields the seller marked required
   (`requiredCompanyFields`), and the seller's custom questions (`customFields`, including
-  their type, required flag, select options and help text). Fetched by
-  `Model/RegistrationConfigProvider.php` and cached for 15 minutes; the response is
-  visitor-independent, so it is safe to render into full-page-cached HTML.
+  their type, required flag, select options and help text). Cached by
+  `Model/RegistrationConfigProvider.php`; the response is visitor-independent, so it is
+  safe to render into full-page-cached HTML.
+- **The policy is never fetched while a shopper waits.** `Block/QuoteList.php` renders on
+  every storefront page and reads cache only (`getCached()`), so a cold cache costs nothing;
+  `Cron/WarmRegistrationConfig.php` does the fetching every 5 minutes
+  (`etc/crontab.xml`). **Magento cron must be running** or the policy is never warmed and
+  the form permanently degrades to contact fields only — see Known limitations.
 - Submitting registers a real buyer and, where the policy allows, a real company plus
   membership — TackQuote runs the identical sequence as its own buyer-portal registration
   route (`PluginRegistrationService.register` → `BuyersService::registerWithCompany`).
@@ -310,16 +315,16 @@ php vendor/bin/phpunit -c app/code/TackQuote/Quotes/Test/Unit/phpunit.xml
 
 ## Known limitations
 
-- **No `Idempotency-Key` header is sent.** TackQuote accepts one, but
-  `apps/api/src/modules/idempotency/idempotency.service.ts` writes to
-  `api_idempotency_keys` — a FORCE-RLS table — without establishing tenant RLS context, so
-  every request carrying the header fails with "new row violates row-level security policy".
-  Duplicate suppression is therefore done store-side in `Model/IdempotencyGuard.php`. The
-  header line is commented out in `Model/Api/Client.php` and should be restored once the
-  API is fixed.
 - **No cart-page quote button in normal mode.** Quoting runs off the module's own
   browser-side list, not Magento's cart, so there is no entry point on the cart page unless
   quote-only mode is on (which adds one — see above).
+- **Duplicate suppression is belt-and-braces.** `Model/Api/Client.php` sends an
+  `Idempotency-Key` header AND `Model/IdempotencyGuard.php` collapses double-submits
+  store-side. The two catch different things: the guard stops a double-click before it
+  leaves the store, the header catches retries the guard cannot see (a second Magento node,
+  or a request after a cache flush). Earlier revisions of this list claimed the header was
+  commented out because of an upstream RLS defect; that was fixed upstream and the header
+  has been sent since — see the comment in `Model/Api/Client.php`.
 - **Quote-only mode does not cover the Web API or GraphQL areas.** `UNVERIFIED against a
   running store.` The guards are declared in `etc/frontend/di.xml`, so `webapi_rest`,
   `webapi_soap` and `graphql` are not intercepted. Two consequences: adding items to a guest
@@ -336,11 +341,28 @@ php vendor/bin/phpunit -c app/code/TackQuote/Quotes/Test/Unit/phpunit.xml
   from the storefront.**
 - **Quote-only mode and multishipping.** `Magento_Multishipping` (`multishipping/checkout`,
   off by default) has its own checkout controller and is not guarded. UNVERIFIED.
-- **The registration policy is cached for 15 minutes** (60 seconds on failure). A policy
-  change in TackQuote can take that long to appear on the storefront.
-- **A TackQuote outage degrades rather than breaks the form** — the policy fetch returns
-  null and the form falls back to contact fields only, which still produces a usable quote
-  request.
+- **The registration policy can be up to 5 minutes stale**, bounded by the cron schedule in
+  `etc/crontab.xml` rather than by the 1-hour cache TTL. A policy change in TackQuote takes
+  that long to reach the storefront. **If Magento cron is not running the policy is never
+  warmed at all** and the form shows contact fields only, forever — the same degraded state
+  as an outage, but permanent, so check `bin/magento cron:run` on a new install.
+- **The form degrades rather than breaks with no policy** — a TackQuote outage, or a cache
+  flush that cron has not yet caught up with, drops the company step and the seller's custom
+  questions and leaves contact fields only. That still produces a usable quote request, and
+  TackQuote re-checks its own policy server-side on submit, so a required company detail is
+  refused there rather than silently accepted.
+- **The product-page triggers sit directly after the add-to-cart form**, ordered
+  `after="product.info"` within `product.info.main`. They are deliberately NOT inside
+  `product.info.form.content`, which is what keeps quote-only mode able to remove
+  `product.info.addtocart` without taking the quote CTA with it. See the comment in
+  `view/frontend/layout/catalog_product_view.xml`.
+- **Marketplace-grade CSP needs Magento to catch up first.** Every script and style this
+  module emits goes through `SecureHtmlRenderer`, so it is nonce/hash eligible and works
+  with `Magento_Csp` in restrict mode — verified with `'unsafe-inline'` removed from
+  `script-src`. On 2.4.8-p5, however, removing `'unsafe-inline'` blocks 13 of Magento's OWN
+  inline blocks on a Luma product page, including the RequireJS base-URL config, which takes
+  the whole storefront's JavaScript down. That is a core limitation, not this module's, but
+  it means a merchant cannot yet run the storefront with inline scripts fully disabled.
 - No Magento Marketplace listing or Packagist publication (see Installation).
 
 ## Requirements
@@ -350,6 +372,43 @@ php vendor/bin/phpunit -c app/code/TackQuote/Quotes/Test/Unit/phpunit.xml
   `magento/module-catalog: 104.0.*`, and so on).
 - PHP **8.1 – 8.4** — the union of what those Magento releases support (2.4.5 still allows
   8.1; 2.4.8 allows 8.4).
+- Magento **cron** must be running (`etc/crontab.xml` warms the registration policy).
+
+## Licence
+
+GPL-2.0-or-later. The full text ships in the package as `LICENSE.txt`, matching the SPDX
+identifier in `composer.json` — the identifier alone is not enough for Adobe Commerce
+Marketplace technical review, and every Magento core module ships its licence text the same
+way.
+
+## Development tooling
+
+`composer.json` declares the tools in `require-dev` so a reviewer can reproduce the checks
+without guessing versions, and `autoload-dev` is what makes `Test/` loadable:
+
+```bash
+composer install                     # inside magento2/ (this directory)
+vendor/bin/phpcs                     # picks up ./phpcs.xml -> the Magento2 standard
+vendor/bin/phpunit -c Test/Unit/phpunit.xml
+```
+
+`Test/` is deliberately absent from the PRODUCTION `autoload` block. That block used to map
+the module root (`"TackQuote\\Quotes\\": ""`), which made
+`TackQuote\Quotes\Test\Unit\Controller\Quote\SubmitTest` — and therefore PHPUnit, an
+undeclared dependency — resolvable on a live store. The production map now names only the
+six namespaces that ship code (`Block\`, `Controller\`, `Cron\`, `Model\`, `Observer\`,
+`Plugin\`), and `Test\` lives in `autoload-dev`. **Adding a new top-level source directory
+means adding it to `autoload.psr-4`**; that is the cost of not mapping the root.
+
+That cost is not theoretical. `Plugin\` — which is the whole of quote-only enforcement — was
+missing from the map at one point, and nothing catches it locally: an `app/code` install
+resolves the classes anyway through the PSR-0 `""` -> `app/code/` fallback in Magento's own
+root `composer.json`, so the suite and a dev store both stay green while a Marketplace
+(`vendor/`) install silently loses all three guards. Check a change to this map by resolving
+against the generated `vendor/composer/autoload_psr4.php`, not by running the tests.
+
+`Test/Unit/phpunit.xml` bootstraps from Magento's own `dev/tests/unit/framework/bootstrap.php`,
+so the suite has to be run from inside a Magento installation, not from this directory alone.
 
 ## Installation
 
@@ -454,9 +513,14 @@ bin/magento cache:flush
 integrations/magento2/
 ├── registration.php                            Module registration
 ├── composer.json                               Package metadata (tackquote/module-quotes)
+├── LICENSE.txt                                 GPL-2.0 text (required in the package)
+├── phpcs.xml                                   Magento2 coding standard for a bare `phpcs`
 ├── i18n/en_US.csv                              Translation source strings
+│                                               (regenerate with i18n:collect-phrases)
 ├── etc/module.xml                              Module declaration + sequence
 ├── etc/acl.xml                                 Admin ACL: dashboard tree + config resource
+├── etc/crontab.xml                             Warms the registration policy every 5 min
+├── etc/adminhtml/events.xml                    Flush the policy when settings are saved
 ├── etc/adminhtml/menu.xml                      TackQuote sidebar menu (Dashboard, Settings)
 ├── etc/adminhtml/routes.xml                    Admin route tackquote/*
 ├── etc/adminhtml/system.xml                    Stores > Configuration > TackQuote fields
@@ -487,6 +551,8 @@ integrations/magento2/
 ├── Controller/Quote/Submit.php                 Storefront quote-request POST handler
 ├── Controller/Adminhtml/Dashboard/Index.php    Admin dashboard page
 ├── Controller/Adminhtml/Connection/Test.php    Admin "Test connection" AJAX endpoint
+├── Cron/WarmRegistrationConfig.php             Keeps the policy out of the render path
+├── Observer/FlushRegistrationConfig.php        Invalidates the policy on a settings save
 ├── view/frontend/
 │   ├── layout/catalog_product_view.xml         Product-page triggers
 │   ├── layout/catalog_category_view.xml        Listing-tile "Add to Quote"
@@ -502,7 +568,9 @@ integrations/magento2/
 │   └── web/css/request-quote.css               Storefront styles
 └── view/adminhtml/
     ├── layout/tackquote_dashboard_index.xml    Dashboard layout
+    ├── layout/adminhtml_system_config_edit.xml Loads the config-screen control stylesheet
     ├── templates/dashboard.phtml               Dashboard markup + test-connection JS
     ├── templates/system/config/test-connection.phtml   Config-screen button markup
-    └── web/css/dashboard.css                   Admin dashboard styles
+    ├── web/css/dashboard.css                   Admin dashboard styles
+    └── web/css/config-test-connection.css      "Verify" result pill (was an inline <style>)
 ```

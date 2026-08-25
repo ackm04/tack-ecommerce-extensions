@@ -2,8 +2,19 @@
 /**
  * TackQuote admin dashboard.
  *
+ * CSP — the behaviour script goes out through SecureHtmlRenderer rather than as a literal
+ * <script> tag, so Magento\Csp\Helper\InlineUtil can stamp it with the request nonce once a
+ * merchant drops 'unsafe-inline' from script-src. Without that the "Test connection" button
+ * is simply dead in the browser and nothing reaches var/log. $secureRenderer arrives as a
+ * block variable from app/etc/di.xml; there is nothing to inject.
+ *
+ * The endpoint and the three status strings travel out of PHP as data attributes and
+ * mage/translate lookups respectively, so the script itself is a constant with no
+ * server-side interpolation to escape.
+ *
  * @var \TackQuote\Quotes\Block\Adminhtml\Dashboard $block
  * @var \Magento\Framework\Escaper $escaper
+ * @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer
  * @package TackQuote_Quotes
  */
 
@@ -79,41 +90,51 @@ foreach ($checklist as $item) {
                 <dt><?= $escaper->escapeHtml(__('Button label')) ?></dt>
                 <dd><?= $escaper->escapeHtml($block->getButtonLabel()) ?></dd>
             </dl>
-            <p class="tq-result" id="tq-test-result" hidden role="status" aria-live="polite"></p>
+            <p class="tq-result"
+               id="tq-test-result"
+               data-test-url="<?= $escaper->escapeHtmlAttr($block->getTestConnectionUrl()) ?>"
+               hidden
+               role="status"
+               aria-live="polite"></p>
         </section>
     </div>
 </div>
 
-<script>
-    require(['jquery'], function ($) {
-        'use strict';
+<?php
+$script = <<<'JS'
+require(['jquery', 'mage/translate'], function ($, $t) {
+    'use strict';
 
-        var btn = document.getElementById('tq-test-connection');
-        var out = document.getElementById('tq-test-result');
-        if (!btn || !out) {
-            return;
-        }
+    var btn = document.getElementById('tq-test-connection'),
+        out = document.getElementById('tq-test-result'),
+        url = out ? out.getAttribute('data-test-url') : '';
 
-        btn.addEventListener('click', function () {
-            btn.disabled = true;
-            out.hidden = false;
-            out.className = 'tq-result tq-result--pending';
-            out.textContent = '<?= $escaper->escapeJs(__('Testing…')) ?>';
+    if (!btn || !out || !url) {
+        return;
+    }
 
-            $.ajax({
-                url: '<?= $escaper->escapeJs($block->getTestConnectionUrl()) ?>',
-                type: 'POST',
-                dataType: 'json',
-                data: { form_key: window.FORM_KEY }
-            }).done(function (data) {
-                out.className = 'tq-result tq-result--' + (data && data.success ? 'ok' : 'error');
-                out.textContent = (data && data.message) || '<?= $escaper->escapeJs(__('Unexpected response.')) ?>';
-            }).fail(function () {
-                out.className = 'tq-result tq-result--error';
-                out.textContent = '<?= $escaper->escapeJs(__('Could not reach the server.')) ?>';
-            }).always(function () {
-                btn.disabled = false;
-            });
+    btn.addEventListener('click', function () {
+        btn.disabled = true;
+        out.hidden = false;
+        out.className = 'tq-result tq-result--pending';
+        out.textContent = $t('Testing…');
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'json',
+            data: { form_key: window.FORM_KEY }
+        }).done(function (data) {
+            out.className = 'tq-result tq-result--' + (data && data.success ? 'ok' : 'error');
+            out.textContent = (data && data.message) || $t('Unexpected response.');
+        }).fail(function () {
+            out.className = 'tq-result tq-result--error';
+            out.textContent = $t('Could not reach the server.');
+        }).always(function () {
+            btn.disabled = false;
         });
     });
-</script>
+});
+JS;
+?>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $script, false) ?>

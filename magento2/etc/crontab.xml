@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+  Warms the cached registration policy so Block\QuoteList — which renders on every
+  storefront page — never has to fetch it while a shopper waits.
+
+  Every 5 minutes against a 1-hour cache TTL: the entry is rewritten long before it can
+  expire, so a running store has no expiry gap, and 5 minutes is also the worst case for
+  how long a freshly flushed cache leaves the quote form showing contact fields only.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="tackquote_warm_registration_config"
+             instance="TackQuote\Quotes\Cron\WarmRegistrationConfig"
+             method="execute">
+            <schedule>*/5 * * * *</schedule>
+        </job>
+    </group>
+</config>
