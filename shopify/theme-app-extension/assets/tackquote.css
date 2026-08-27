@@ -225,3 +225,62 @@
     transition: none;
   }
 }
+
+/*
+ * Wholesale application block.
+ *
+ * Inputs inherit the theme's font and colour and stay transparent, exactly as
+ * the quote drawer's do. A B2B application form that arrives in the app's own
+ * palette looks bolted on to every storefront it lands in; one that borrows the
+ * theme's looks like part of the shop.
+ */
+.tackquote-signup__heading {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.tackquote-signup__intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.tackquote-signup__field {
+  margin: 0 0 0.75rem;
+}
+
+.tackquote-signup__field label {
+  display: block;
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+}
+
+.tackquote-signup__field input,
+.tackquote-signup__field select,
+.tackquote-signup__field textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.35rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+.tackquote-signup__status {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.tackquote-signup__status:empty {
+  display: none;
+}
+
+.tackquote-signup__success {
+  margin: 0;
+}
+
+.tackquote-signup__error {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.85;
+}

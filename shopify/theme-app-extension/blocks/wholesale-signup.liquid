@@ -1,0 +1,98 @@
+{%- liquid
+  assign proxy_path = block.settings.proxy_path | strip | remove_last: '/'
+  assign form_slug = block.settings.form_slug | strip
+-%}
+
+{%- if proxy_path == blank or form_slug == blank -%}
+  {%- comment -%}
+    Setup guidance is shown ONLY in the theme editor. A merchant who has not
+    finished configuring the block should see what is missing while they are
+    editing; a shopper should see nothing at all rather than a broken widget.
+  {%- endcomment -%}
+  {%- if request.design_mode -%}
+    <div class="tackquote-setup" {{ block.shopify_attributes }}>
+      <strong>{{ 'tackquote.setup.title' | t }}</strong>
+      {%- if proxy_path == blank -%}
+        <p>{{ 'tackquote.setup.proxy' | t }}</p>
+      {%- endif -%}
+      {%- if form_slug == blank -%}
+        <p>{{ 'tackquote.setup.form_slug' | t }}</p>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+{%- else -%}
+  {%- comment -%}
+    The tenant is NOT carried in this markup, deliberately.
+
+    Shopify signs `shop` on every App Proxy request, and the server resolves that
+    signed value to a tenant. Putting a tenant slug in a block setting would mean
+    a merchant could mistype it, or point the block at somebody else's tenant —
+    the class of defect this project tracks as "tenant from a caller-supplied
+    value". The proxy path plus the form slug is all this block needs to know.
+  {%- endcomment -%}
+  <div
+    class="tackquote-block tackquote-signup"
+    data-tackquote-mode="signup"
+    data-tackquote-proxy="{{ proxy_path | escape }}"
+    data-tackquote-form="{{ form_slug | escape }}"
+    data-msg-loading="{{ 'tackquote.signup.loading' | t | escape }}"
+    data-msg-unavailable="{{ 'tackquote.signup.unavailable' | t | escape }}"
+    data-msg-submitting="{{ 'tackquote.signup.submitting' | t | escape }}"
+    data-msg-success="{{ 'tackquote.signup.success' | t | escape }}"
+    data-msg-error="{{ 'tackquote.signup.error' | t | escape }}"
+    data-msg-required="{{ 'tackquote.signup.required' | t | escape }}"
+    data-msg-submit="{{ 'tackquote.signup.submit' | t | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    <h3 class="tackquote-signup__heading">
+      {{ block.settings.heading | default: 'Apply for a wholesale account' }}
+    </h3>
+
+    {%- if block.settings.intro != blank -%}
+      <div class="tackquote-signup__intro">{{ block.settings.intro }}</div>
+    {%- endif -%}
+
+    <div class="tackquote-signup__body" data-tackquote-signup-body role="status" aria-live="polite">
+      <p class="tackquote-signup__loading">{{ 'tackquote.signup.loading' | t }}</p>
+    </div>
+  </div>
+
+  <script src="{{ 'tackquote-shared.js' | asset_url }}" async></script>
+  <script src="{{ 'tackquote-signup.js' | asset_url }}" async></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Wholesale signup",
+  "target": "section",
+  "enabled_on": { "templates": ["page", "index"] },
+  "stylesheet": "tackquote.css",
+  "javascript": "tackquote-signup.js",
+  "settings": [
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/tackquote",
+      "info": "Must match the subpath configured for the TackQuote app proxy."
+    },
+    {
+      "type": "text",
+      "id": "form_slug",
+      "label": "Application form",
+      "info": "The slug of the wholesale application form to show, as named in TackQuote."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Apply for a wholesale account"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Introduction"
+    }
+  ]
+}
+{% endschema %}

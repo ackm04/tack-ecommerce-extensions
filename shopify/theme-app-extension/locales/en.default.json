@@ -3,7 +3,8 @@
     "setup": {
       "title": "TackQuote is not configured yet",
       "body": "Add your TackQuote Tenant ID in this block's settings. Until then the block is hidden from shoppers.",
-      "proxy": "Set the app proxy path in this block's settings so the price lookup can reach TackQuote."
+      "proxy": "Set the app proxy path in this block's settings so the price lookup can reach TackQuote.",
+      "form_slug": "Set the wholesale application form in this block's settings — it is the form's slug as named in TackQuote."
     },
     "price": {
       "loading": "Checking your price",
@@ -33,6 +34,15 @@
       "failure": "We could not send that. Please try again.",
       "close": "Close",
       "required": "Please add your name and email."
+    },
+    "signup": {
+      "loading": "Loading the application form",
+      "unavailable": "The wholesale application form is not available right now.",
+      "submit": "Submit application",
+      "submitting": "Sending your application",
+      "success": "Thanks. Your wholesale application is with us and we will be in touch.",
+      "error": "We could not send that. Please try again.",
+      "required": "Please complete the required fields."
     }
   }
 }

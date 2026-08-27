@@ -41,6 +41,77 @@
     return raw.replace(/\/+$/, '');
   };
 
+  /**
+   * A fetch with a hard deadline.
+   *
+   * Without one, a slow TackQuote leaves "Checking your price" on a merchant's
+   * product page for as long as the browser is willing to wait. The whole
+   * availability argument for this architecture is that our latency must not
+   * become the storefront's latency, and a request with no ceiling is exactly
+   * that coupling.
+   *
+   * AbortController is available in every browser Shopify's OS 2.0 themes
+   * support, but the guard costs nothing and a missing one would turn a
+   * degraded price into a broken page.
+   */
+  ns.fetchJson = (url, options) => {
+    const opts = options || {};
+    const timeoutMs = opts.timeoutMs || 2500;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+    return fetch(url, {
+      method: opts.method || 'GET',
+      headers: opts.headers || { Accept: 'application/json' },
+      body: opts.body,
+      credentials: 'same-origin',
+      signal: controller ? controller.signal : undefined,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .finally(() => {
+        if (timer) clearTimeout(timer);
+      });
+  };
+
+  /**
+   * A tiny per-tab cache, so repeat views do not each cost a round trip.
+   *
+   * sessionStorage rather than localStorage on purpose: a B2B price belongs to
+   * the session that was authenticated to see it, and a tab close should end it.
+   * Every access is wrapped — a browser set to block site data THROWS on the
+   * accessor itself rather than returning null, and a price block that explodes
+   * on a privacy-hardened browser is worse than one that simply does not cache.
+   *
+   * Keys must carry the customer marker. Without it a shopper who logs out in
+   * the same tab keeps reading the price they saw while signed in.
+   */
+  ns.cache = {
+    read: (key) => {
+      try {
+        const raw = window.sessionStorage.getItem(`tackquote:${key}`);
+        if (!raw) return null;
+        const entry = JSON.parse(raw);
+        if (!entry || typeof entry.expires !== 'number' || entry.expires < Date.now()) return null;
+        return entry.value;
+      } catch (_err) {
+        return null;
+      }
+    },
+    write: (key, value, ttlMs) => {
+      try {
+        window.sessionStorage.setItem(
+          `tackquote:${key}`,
+          JSON.stringify({ value, expires: Date.now() + ttlMs }),
+        );
+      } catch (_err) {
+        // Quota, private mode, or blocked site data. Caching is an optimisation.
+      }
+    },
+  };
+
   ns.variants = (root) => {
     const node = root.querySelector('.tackquote-variants');
     try {

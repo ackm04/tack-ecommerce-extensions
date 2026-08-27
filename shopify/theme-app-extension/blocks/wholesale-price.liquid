@@ -17,6 +17,20 @@
     data-tackquote-proxy="{{ proxy_path | escape }}"
     data-tackquote-variant="{{ variant.id }}"
     data-tackquote-login-url="{{ routes.account_login_url }}"
+    {%- comment -%}
+      Two attributes that are NOT identity and must never be read as such.
+
+      `customer` only partitions the per-tab price cache, so that logging out in
+      the same tab cannot surface the price the previous session was entitled to
+      see. The identity that decides the price is `logged_in_customer_id`, which
+      Shopify injects into the proxy request and signs; anything emitted here is
+      just markup a shopper can edit.
+
+      `design` suspends the fail-quiet behaviour: a merchant placing the block in
+      the theme editor needs to see it failing, a shopper does not.
+    {%- endcomment -%}
+    data-tackquote-customer="{{ customer.id }}"
+    data-tackquote-design="{% if request.design_mode %}true{% else %}false{% endif %}"
     data-msg-anonymous="{{ 'tackquote.price.anonymous' | t | escape }}"
     data-msg-login="{{ 'tackquote.price.login' | t | escape }}"
     data-msg-unlinked="{{ 'tackquote.price.unlinked' | t | escape }}"

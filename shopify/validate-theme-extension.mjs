@@ -136,13 +136,26 @@ describe('the validator itself detects breakage', () => {
   });
 });
 
+/**
+ * Which templates each block is allowed on.
+ *
+ * A per-block map rather than a blanket "product only" rule. The three product
+ * blocks answer a question about the item being viewed, so `product` is the only
+ * template where they mean anything. A wholesale APPLICATION is not about a
+ * product at all — merchants put it on a dedicated page — so pinning it to
+ * `product` would have made it unplaceable where it belongs. The map exists so
+ * that widening one block cannot silently widen the others.
+ */
+export const EXPECTED_TEMPLATES = {
+  'add-to-quote.liquid': ['product'],
+  'request-a-quote.liquid': ['product'],
+  'wholesale-price.liquid': ['product'],
+  'wholesale-signup.liquid': ['page', 'index'],
+};
+
 describe('the shipped blocks', () => {
-  test('ships the three blocks the extension is meant to provide', () => {
-    assert.deepStrictEqual(blockFiles().sort(), [
-      'add-to-quote.liquid',
-      'request-a-quote.liquid',
-      'wholesale-price.liquid',
-    ]);
+  test('ships exactly the blocks the extension is meant to provide', () => {
+    assert.deepStrictEqual(blockFiles().sort(), Object.keys(EXPECTED_TEMPLATES).sort());
   });
 
   for (const file of blockFiles()) {
@@ -150,9 +163,9 @@ describe('the shipped blocks', () => {
       assert.deepStrictEqual(validateSchemaBody(schemaBodyOf(file)), []);
     });
 
-    test(`${file} is enabled only on the product template`, () => {
+    test(`${file} is enabled only on its expected templates`, () => {
       const schema = JSON.parse(schemaBodyOf(file));
-      assert.deepStrictEqual(schema.enabled_on?.templates, ['product']);
+      assert.deepStrictEqual(schema.enabled_on?.templates, EXPECTED_TEMPLATES[file]);
     });
 
     test(`${file} references asset files that exist`, () => {
@@ -173,6 +186,46 @@ describe('the shipped blocks', () => {
         .filter((s) => s.type !== 'paragraph' && s.type !== 'header')
         .map((s) => s.id);
       assert.deepStrictEqual(ids.length, new Set(ids).size, `${file} has duplicate setting ids`);
+    });
+  }
+});
+
+/**
+ * Every `'tackquote.x.y' | t` a block asks for, in order of appearance.
+ *
+ * A missing key does not fail — Shopify renders the literal string
+ * `translation missing: en.tackquote.x.y` into the storefront, in front of
+ * shoppers. That is the single most likely way this extension embarrasses a
+ * merchant, and it is invisible to every other check here.
+ */
+export function translationKeysUsed() {
+  const used = new Set();
+  for (const file of blockFiles()) {
+    const src = fs.readFileSync(path.join(BLOCKS_DIR, file), 'utf8');
+    for (const match of src.matchAll(/'(tackquote\.[a-z0-9_.]+)'\s*\|\s*t\b/g)) {
+      used.add(match[1]);
+    }
+  }
+  return [...used].sort();
+}
+
+describe('storefront translations', () => {
+  const locale = JSON.parse(
+    fs.readFileSync(path.join(EXTENSION_DIR, 'locales', 'en.default.json'), 'utf8'),
+  );
+  const resolve = (key) => key.split('.').reduce((node, part) => node?.[part], locale);
+
+  test('finds the keys the blocks actually use', () => {
+    // Guards the regex, not the locale file. If this ever returns nothing, the
+    // assertion below would pass while checking nothing at all.
+    const used = translationKeysUsed();
+    assert.ok(used.length >= 8, `only found ${used.length} translation keys — regex is wrong`);
+    assert.ok(used.includes('tackquote.signup.loading'));
+  });
+
+  for (const key of translationKeysUsed()) {
+    test(`${key} resolves in en.default.json`, () => {
+      assert.equal(typeof resolve(key), 'string', `${key} is missing or is not a string`);
     });
   }
 });
