@@ -1,0 +1,227 @@
+/*
+ * TackQuote theme app extension styles.
+ *
+ * Everything is namespaced under .tackquote- and inherits the theme's font and
+ * colours rather than declaring its own palette, so a block dropped into any
+ * Online Store 2.0 theme reads as part of that theme. Shopify's docs ask that
+ * app blocks be built responsively, since a merchant can place them into a
+ * section of any width.
+ */
+
+.tackquote-block {
+  margin: 1rem 0;
+  font-family: inherit;
+  color: inherit;
+}
+
+.tackquote-setup {
+  padding: 0.75rem 1rem;
+  border: 1px dashed currentColor;
+  border-radius: 0.5rem;
+  opacity: 0.85;
+  font-size: 0.875rem;
+}
+
+.tackquote-setup p {
+  margin: 0.35rem 0 0;
+}
+
+.tackquote-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px; /* pointer target floor */
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.tackquote-button:hover {
+  opacity: 0.85;
+}
+
+.tackquote-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.tackquote-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.tackquote-button--solid {
+  border: 1px solid currentColor;
+  background: currentColor;
+}
+
+/* The label needs to contrast with the button's own background, and the theme's
+   background colour is the only value guaranteed to do that here. */
+.tackquote-button--solid {
+  color: inherit;
+}
+
+.tackquote-button--outline {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+.tackquote-helper,
+.tackquote-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.tackquote-status:empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------- price block */
+
+.tackquote-price__heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.tackquote-price__amount {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.tackquote-price__note,
+.tackquote-price__loading {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+.tackquote-price__login {
+  display: inline-block;
+  margin-top: 0.25rem;
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------- drawer */
+
+.tackquote-drawer {
+  width: min(30rem, 100vw - 2rem);
+  max-height: 85vh;
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  overflow-y: auto;
+  font-family: inherit;
+}
+
+.tackquote-drawer::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.tackquote-drawer__dismiss {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.tackquote-drawer__close {
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+
+.tackquote-drawer__title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.tackquote-drawer__items {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.tackquote-drawer__items li {
+  display: grid;
+  grid-template-columns: 1fr 4.5rem auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgb(128 128 128 / 25%);
+}
+
+.tackquote-drawer__name {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.tackquote-drawer__remove {
+  border: 0;
+  background: transparent;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  cursor: pointer;
+  color: inherit;
+}
+
+.tackquote-drawer__form label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.tackquote-drawer__form label span {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.tackquote-drawer__form input,
+.tackquote-drawer__form textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.35rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+.tackquote-drawer__status {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.tackquote-drawer__status:empty {
+  display: none;
+}
+
+/*
+ * Honeypot. Hidden from sighted users and from assistive technology, but still a
+ * real, fillable field in the DOM — which is the point, since bots fill what they
+ * find. `display: none` is avoided because some bots skip those.
+ */
+.tackquote-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tackquote-button {
+    transition: none;
+  }
+}

@@ -1,0 +1,10 @@
+# Theme app extension configuration.
+#
+# Deliberately minimal: Shopify's docs state that "a theme app extension's
+# behavior is driven by its app blocks, app embed blocks, and their schema -- so
+# the configuration file itself is minimal". `name` and `type` are the only
+# required keys; `handle` is optional and Shopify CLI may add one.
+# https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration
+
+name = "TackQuote B2B"
+type = "theme"

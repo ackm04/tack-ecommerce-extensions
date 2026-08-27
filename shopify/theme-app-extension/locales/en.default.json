@@ -1,0 +1,38 @@
+{
+  "tackquote": {
+    "setup": {
+      "title": "TackQuote is not configured yet",
+      "body": "Add your TackQuote Tenant ID in this block's settings. Until then the block is hidden from shoppers.",
+      "proxy": "Set the app proxy path in this block's settings so the price lookup can reach TackQuote."
+    },
+    "price": {
+      "loading": "Checking your price",
+      "anonymous": "Log in to see your wholesale price.",
+      "login": "Log in",
+      "unlinked": "Your account is not linked to wholesale pricing yet. Request a quote and we will set it up.",
+      "unpriced": "No wholesale price is set for this item yet. Request a quote for a price.",
+      "each": "each",
+      "list_note": "List price, not a negotiated rate.",
+      "error": "We could not load your price just now."
+    },
+    "quote": {
+      "added": "Added to your quote request.",
+      "already": "Already in your quote request.",
+      "unavailable": "This variant is unavailable.",
+      "title": "Your quote request",
+      "empty": "Nothing in your quote request yet.",
+      "remove": "Remove",
+      "quantity": "Quantity",
+      "name": "Full name",
+      "email": "Email",
+      "company": "Company",
+      "message": "Anything we should know?",
+      "submit": "Send quote request",
+      "sending": "Sending",
+      "success": "Thanks. We have your request and will reply with a quote.",
+      "failure": "We could not send that. Please try again.",
+      "close": "Close",
+      "required": "Please add your name and email."
+    }
+  }
+}

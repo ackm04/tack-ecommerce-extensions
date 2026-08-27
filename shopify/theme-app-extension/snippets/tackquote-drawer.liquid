@@ -1,0 +1,60 @@
+{% doc %}
+  The quote-request drawer: static, already-translated markup for the two button
+  blocks.
+
+  Rendered by Liquid rather than built in JavaScript on purpose. Shopify's Theme
+  Check caps a storefront JavaScript asset at 10 KB, and a runtime that also
+  carried this markup and a translation dictionary blew straight through it. Doing
+  it here is smaller AND better: the `t` filter translates directly, so the strings
+  live in locales/ like every other customer-facing string, instead of being
+  shipped to the browser as JSON and looked up again.
+
+  The handful of strings JavaScript sets at runtime ride along as data attributes.
+
+  @example
+  {% render 'tackquote-drawer' %}
+{% enddoc %}
+<dialog
+  class="tackquote-drawer"
+  data-tackquote-drawer
+  data-msg-added="{{ 'tackquote.quote.added' | t | escape }}"
+  data-msg-already="{{ 'tackquote.quote.already' | t | escape }}"
+  data-msg-unavailable="{{ 'tackquote.quote.unavailable' | t | escape }}"
+  data-msg-required="{{ 'tackquote.quote.required' | t | escape }}"
+  data-msg-sending="{{ 'tackquote.quote.sending' | t | escape }}"
+  data-msg-success="{{ 'tackquote.quote.success' | t | escape }}"
+  data-msg-failure="{{ 'tackquote.quote.failure' | t | escape }}"
+  data-msg-remove="{{ 'tackquote.quote.remove' | t | escape }}"
+  data-msg-quantity="{{ 'tackquote.quote.quantity' | t | escape }}"
+>
+  <form method="dialog" class="tackquote-drawer__dismiss">
+    <button value="close" class="tackquote-drawer__close" aria-label="{{ 'tackquote.quote.close' | t }}">&times;</button>
+  </form>
+  <h2 class="tackquote-drawer__title">{{ 'tackquote.quote.title' | t }}</h2>
+  <ul class="tackquote-drawer__items" data-tackquote-items></ul>
+  <p class="tackquote-drawer__empty" data-tackquote-empty>{{ 'tackquote.quote.empty' | t }}</p>
+  <div class="tackquote-drawer__form">
+    <label>
+      <span>{{ 'tackquote.quote.name' | t }}</span>
+      <input type="text" name="name" autocomplete="name" required>
+    </label>
+    <label>
+      <span>{{ 'tackquote.quote.email' | t }}</span>
+      <input type="email" name="email" autocomplete="email" required>
+    </label>
+    <label>
+      <span>{{ 'tackquote.quote.company' | t }}</span>
+      <input type="text" name="company" autocomplete="organization">
+    </label>
+    <div class="tackquote-hp" aria-hidden="true">
+      <label>
+        Do not fill this in
+        <input type="text" name="hp" tabindex="-1" autocomplete="off">
+      </label>
+    </div>
+    <button type="button" class="tackquote-button tackquote-button--solid" data-tackquote-submit>
+      {{ 'tackquote.quote.submit' | t }}
+    </button>
+    <p class="tackquote-drawer__status" data-tackquote-drawer-status role="status" aria-live="polite"></p>
+  </div>
+</dialog>

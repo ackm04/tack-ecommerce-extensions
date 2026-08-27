@@ -1,0 +1,75 @@
+{%- liquid
+  assign proxy_path = block.settings.proxy_path | strip | remove_last: '/'
+  assign variant = product.selected_or_first_available_variant
+-%}
+
+{%- if proxy_path == blank -%}
+  {%- if request.design_mode -%}
+    <div class="tackquote-setup" {{ block.shopify_attributes }}>
+      <strong>{{ 'tackquote.setup.title' | t }}</strong>
+      <p>{{ 'tackquote.setup.proxy' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
+  <div
+    class="tackquote-block tackquote-price"
+    data-tackquote-mode="price"
+    data-tackquote-proxy="{{ proxy_path | escape }}"
+    data-tackquote-variant="{{ variant.id }}"
+    data-tackquote-login-url="{{ routes.account_login_url }}"
+    data-msg-anonymous="{{ 'tackquote.price.anonymous' | t | escape }}"
+    data-msg-login="{{ 'tackquote.price.login' | t | escape }}"
+    data-msg-unlinked="{{ 'tackquote.price.unlinked' | t | escape }}"
+    data-msg-unpriced="{{ 'tackquote.price.unpriced' | t | escape }}"
+    data-msg-each="{{ 'tackquote.price.each' | t | escape }}"
+    data-msg-list-note="{{ 'tackquote.price.list_note' | t | escape }}"
+    data-msg-error="{{ 'tackquote.price.error' | t | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    {% render 'tackquote-selection', product: product %}
+    <h3 class="tackquote-price__heading">
+      {{ block.settings.heading | default: 'Your wholesale price' }}
+    </h3>
+    <div class="tackquote-price__body" data-tackquote-price-body role="status" aria-live="polite">
+      <p class="tackquote-price__loading">{{ 'tackquote.price.loading' | t }}</p>
+    </div>
+  </div>
+
+  <script src="{{ 'tackquote-shared.js' | asset_url }}" async></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Wholesale Price",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "stylesheet": "tackquote.css",
+  "javascript": "tackquote-price.js",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Shows the signed-in customer's B2B price. TackQuote resolves the price from the shopper's Shopify session, so it is never read from this page and a shopper cannot alter it."
+    },
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/tackquote",
+      "info": "Must match Settings > Apps and sales channels > TackQuote > App proxy. Change it here if you renamed the proxy URL there."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Your wholesale price"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Wholesale Price"
+    }
+  ]
+}
+{% endschema %}

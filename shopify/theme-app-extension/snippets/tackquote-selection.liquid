@@ -1,0 +1,25 @@
+{% doc %}
+  The variant lookup every block's JavaScript needs, as a JSON script tag.
+
+  Only the fields the quote payload actually uses are emitted. Price is
+  deliberately absent: the API records a supplied per-line price as the buyer's
+  REQUESTED price, so sending the storefront's retail figure would put a number in
+  front of a sales rep as though the buyer had asked for it. TackQuote prices every
+  line server-side regardless.
+
+  @param {product} product - The product whose variants should be emitted.
+  @example
+  {% render 'tackquote-selection', product: product %}
+{% enddoc %}
+<script type="application/json" class="tackquote-variants">
+  [
+    {%- for variant in product.variants -%}
+      {
+        "id": {{ variant.id | json }},
+        "sku": {{ variant.sku | default: '' | json }},
+        "title": {{ variant.title | json }},
+        "available": {{ variant.available | json }}
+      }{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+  ]
+</script>
