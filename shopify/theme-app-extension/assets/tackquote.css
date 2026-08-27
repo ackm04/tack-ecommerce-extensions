@@ -1,0 +1,377 @@
+/*
+ * TackQuote theme app extension styles.
+ *
+ * Everything is namespaced under .tackquote- and inherits the theme's font and
+ * colours rather than declaring its own palette, so a block dropped into any
+ * Online Store 2.0 theme reads as part of that theme. Shopify's docs ask that
+ * app blocks be built responsively, since a merchant can place them into a
+ * section of any width.
+ */
+
+.tackquote-block {
+  margin: 1rem 0;
+  font-family: inherit;
+  color: inherit;
+}
+
+.tackquote-setup {
+  padding: 0.75rem 1rem;
+  border: 1px dashed currentColor;
+  border-radius: 0.5rem;
+  opacity: 0.85;
+  font-size: 0.875rem;
+}
+
+.tackquote-setup p {
+  margin: 0.35rem 0 0;
+}
+
+.tackquote-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px; /* pointer target floor */
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.tackquote-button:hover {
+  opacity: 0.85;
+}
+
+.tackquote-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.tackquote-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.tackquote-button--solid {
+  border: 1px solid currentColor;
+  background: currentColor;
+}
+
+/* The label needs to contrast with the button's own background, and the theme's
+   background colour is the only value guaranteed to do that here. */
+.tackquote-button--solid {
+  color: inherit;
+}
+
+.tackquote-button--outline {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+.tackquote-helper,
+.tackquote-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.tackquote-status:empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------- price block */
+
+.tackquote-price__heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.tackquote-price__amount {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.tackquote-price__note,
+.tackquote-price__loading {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+.tackquote-price__login {
+  display: inline-block;
+  margin-top: 0.25rem;
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------- volume tier table */
+
+.tackquote-breaks__heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/*
+ * The table scrolls inside its own box rather than widening the page. A merchant
+ * can place an app block into a section of any width, including a narrow sidebar
+ * on a phone, and a two-column price table that overflows would push the whole
+ * product page sideways.
+ */
+.tackquote-breaks__body {
+  overflow-x: auto;
+}
+
+.tackquote-breaks__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+/* Visually hidden, still announced. The caption is what tells a screen-reader
+ * user what the two columns are for when they land on the table out of context;
+ * sighted users already have the block heading directly above it. */
+.tackquote-breaks__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tackquote-breaks__table th,
+.tackquote-breaks__table td {
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  text-align: left;
+  border-bottom: 1px solid currentColor;
+  /* currentColor at full strength would out-weigh the theme's own rules. */
+  border-bottom-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.tackquote-breaks__table thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.tackquote-breaks__table tbody th {
+  font-weight: 600;
+}
+
+.tackquote-breaks__table tr:last-child th,
+.tackquote-breaks__table tr:last-child td {
+  border-bottom: 0;
+}
+
+.tackquote-breaks__note,
+.tackquote-breaks__loading,
+.tackquote-breaks__error {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+/* -------------------------------------------------------- buyer group badge */
+
+.tackquote-badge__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.tackquote-badge__label {
+  opacity: 0.75;
+}
+
+.tackquote-badge__name {
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------------- drawer */
+
+.tackquote-drawer {
+  width: min(30rem, 100vw - 2rem);
+  max-height: 85vh;
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  overflow-y: auto;
+  font-family: inherit;
+}
+
+.tackquote-drawer::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.tackquote-drawer__dismiss {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.tackquote-drawer__close {
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+
+.tackquote-drawer__title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.tackquote-drawer__items {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.tackquote-drawer__items li {
+  display: grid;
+  grid-template-columns: 1fr 4.5rem auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgb(128 128 128 / 25%);
+}
+
+.tackquote-drawer__name {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.tackquote-drawer__remove {
+  border: 0;
+  background: transparent;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  cursor: pointer;
+  color: inherit;
+}
+
+.tackquote-drawer__form label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.tackquote-drawer__form label span {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.tackquote-drawer__form input,
+.tackquote-drawer__form textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.35rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+.tackquote-drawer__status {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.tackquote-drawer__status:empty {
+  display: none;
+}
+
+/*
+ * Honeypot. Hidden from sighted users and from assistive technology, but still a
+ * real, fillable field in the DOM — which is the point, since bots fill what they
+ * find. `display: none` is avoided because some bots skip those.
+ */
+.tackquote-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tackquote-button {
+    transition: none;
+  }
+}
+
+/*
+ * Wholesale application block.
+ *
+ * Inputs inherit the theme's font and colour and stay transparent, exactly as
+ * the quote drawer's do. A B2B application form that arrives in the app's own
+ * palette looks bolted on to every storefront it lands in; one that borrows the
+ * theme's looks like part of the shop.
+ */
+.tackquote-signup__heading {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.tackquote-signup__intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.tackquote-signup__field {
+  margin: 0 0 0.75rem;
+}
+
+.tackquote-signup__field label {
+  display: block;
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+}
+
+.tackquote-signup__field input,
+.tackquote-signup__field select,
+.tackquote-signup__field textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.35rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+.tackquote-signup__status {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.tackquote-signup__status:empty {
+  display: none;
+}
+
+.tackquote-signup__success {
+  margin: 0;
+}
+
+.tackquote-signup__error {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.85;
+}

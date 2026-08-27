@@ -1,0 +1,7 @@
+{
+  "name": "@tack/shopify-theme-app-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TackQuote theme app extension: Add to Quote, Request a Quote and Wholesale Price blocks for Shopify Online Store 2.0 product pages.",
+  "license": "MIT"
+}
