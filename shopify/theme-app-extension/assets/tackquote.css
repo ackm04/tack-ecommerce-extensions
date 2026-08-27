@@ -113,7 +113,7 @@
 
 /* ------------------------------------------------------- volume tier table */
 
-.tackquote-tiers__heading {
+.tackquote-breaks__heading {
   margin: 0 0 0.35rem;
   font-size: 0.95rem;
   font-weight: 600;
@@ -125,11 +125,11 @@
  * on a phone, and a two-column price table that overflows would push the whole
  * product page sideways.
  */
-.tackquote-tiers__body {
+.tackquote-breaks__body {
   overflow-x: auto;
 }
 
-.tackquote-tiers__table {
+.tackquote-breaks__table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9375rem;
@@ -138,7 +138,7 @@
 /* Visually hidden, still announced. The caption is what tells a screen-reader
  * user what the two columns are for when they land on the table out of context;
  * sighted users already have the block heading directly above it. */
-.tackquote-tiers__caption {
+.tackquote-breaks__caption {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -149,8 +149,8 @@
   border: 0;
 }
 
-.tackquote-tiers__table th,
-.tackquote-tiers__table td {
+.tackquote-breaks__table th,
+.tackquote-breaks__table td {
   padding: 0.4rem 0.75rem 0.4rem 0;
   text-align: left;
   border-bottom: 1px solid currentColor;
@@ -158,24 +158,24 @@
   border-bottom-color: color-mix(in srgb, currentColor 18%, transparent);
 }
 
-.tackquote-tiers__table thead th {
+.tackquote-breaks__table thead th {
   font-size: 0.8125rem;
   font-weight: 600;
   opacity: 0.75;
 }
 
-.tackquote-tiers__table tbody th {
+.tackquote-breaks__table tbody th {
   font-weight: 600;
 }
 
-.tackquote-tiers__table tr:last-child th,
-.tackquote-tiers__table tr:last-child td {
+.tackquote-breaks__table tr:last-child th,
+.tackquote-breaks__table tr:last-child td {
   border-bottom: 0;
 }
 
-.tackquote-tiers__note,
-.tackquote-tiers__loading,
-.tackquote-tiers__error {
+.tackquote-breaks__note,
+.tackquote-breaks__loading,
+.tackquote-breaks__error {
   margin: 0.35rem 0 0;
   font-size: 0.8125rem;
   opacity: 0.75;

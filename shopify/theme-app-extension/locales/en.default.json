@@ -44,14 +44,14 @@
       "error": "We could not send that. Please try again.",
       "required": "Please complete the required fields."
     },
-    "tiers": {
-      "loading": "Loading volume pricing",
+    "quantity_breaks": {
+      "loading": "Loading quantity pricing",
       "caption": "Price per unit by quantity",
       "quantity": "Quantity",
       "price": "Price each",
       "list_note": "List prices, not a negotiated rate.",
-      "empty": "No volume pricing is published for this item.",
-      "error": "We could not load volume pricing just now."
+      "empty": "No quantity pricing is published for this item.",
+      "error": "We could not load quantity pricing just now."
     },
     "badge": {
       "label": "Your pricing tier",

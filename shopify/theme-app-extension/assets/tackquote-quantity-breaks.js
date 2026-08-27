@@ -32,9 +32,9 @@
   /** Matches the price block. B2B contract prices change on the order of weeks. */
   const CACHE_TTL_MS = 5 * 60 * 1000;
 
-  ns.boot('.tackquote-block[data-tackquote-mode="tiers"]', (root) => {
+  ns.boot('.tackquote-block[data-tackquote-mode="quantity-breaks"]', (root) => {
     const proxy = ns.safeProxyPath(root.dataset.tackquoteProxy);
-    const body = root.querySelector('[data-tackquote-tiers-body]');
+    const body = root.querySelector('[data-tackquote-breaks-body]');
     if (!proxy || !body) return;
 
     const variants = ns.variants(root);
@@ -74,7 +74,7 @@
      * reads as a broken widget rather than an absent one. */
     function standDown() {
       if (designMode) {
-        show(line(root.dataset.msgError, 'tackquote-tiers__error'));
+        show(line(root.dataset.msgError, 'tackquote-breaks__error'));
         return;
       }
       root.hidden = true;
@@ -89,10 +89,10 @@
 
     function table(data) {
       const el = document.createElement('table');
-      el.className = 'tackquote-tiers__table';
+      el.className = 'tackquote-breaks__table';
 
       const caption = document.createElement('caption');
-      caption.className = 'tackquote-tiers__caption';
+      caption.className = 'tackquote-breaks__caption';
       caption.textContent = root.dataset.msgCaption;
       el.appendChild(caption);
 
@@ -124,7 +124,7 @@
       // block hides, exactly as it does for `unpriced`.
       if (data.status !== 'priced') {
         if (designMode) {
-          show(line(root.dataset.msgEmpty, 'tackquote-tiers__error'));
+          show(line(root.dataset.msgEmpty, 'tackquote-breaks__error'));
           return;
         }
         root.hidden = true;
@@ -137,7 +137,7 @@
       // tenant's list prices. Labelling one as the other is the failure the
       // whole wholesale surface exists to avoid.
       if (!data.accountSpecific) {
-        wrap.appendChild(line(root.dataset.msgListNote, 'tackquote-tiers__note'));
+        wrap.appendChild(line(root.dataset.msgListNote, 'tackquote-breaks__note'));
       }
       show(wrap);
     }
@@ -157,7 +157,7 @@
       // Rule 3, first half: paint what we already know before asking anything.
       if (cached) render(cached);
 
-      ns.fetchJson(`${proxy}/volume-tiers?sku=${encodeURIComponent(sku)}`)
+      ns.fetchJson(`${proxy}/quantity-breaks?sku=${encodeURIComponent(sku)}`)
         .then((data) => {
           // A slow reply for a variant the shopper has already navigated away
           // from must not overwrite a newer one.

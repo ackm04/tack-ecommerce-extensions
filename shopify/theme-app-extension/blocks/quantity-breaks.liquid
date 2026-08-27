@@ -12,8 +12,8 @@
   {%- endif -%}
 {%- else -%}
   <div
-    class="tackquote-block tackquote-tiers"
-    data-tackquote-mode="tiers"
+    class="tackquote-block tackquote-breaks"
+    data-tackquote-mode="quantity-breaks"
     data-tackquote-proxy="{{ proxy_path | escape }}"
     data-tackquote-variant="{{ variant.id }}"
     {%- comment -%}
@@ -30,20 +30,20 @@
     {%- endcomment -%}
     data-tackquote-customer="{{ customer.id }}"
     data-tackquote-design="{% if request.design_mode %}true{% else %}false{% endif %}"
-    data-msg-caption="{{ 'tackquote.tiers.caption' | t | escape }}"
-    data-msg-quantity="{{ 'tackquote.tiers.quantity' | t | escape }}"
-    data-msg-price="{{ 'tackquote.tiers.price' | t | escape }}"
-    data-msg-list-note="{{ 'tackquote.tiers.list_note' | t | escape }}"
-    data-msg-empty="{{ 'tackquote.tiers.empty' | t | escape }}"
-    data-msg-error="{{ 'tackquote.tiers.error' | t | escape }}"
+    data-msg-caption="{{ 'tackquote.quantity_breaks.caption' | t | escape }}"
+    data-msg-quantity="{{ 'tackquote.quantity_breaks.quantity' | t | escape }}"
+    data-msg-price="{{ 'tackquote.quantity_breaks.price' | t | escape }}"
+    data-msg-list-note="{{ 'tackquote.quantity_breaks.list_note' | t | escape }}"
+    data-msg-empty="{{ 'tackquote.quantity_breaks.empty' | t | escape }}"
+    data-msg-error="{{ 'tackquote.quantity_breaks.error' | t | escape }}"
     {{ block.shopify_attributes }}
   >
     {% render 'tackquote-selection', product: product %}
-    <h3 class="tackquote-tiers__heading">
-      {{ block.settings.heading | default: 'Volume pricing' }}
+    <h3 class="tackquote-breaks__heading">
+      {{ block.settings.heading | default: 'Quantity pricing' }}
     </h3>
-    <div class="tackquote-tiers__body" data-tackquote-tiers-body role="status" aria-live="polite">
-      <p class="tackquote-tiers__loading">{{ 'tackquote.tiers.loading' | t }}</p>
+    <div class="tackquote-breaks__body" data-tackquote-breaks-body role="status" aria-live="polite">
+      <p class="tackquote-breaks__loading">{{ 'tackquote.quantity_breaks.loading' | t }}</p>
     </div>
   </div>
 
@@ -52,13 +52,13 @@
 
 {% schema %}
 {
-  "name": "Volume Pricing",
+  "name": "Quantity Breaks",
   "target": "section",
   "enabled_on": {
     "templates": ["product"]
   },
   "stylesheet": "tackquote.css",
-  "javascript": "tackquote-tiers.js",
+  "javascript": "tackquote-quantity-breaks.js",
   "settings": [
     {
       "type": "paragraph",
@@ -79,12 +79,12 @@
       "type": "text",
       "id": "heading",
       "label": "Heading",
-      "default": "Volume pricing"
+      "default": "Quantity pricing"
     }
   ],
   "presets": [
     {
-      "name": "Volume Pricing"
+      "name": "Quantity Breaks"
     }
   ]
 }

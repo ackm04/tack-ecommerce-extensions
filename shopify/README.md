@@ -7,7 +7,7 @@ Six app blocks a merchant drags onto a page from the theme editor:
 | **Add to Quote** | product | Adds the selected variant and quantity to a running quote request, then opens the drawer. |
 | **Request a Quote** | product | Opens the quote request form for this product alone. |
 | **Wholesale Price** | product | Shows the signed-in customer's B2B price, resolved server-side by TackQuote. |
-| **Volume Pricing** | product | The quantity-break ladder for this product. |
+| **Quantity Breaks** | product | The quantity-break ladder for this product. |
 | **Buyer Group Badge** | product, cart, page | "Your pricing tier — Tier 2", when the shopper is in a TackQuote buyer group. |
 | **Wholesale Application** | page, home | The merchant's wholesale account application form. |
 
@@ -26,7 +26,7 @@ this directory.
 - **An Online Store 2.0 theme.** App blocks need JSON templates and sections that render
   blocks of type `@app`. On a vintage theme the blocks cannot be added at all.
 - The TackQuote Shopify app installed on the store.
-- For the four blocks that READ from TackQuote — Wholesale Price, Volume Pricing, Buyer
+- For the four blocks that READ from TackQuote — Wholesale Price, Quantity Breaks, Buyer
   Group Badge and Wholesale Application — the app proxy, which ships in `shopify.app.toml`.
   The two button blocks write instead, and do not use it.
 
@@ -128,7 +128,7 @@ verification and block are complete and fail closed until it lands.
 
 ---
 
-## Volume Pricing: which ladder it shows, and who sees it
+## Quantity Breaks: which ladder it shows, and who sees it
 
 TackQuote has **three** quantity-break stores and only two of them price anything. The
 block renders the two that do — `price_book_entries` and `catalog_products.tier_prices` —

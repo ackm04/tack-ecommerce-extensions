@@ -151,7 +151,7 @@ export const EXPECTED_TEMPLATES = {
   'add-to-quote.liquid': ['product'],
   'request-a-quote.liquid': ['product'],
   'wholesale-price.liquid': ['product'],
-  'volume-tiers.liquid': ['product'],
+  'quantity-breaks.liquid': ['product'],
   'wholesale-signup.liquid': ['page', 'index'],
   // The only block that is not about the item being viewed. A buyer's group is
   // a fact about their ACCOUNT, so it is equally meaningful beside a product,
