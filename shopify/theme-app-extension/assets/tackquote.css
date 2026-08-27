@@ -111,6 +111,97 @@
   text-decoration: underline;
 }
 
+/* ------------------------------------------------------- volume tier table */
+
+.tackquote-tiers__heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/*
+ * The table scrolls inside its own box rather than widening the page. A merchant
+ * can place an app block into a section of any width, including a narrow sidebar
+ * on a phone, and a two-column price table that overflows would push the whole
+ * product page sideways.
+ */
+.tackquote-tiers__body {
+  overflow-x: auto;
+}
+
+.tackquote-tiers__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+/* Visually hidden, still announced. The caption is what tells a screen-reader
+ * user what the two columns are for when they land on the table out of context;
+ * sighted users already have the block heading directly above it. */
+.tackquote-tiers__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tackquote-tiers__table th,
+.tackquote-tiers__table td {
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  text-align: left;
+  border-bottom: 1px solid currentColor;
+  /* currentColor at full strength would out-weigh the theme's own rules. */
+  border-bottom-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.tackquote-tiers__table thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.tackquote-tiers__table tbody th {
+  font-weight: 600;
+}
+
+.tackquote-tiers__table tr:last-child th,
+.tackquote-tiers__table tr:last-child td {
+  border-bottom: 0;
+}
+
+.tackquote-tiers__note,
+.tackquote-tiers__loading,
+.tackquote-tiers__error {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+/* -------------------------------------------------------- buyer group badge */
+
+.tackquote-badge__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.tackquote-badge__label {
+  opacity: 0.75;
+}
+
+.tackquote-badge__name {
+  font-weight: 600;
+}
+
 /* ----------------------------------------------------------------- drawer */
 
 .tackquote-drawer {

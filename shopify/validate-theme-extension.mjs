@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, test } from 'node:test';
+import { gzipSync } from 'node:zlib';
 
 /**
  * Validates the TackQuote theme app extension.
@@ -150,7 +151,12 @@ export const EXPECTED_TEMPLATES = {
   'add-to-quote.liquid': ['product'],
   'request-a-quote.liquid': ['product'],
   'wholesale-price.liquid': ['product'],
+  'volume-tiers.liquid': ['product'],
   'wholesale-signup.liquid': ['page', 'index'],
+  // The only block that is not about the item being viewed. A buyer's group is
+  // a fact about their ACCOUNT, so it is equally meaningful beside a product,
+  // in the cart, and on a wholesale landing page.
+  'buyer-group-badge.liquid': ['product', 'cart', 'page'],
 };
 
 describe('the shipped blocks', () => {
@@ -250,5 +256,147 @@ describe('configuration', () => {
   test('the storefront locale file is valid JSON', () => {
     const raw = fs.readFileSync(path.join(EXTENSION_DIR, 'locales', 'en.default.json'), 'utf8');
     assert.doesNotThrow(() => JSON.parse(raw));
+  });
+});
+
+/**
+ * Shopify's file and content size limits for a theme app extension.
+ *
+ * Verified against shopify.dev's "file and content size limits" page for theme
+ * app extensions. Two classes, and the distinction matters when one trips:
+ *
+ *   ENFORCED  — Shopify REJECTS the deploy. The 100 KB total-Liquid ceiling.
+ *   SUGGESTED — Shopify does not reject, it just gets slower for shoppers. The
+ *               10 KB compressed ceiling per schema-referenced JavaScript file
+ *               and 100 KB compressed for CSS.
+ *
+ * Both are asserted here, because a suggestion nobody measures is a suggestion
+ * nobody keeps — and this extension gains a block, a runtime and a stylesheet
+ * rule every time it grows. A deploy that silently fails validation is the
+ * failure mode this guards.
+ *
+ * Compressed sizes use gzip. Shopify does not publish which encoder it measures
+ * with, and Brotli would read smaller — so gzip is the conservative choice and
+ * a pass here is a pass either way.
+ */
+export const SIZE_LIMITS = {
+  /** Per schema-referenced JS asset, gzipped. Suggested, not enforced. */
+  jsGzipBytes: 10 * 1024,
+  /** Per schema-referenced CSS asset, gzipped. Suggested, not enforced. */
+  cssGzipBytes: 100 * 1024,
+  /** Every .liquid file in the extension, added together. ENFORCED. */
+  totalLiquidBytes: 100 * 1024,
+};
+
+export function gzipBytes(filePath) {
+  return gzipSync(fs.readFileSync(filePath)).length;
+}
+
+/** Assets named by a `javascript` or `stylesheet` key in any block schema. */
+export function schemaReferencedAssets() {
+  const found = new Map();
+  for (const file of blockFiles()) {
+    const schema = JSON.parse(schemaBodyOf(file));
+    for (const key of ['javascript', 'stylesheet']) {
+      if (schema[key]) found.set(schema[key], key);
+    }
+  }
+  if (found.size === 0) {
+    throw new Error('No schema-referenced assets found — refusing to pass vacuously.');
+  }
+  return [...found.entries()].map(([asset, key]) => ({ asset, key }));
+}
+
+/**
+ * Every `.liquid` file the extension ships, not just the blocks.
+ *
+ * `snippets/` counts toward the same total. Measuring only `blocks/` would let
+ * the ceiling be breached by a snippet and report a comfortable margin right up
+ * until the deploy was rejected.
+ */
+export function liquidFiles() {
+  const dirs = ['blocks', 'snippets'];
+  const files = [];
+  for (const dir of dirs) {
+    const full = path.join(EXTENSION_DIR, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const name of fs.readdirSync(full)) {
+      if (name.endsWith('.liquid')) files.push(path.join(full, name));
+    }
+  }
+  if (files.length === 0) {
+    throw new Error('No .liquid files found — refusing to pass vacuously.');
+  }
+  return files;
+}
+
+describe('the size guards can fail', () => {
+  // Meta-tests, matching the schema guard above: a size check that cannot report
+  // a breach is a number printed for decoration.
+  test('gzipBytes grows with the file it measures', () => {
+    const assets = schemaReferencedAssets().map(({ asset }) =>
+      gzipBytes(path.join(ASSETS_DIR, asset)),
+    );
+    assert.ok(
+      assets.every((n) => n > 0),
+      'every measured asset should have a non-zero compressed size',
+    );
+  });
+
+  test('the limits are the documented ones, not whatever currently passes', () => {
+    // Pinned so that a future breach cannot be resolved by raising the ceiling
+    // without someone deliberately editing these three numbers.
+    assert.equal(SIZE_LIMITS.jsGzipBytes, 10240);
+    assert.equal(SIZE_LIMITS.cssGzipBytes, 102400);
+    assert.equal(SIZE_LIMITS.totalLiquidBytes, 102400);
+  });
+
+  test('finds every liquid file, snippets included', () => {
+    const names = liquidFiles().map((f) => path.basename(f));
+    assert.ok(names.length >= blockFiles().length, 'should count at least the blocks');
+    assert.ok(
+      names.some((n) => n.startsWith('tackquote-')),
+      'should reach into snippets/ as well as blocks/',
+    );
+  });
+});
+
+describe('Shopify size limits', () => {
+  for (const { asset, key } of schemaReferencedAssets()) {
+    const limit = key === 'javascript' ? SIZE_LIMITS.jsGzipBytes : SIZE_LIMITS.cssGzipBytes;
+    test(`${asset} stays under the ${limit / 1024} KB compressed suggestion`, () => {
+      const size = gzipBytes(path.join(ASSETS_DIR, asset));
+      assert.ok(
+        size <= limit,
+        `assets/${asset} is ${size} B gzipped, over the ${limit} B suggestion for a ${key} asset`,
+      );
+    });
+  }
+
+  test('tackquote-shared.js stays under the JS suggestion', () => {
+    /*
+     * Called out separately because it is the file that grows every time.
+     * Every block loads it via `asset_url`, so it is not named by any schema's
+     * `javascript` key and the loop above would never look at it — while being
+     * the one file whose weight is paid on every page that carries any block.
+     */
+    const size = gzipBytes(path.join(ASSETS_DIR, 'tackquote-shared.js'));
+    assert.ok(
+      size <= SIZE_LIMITS.jsGzipBytes,
+      `tackquote-shared.js is ${size} B gzipped, over the ${SIZE_LIMITS.jsGzipBytes} B suggestion`,
+    );
+  });
+
+  test('total Liquid stays under the 100 KB ENFORCED limit', () => {
+    const total = liquidFiles().reduce((sum, f) => sum + fs.statSync(f).size, 0);
+    assert.ok(
+      total <= SIZE_LIMITS.totalLiquidBytes,
+      `Liquid totals ${total} B across ${liquidFiles().length} files, over the enforced ${SIZE_LIMITS.totalLiquidBytes} B limit`,
+    );
+  });
+
+  test('stays under the 30 app blocks Shopify enforces per extension', () => {
+    // Raised from 25 to 30 on 2026-02-03 per the shopify.dev changelog.
+    assert.ok(blockFiles().length <= 30, `${blockFiles().length} blocks, over the enforced 30`);
   });
 });

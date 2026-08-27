@@ -43,6 +43,19 @@
       "success": "Thanks. Your wholesale application is with us and we will be in touch.",
       "error": "We could not send that. Please try again.",
       "required": "Please complete the required fields."
+    },
+    "tiers": {
+      "loading": "Loading volume pricing",
+      "caption": "Price per unit by quantity",
+      "quantity": "Quantity",
+      "price": "Price each",
+      "list_note": "List prices, not a negotiated rate.",
+      "empty": "No volume pricing is published for this item.",
+      "error": "We could not load volume pricing just now."
+    },
+    "badge": {
+      "label": "Your pricing tier",
+      "empty": "No buyer group applies to this shopper."
     }
   }
 }

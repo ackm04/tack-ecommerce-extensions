@@ -1,0 +1,91 @@
+{%- liquid
+  assign proxy_path = block.settings.proxy_path | strip | remove_last: '/'
+  assign variant = product.selected_or_first_available_variant
+-%}
+
+{%- if proxy_path == blank -%}
+  {%- if request.design_mode -%}
+    <div class="tackquote-setup" {{ block.shopify_attributes }}>
+      <strong>{{ 'tackquote.setup.title' | t }}</strong>
+      <p>{{ 'tackquote.setup.proxy' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
+  <div
+    class="tackquote-block tackquote-tiers"
+    data-tackquote-mode="tiers"
+    data-tackquote-proxy="{{ proxy_path | escape }}"
+    data-tackquote-variant="{{ variant.id }}"
+    {%- comment -%}
+      Two attributes that are NOT identity and must never be read as such.
+
+      `customer` only partitions the per-tab cache, so that logging out in the
+      same tab cannot surface a ladder the previous session was entitled to see.
+      The identity that decides the ladder is `logged_in_customer_id`, which
+      Shopify injects into the proxy request and signs; anything emitted here is
+      just markup a shopper can edit.
+
+      `design` suspends the fail-quiet behaviour: a merchant placing the block in
+      the theme editor needs to see it failing, a shopper does not.
+    {%- endcomment -%}
+    data-tackquote-customer="{{ customer.id }}"
+    data-tackquote-design="{% if request.design_mode %}true{% else %}false{% endif %}"
+    data-msg-caption="{{ 'tackquote.tiers.caption' | t | escape }}"
+    data-msg-quantity="{{ 'tackquote.tiers.quantity' | t | escape }}"
+    data-msg-price="{{ 'tackquote.tiers.price' | t | escape }}"
+    data-msg-list-note="{{ 'tackquote.tiers.list_note' | t | escape }}"
+    data-msg-empty="{{ 'tackquote.tiers.empty' | t | escape }}"
+    data-msg-error="{{ 'tackquote.tiers.error' | t | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    {% render 'tackquote-selection', product: product %}
+    <h3 class="tackquote-tiers__heading">
+      {{ block.settings.heading | default: 'Volume pricing' }}
+    </h3>
+    <div class="tackquote-tiers__body" data-tackquote-tiers-body role="status" aria-live="polite">
+      <p class="tackquote-tiers__loading">{{ 'tackquote.tiers.loading' | t }}</p>
+    </div>
+  </div>
+
+  <script src="{{ 'tackquote-shared.js' | asset_url }}" async></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Volume Pricing",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "stylesheet": "tackquote.css",
+  "javascript": "tackquote-tiers.js",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Shows the quantity-break ladder for this product. Every price comes from TackQuote's own pricing engine, so this table and the Wholesale Price block can never disagree."
+    },
+    {
+      "type": "paragraph",
+      "content": "Signed-in wholesale customers see their own ladder. Logged-out visitors see nothing unless you have published a public ladder in TackQuote — see the Shopify connector guide."
+    },
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/tackquote",
+      "info": "Must match Settings > Apps and sales channels > TackQuote > App proxy. Change it here if you renamed the proxy URL there."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Volume pricing"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Volume Pricing"
+    }
+  ]
+}
+{% endschema %}

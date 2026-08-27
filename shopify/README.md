@@ -1,12 +1,19 @@
 # TackQuote for Shopify — Theme App Extension
 
-Three app blocks a merchant drags onto a product page from the theme editor:
+Six app blocks a merchant drags onto a page from the theme editor:
 
-| Block | What it does |
-| --- | --- |
-| **Add to Quote** | Adds the selected variant and quantity to a running quote request, then opens the drawer. |
-| **Request a Quote** | Opens the quote request form for this product alone. |
-| **Wholesale Price** | Shows the signed-in customer's B2B price, resolved server-side by TackQuote. |
+| Block | Where | What it does |
+| --- | --- | --- |
+| **Add to Quote** | product | Adds the selected variant and quantity to a running quote request, then opens the drawer. |
+| **Request a Quote** | product | Opens the quote request form for this product alone. |
+| **Wholesale Price** | product | Shows the signed-in customer's B2B price, resolved server-side by TackQuote. |
+| **Volume Pricing** | product | The quantity-break ladder for this product. |
+| **Buyer Group Badge** | product, cart, page | "Your pricing tier — Tier 2", when the shopper is in a TackQuote buyer group. |
+| **Wholesale Application** | page, home | The merchant's wholesale account application form. |
+
+The first five are product-page furniture; the application form is not about a product at
+all, which is why it is pinned to different templates. The badge is the only one that is a
+statement about the *account* rather than the item, so it is equally at home in the cart.
 
 This is the Shopify counterpart to the WooCommerce catalog-mode work — same intent,
 Shopify's extension model instead of PHP hooks. Licensed MIT, like every extension in
@@ -19,7 +26,9 @@ this directory.
 - **An Online Store 2.0 theme.** App blocks need JSON templates and sections that render
   blocks of type `@app`. On a vintage theme the blocks cannot be added at all.
 - The TackQuote Shopify app installed on the store.
-- For the price block only: the app proxy, which ships in `shopify.app.toml`.
+- For the four blocks that READ from TackQuote — Wholesale Price, Volume Pricing, Buyer
+  Group Badge and Wholesale Application — the app proxy, which ships in `shopify.app.toml`.
+  The two button blocks write instead, and do not use it.
 
 App blocks **cannot render on checkout pages** and have no access to
 `content_for_header`, `content_for_layout`, or any parent-section property other than
@@ -50,7 +59,7 @@ URL that defaults to `https://api.tackquote.com/v1`. Until the tenant id is set 
 renders nothing on the storefront — and a setup notice in the theme editor, which is the
 only place a merchant can act on it.
 
-The price block takes the **app proxy path**, default `/apps/tackquote`. It is a setting
+The four reading blocks each take the **app proxy path**, default `/apps/tackquote`. It is a setting
 rather than a constant because merchants can rename the proxy under *Settings → Apps and
 sales channels → TackQuote → App proxy*; the value is immutable per store once installed,
 and a change in app config only applies to new installations.
@@ -119,6 +128,60 @@ verification and block are complete and fail closed until it lands.
 
 ---
 
+## Volume Pricing: which ladder it shows, and who sees it
+
+TackQuote has **three** quantity-break stores and only two of them price anything. The
+block renders the two that do — `price_book_entries` and `catalog_products.tier_prices` —
+and deliberately not `volume_tiers`.
+
+`volume_tiers` holds a `discountPct`, and a discount only means something beside the number
+it is taken from. That table does not store that number, and for a logged-out visitor we do
+not know it. Rendering it would also put a figure on the product page that the **Wholesale
+Price block on the same page would contradict**, since that block prices through the other
+two mechanisms. Two of our own blocks disagreeing about price on one page is worse than one
+block being absent.
+
+So every rung is produced by the same server-side price resolution the Wholesale Price
+block uses, evaluated at that rung's quantity. The two can never disagree, because they are
+the same computation.
+
+Two consequences a merchant will notice:
+
+- **Rungs that repeat the price above them are dropped.** Break quantities are unioned from
+  both ladders, so a SKU can produce four candidates where only two prices exist. Showing
+  "10+ $7.50" directly beneath "1+ $7.50" invites a shopper to buy ten of something to save
+  nothing. A rung only appears where the price actually moves — and if nothing moves, the
+  block hides.
+- **Logged-out visitors see nothing by default.** Volume breaks are usually public
+  marketing and the merchant will often want them shown, but publishing a wholesale ladder
+  is their call and cannot be undone once a competitor has read it. A tenant admin turns it
+  on with `PATCH /v1/tenants/me/settings` → `{"storefront":{"publicVolumeTiers":true}}`.
+  There is no checkbox for it in the seller portal yet.
+
+When it is on, the public ladder is the **catalogue** ladder and never a price book, even
+the default one — an anonymous shopper is shown list prices, labelled as list prices.
+
+---
+
+## Buyer Group Badge
+
+Reads the shopper's group from TackQuote and renders a chip. Four outcomes, and three of
+them render **nothing at all**: signed out, signed in but not linked to a TackQuote buyer,
+and linked but in no group. An empty chip beside a product reads as a broken feature rather
+than an absent one.
+
+The natural sentence is "You're on Tier 2 pricing", and Shopify's locale files do support
+that placeholder — the localization guide shows single-brace interpolation filled in by the
+`t` filter. The catch is *where the value comes from*: `t` interpolates in Liquid, on
+Shopify's side, at render time, and the group name is not known until the proxy answers.
+The template would have to reach the browser with `{group}` still in it, which means calling
+`t` without passing `group` and trusting the filter to leave the token alone — behaviour
+shopify.dev does not document, and whose two plausible outcomes differ by a shopper seeing a
+literal `{group}` on a product page. So the badge is a label and a name in two elements
+instead. No interpolation, and not hostage to English word order.
+
+---
+
 ## Notes for whoever edits this next
 
 - **`{% schema %}` JSON supports no comments and no trailing commas**, unlike theme
@@ -154,9 +217,26 @@ No dependencies — it uses Node's built-in test runner, because this repository
 ships PHP and Liquid and has no JS toolchain.
 
 It checks the real blocks, not just itself: schema JSON validity, required keys,
-`target: "section"`, product-template gating, that declared `stylesheet` /
-`javascript` assets exist, unique setting ids, and that the config file stays
-minimal.
+`target: "section"`, per-block template gating, that declared `stylesheet` /
+`javascript` assets exist, unique setting ids, that every `| t` key resolves in
+`en.default.json`, and that the config file stays minimal.
+
+It also enforces **Shopify's size limits**, which are otherwise invisible until a
+deploy is rejected or a storefront quietly gets slower:
+
+| Limit | Value | Class |
+| --- | --- | --- |
+| App blocks per extension | 30 | **Enforced** — deploy rejected |
+| All Liquid, added together | 100 KB | **Enforced** |
+| JS per schema-referenced file, gzipped | 10 KB | Suggested |
+| CSS, gzipped | 100 KB | Suggested |
+
+Measured with gzip rather than Brotli: Shopify does not publish which encoder it
+counts with, and gzip is the conservative reading, so a pass here passes either way.
+`tackquote-shared.js` gets its own assertion because every block loads it through
+`asset_url` — it is named by no schema's `javascript` key, so the schema-driven loop
+would never look at it, and it is the one file whose weight is paid on every page
+carrying any block.
 
 **The check that earns its place is the comment rule.** Shopify's schema JSON
 supports neither comments nor trailing commas — unlike ordinary theme files, where
