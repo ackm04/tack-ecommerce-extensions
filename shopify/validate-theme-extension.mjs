@@ -237,9 +237,26 @@ describe('storefront translations', () => {
 });
 
 describe('configuration', () => {
-  test('shopify.extension.toml declares only name and type', () => {
+  test('shopify.extension.toml declares name, type and uid, and nothing undocumented', () => {
     // A theme app extension's behaviour is driven by its blocks and their
-    // schema, so its config file is deliberately minimal.
+    // schema, so its config file is deliberately minimal — but "minimal" is not
+    // the same as "name and type only", which is what this test used to assert.
+    //
+    // `uid` is REQUIRED, not merely tolerated. From shopify.dev's
+    // "Migrate to extension user identifiers":
+    //
+    //   "all extensions need to include user identifiers in the uid field of
+    //    their shopify.extension.toml … Non-interactive deploys
+    //    (shopify app deploy --force) and the shopify app dev command will fail
+    //    until you've completed these steps."
+    //
+    // The old assertion therefore failed on a correct file and pointed at the
+    // one key whose removal breaks non-interactive deploys — a test pressuring
+    // a change that would take the release pipeline down. It is recorded here
+    // rather than quietly rewritten, because the failure mode (a green test and
+    // a deploy that no longer runs) is the expensive kind.
+    //
+    // `handle` stays optional: the CLI generates one when it is absent.
     const toml = fs.readFileSync(path.join(EXTENSION_DIR, 'shopify.extension.toml'), 'utf8');
     const keys = toml
       .split('\n')
@@ -247,9 +264,12 @@ describe('configuration', () => {
       .filter((k) => k && !k.startsWith('#') && !k.startsWith('['));
     for (const key of keys) {
       assert.ok(
-        ['name', 'type', 'handle'].includes(key),
+        ['name', 'type', 'uid', 'handle'].includes(key),
         `unexpected key "${key}" in shopify.extension.toml`,
       );
+    }
+    for (const required of ['name', 'type', 'uid']) {
+      assert.ok(keys.includes(required), `shopify.extension.toml is missing "${required}"`);
     }
   });
 
