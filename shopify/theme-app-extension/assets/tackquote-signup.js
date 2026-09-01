@@ -58,6 +58,14 @@
           opt.textContent = String(option);
           control.appendChild(opt);
         }
+      } else if (field.type === 'checkbox') {
+        // A REAL checkbox, not a text box. `checkbox` is one of the seven field
+        // types the seller can configure in TackQuote, and it used to fall
+        // through to the `else` below and render as free text — so a merchant
+        // whose form asks "I agree to the terms" got a box to type into, and
+        // the submission was then rejected outright (see `readValue`).
+        control = document.createElement('input');
+        control.type = 'checkbox';
       } else {
         control = document.createElement('input');
         control.type =
@@ -70,6 +78,26 @@
       control.name = field.key;
       if (field.required) control.required = true;
       return control;
+    }
+
+    /**
+     * The value to send for one field.
+     *
+     * A checkbox MUST travel as a JSON boolean. The API validates it with a
+     * `typeof === 'boolean'` check and answers 400 "<label> must be a checkbox
+     * value" for anything else, so sending `control.value` — which is the string
+     * "on" for a ticked box, and "on" for an unticked one too — made every
+     * submission of every form containing a checkbox fail. Nothing caught it:
+     * the block and the API live in different repositories, so no type check
+     * spans the boundary, and the failure only appears once a merchant adds a
+     * checkbox to their form.
+     *
+     * Every other type travels as a string, including `number` — the API
+     * validates that one with a regex against a string, not a JS number.
+     */
+    function readValue(field, control) {
+      if (field.type === 'checkbox') return control.checked === true;
+      return control.value;
     }
 
     function renderForm(definition) {
@@ -129,7 +157,7 @@
         const values = {};
         for (const field of fields) {
           const control = form.elements.namedItem(field.key);
-          if (control) values[field.key] = control.value;
+          if (control) values[field.key] = readValue(field, control);
         }
 
         ns.fetchJson(`${proxy}/wholesale-signup/${encodeURIComponent(formSlug)}`, {

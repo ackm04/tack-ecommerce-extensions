@@ -236,6 +236,52 @@ describe('storefront translations', () => {
   }
 });
 
+/**
+ * The API and this extension live in DIFFERENT REPOSITORIES, so nothing type
+ * checks across the boundary between them. These assertions stand in for the
+ * check a compiler would otherwise do, and they exist because that gap already
+ * cost us a real defect: the signup block sent `control.value` for every field,
+ * which is the string "on" for a checkbox — ticked or not — while the API
+ * requires a real JSON boolean and answers 400 for anything else. Every
+ * submission of every form containing a checkbox failed, and no test anywhere
+ * could have seen it.
+ *
+ * The API-side contract these mirror (`wholesale-forms.service.ts`):
+ *   ALLOWED_FIELD_TYPES = text | email | tel | textarea | number | select | checkbox
+ *   checkbox  -> must be a JSON boolean
+ *   all other -> must be a string (including `number`, validated by regex)
+ */
+describe('the signup block matches the API wire contract', () => {
+  const signupSource = fs.readFileSync(
+    path.join(EXTENSION_DIR, 'assets', 'tackquote-signup.js'),
+    'utf8',
+  );
+  // Comments stripped before matching. The first run of these assertions failed
+  // on the file's OWN PROSE: the docblock explains why this route skips
+  // Turnstile, and a bare /turnstile/i read that explanation as the defect —
+  // which pressures whoever hits it into deleting the explanation to get green.
+  const signup = signupSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  test('renders a real checkbox for a checkbox field', () => {
+    assert.match(signup, /field\.type === 'checkbox'/);
+    assert.match(signup, /control\.type = 'checkbox'/);
+  });
+
+  test('sends a checkbox as a boolean, never as control.value', () => {
+    assert.match(signup, /if \(field\.type === 'checkbox'\) return control\.checked === true;/);
+    // The defect shape: reading `.value` straight into the payload sends "on".
+    assert.doesNotMatch(signup, /values\[field\.key\] = control\.value/);
+  });
+
+  test('posts exactly { values }, because the API forbids unknown top-level keys', () => {
+    // main.ts runs ValidationPipe with forbidNonWhitelisted, so any extra
+    // top-level key is a 400 — including a Turnstile token, which this route
+    // deliberately does not accept.
+    assert.match(signup, /body: JSON\.stringify\(\{ values \}\)/);
+    assert.doesNotMatch(signup, /turnstile/i);
+  });
+});
+
 describe('configuration', () => {
   test('shopify.extension.toml declares name, type and uid, and nothing undocumented', () => {
     // A theme app extension's behaviour is driven by its blocks and their
