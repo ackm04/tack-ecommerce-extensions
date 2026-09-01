@@ -306,7 +306,7 @@ Shopware Admin → **Extensions → My extensions → TackQuote → Configure**:
 |---|---|
 | API base URL | Default `https://api.tackquote.com/v1`. Use `http://localhost:3001/v1` for local dev (or the API's container hostname when Shopware runs in Docker). |
 | Tenant slug | Your TackQuote workspace slug (e.g. `demo`). **Required** — with no slug the client throws and the button cannot submit. |
-| API key | From TackQuote → Settings → Developer → API Keys. Stored for future use; not sent by this version of the plugin (see gap above). |
+| API key | From TackQuote → Settings → Developer → API Keys. Sent as `X-API-Key` on the connection test (`GET /integrations/shopware/ping`), and NOT on quote submission — see the note below. |
 | Show "Request a Quote" button | Toggles the storefront button. Default on. |
 | Button label | Default `Request a Quote`. |
 | Run this storefront as a quote-only B2B catalog | Master switch for quote-only mode. Default **off**. |
@@ -359,7 +359,17 @@ config storage for a future tighter integration.
   Shopware storefront plugin (`src/Resources/app/storefront`) — simplest
   path to a working button without requiring the theme asset pipeline. A
   follow-up could migrate it to a proper `PluginBaseClass`-based JS module.
-- `apiKey` config field is not yet used by any request (see gap above).
+- `apiKey` is used by the connection test only. `TackQuoteApiClient::ping()` sends it as
+  `X-API-Key` (`src/Service/TackQuoteApiClient.php:111`), but quote submission posts to
+  `POST {apiUrl}/widget/quote-request` (`:198`) — the unauthenticated widget endpoint,
+  which resolves the tenant from `tenantSlug` in the body rather than from the signed key.
+
+  This is a real difference from the other five storefront plugins, not a documentation
+  detail. They post to `POST /integrations/<platform>/quote-requests`, which is API-key
+  authenticated and derives the tenant from the key. Shopware quotes therefore carry no
+  plugin tagging, no catalog product upsert, and no API-key tenant binding. There is no
+  `integrations/shopware/quote-requests` route on the API to point at yet — the Shopware
+  plugin controller serves `ping` and nothing else.
 - The public widget endpoint is throttled to **5 requests / 60s**, which is shared
   across all callers of that route — fine for a product page, but it will reject bursts.
 - Only Shopware 6.6 has been tested (see *Tested version*).

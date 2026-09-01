@@ -119,6 +119,8 @@ In this monorepo the same files sit flat under `integrations/zencart/`
    - **TackQuote API URL** — defaults to `https://api.tackquote.com/v1`.
    - **TackQuote API Key** — create one in TackQuote under Settings ▸
      Developer ▸ API Keys.
+
+     > **The key must carry the `quotes:write` scope.** *Test connection* uses the unscoped `ping` route, so a key without it passes the test and then fails every real quote submission with a 403.
    - **Show "Request a Quote" button** — `true`/`false`.
    - **Button label** — e.g. "Request a Quote" or "Get a B2B quote".
    - **TackQuote connector token** — *optional; only needed for catalog/order

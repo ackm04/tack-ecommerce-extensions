@@ -396,6 +396,8 @@ value it asserts on is literally the route OpenCart would construct and execute
    - **TackQuote API URL** — `https://api.tackquote.com/v1`.
    - **TackQuote API Key** — TackQuote → Settings → Developer → API Keys. Used by
      the storefront button. Click **Test connection**.
+
+     > **The key must carry the `quotes:write` scope.** *Test connection* uses the unscoped `ping` route, so a key without it passes the test and then fails every real quote submission with a 403.
    - **Catalog / order feed token** — *optional; only needed for catalog/order
      sync.* Generate a long random URL-safe string (`openssl rand -hex 32`),
      paste it here **and** into TackQuote → Settings → Integrations → OpenCart.

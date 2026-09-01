@@ -18,6 +18,8 @@ TackQuote's [Terms of Service](https://tackquote.com/terms) and
 3. Activate the plugin.
 4. Go to **TackQuote** in the admin menu and paste your **TackQuote API key** (found in TackQuote under **Settings → Developer → API Keys**). Click **Test TackQuote connection** to verify.
 
+   > **The key must carry the `quotes:write` scope.** *Test connection* uses the unscoped `ping` route, so a key without it passes the test and then fails every real quote submission with a 403. Order sync additionally needs `orders:write`.
+
 ## Requirements
 
 - WordPress 6.0+

@@ -34,6 +34,8 @@ This directory is source only. No PrestaShop Addons listing is claimed.
    and paste your **TackQuote API key** (create one in TackQuote under
    Settings > Developer > API Keys — the same kind of key the WooCommerce
    plugin uses).
+
+   > **The key must carry the `quotes:write` scope.** *Test connection* uses the unscoped `ping` route, so a key without it passes the test and then fails every real quote submission with a 403.
 5. Click **Save**, then **Test TackQuote connection** to confirm connectivity.
 6. Toggle "Show 'Request a Quote' button on product pages" and set the button
    label as desired.
