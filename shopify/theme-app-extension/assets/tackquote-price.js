@@ -110,6 +110,27 @@
       }
 
       if (data.status === 'unlinked') {
+        // `unlinked` means two different things and the server now says which.
+        //
+        // `shop_not_installed` is a MERCHANT condition — the store has no
+        // TackQuote install — and the install check runs before the anonymous
+        // one, so it reaches even logged-out visitors. Showing them the
+        // wholesale CTA offers help that cannot arrive: applying for access to
+        // a store that is not connected does nothing. Render nothing at all and
+        // let the merchant find it in their own setup, rather than putting a
+        // dead prompt in front of every shopper.
+        //
+        // Older servers send no `reason`. Absence therefore keeps the previous
+        // behaviour exactly, so this block is safe against an un-updated API.
+        //
+        // `standDown()` rather than a bare hide, and that is the useful part:
+        // in the theme editor it shows the merchant the error message, and on a
+        // live storefront it hides. So the person who can fix a broken install
+        // is the one who is told about it, which is what the issue asked for.
+        if (data.reason === 'shop_not_installed') {
+          standDown();
+          return;
+        }
         show(line(root.dataset.msgUnlinked));
         return;
       }
