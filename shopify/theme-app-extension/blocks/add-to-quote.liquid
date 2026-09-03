@@ -1,10 +1,9 @@
 {%- liquid
-  assign tenant_id = block.settings.tenant_id | strip
-  assign api_base = block.settings.api_base_url | strip | remove_last: '/'
+  assign proxy_path = block.settings.proxy_path | strip | remove_last: '/'
   assign variant = product.selected_or_first_available_variant
 -%}
 
-{%- if tenant_id == blank or api_base == blank -%}
+{%- if proxy_path == blank -%}
   {%- if request.design_mode -%}
     <div class="tackquote-setup" {{ block.shopify_attributes }}>
       <strong>{{ 'tackquote.setup.title' | t }}</strong>
@@ -15,8 +14,7 @@
   <div
     class="tackquote-block tackquote-add"
     data-tackquote-mode="add"
-    data-tackquote-tenant="{{ tenant_id | escape }}"
-    data-tackquote-api="{{ api_base | escape }}"
+    data-tackquote-proxy="{{ proxy_path | escape }}"
     data-tackquote-product="{{ product.title | escape }}"
     data-tackquote-variant="{{ variant.id }}"
     data-tackquote-currency="{{ cart.currency.iso_code | default: shop.currency }}"
@@ -50,20 +48,11 @@
   "javascript": "tackquote-quote.js",
   "settings": [
     {
-      "type": "paragraph",
-      "content": "Find your Tenant ID in TackQuote under Settings. The block stays hidden from shoppers until it is set."
-    },
-    {
       "type": "text",
-      "id": "tenant_id",
-      "label": "TackQuote Tenant ID"
-    },
-    {
-      "type": "text",
-      "id": "api_base_url",
-      "label": "TackQuote API URL",
-      "default": "https://api.tackquote.com/v1",
-      "info": "Change this only on a dedicated or self-hosted TackQuote instance."
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/tackquote",
+      "info": "Must match the subpath configured for the TackQuote app proxy."
     },
     {
       "type": "text",

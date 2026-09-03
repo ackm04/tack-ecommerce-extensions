@@ -87,11 +87,13 @@
     button.disabled = true;
     status.textContent = el.dataset.msgSending;
 
-    fetch(`${ctx.apiBase}/widget/quotes`, {
+    // Through the App Proxy, on the MERCHANT'S OWN domain. Shopify signs `shop`
+    // and forwards it, so the server derives the tenant from that signature —
+    // there is no tenantId in this body, and no tenant id in the theme editor.
+    fetch(`${ctx.proxy}/quote-request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tenantId: ctx.tenantId,
         currency: ctx.currency,
         buyer: {
           name: name,
@@ -150,11 +152,10 @@
   ns.boot(
     '.tackquote-block[data-tackquote-mode="add"], .tackquote-block[data-tackquote-mode="request"]',
     (root) => {
-      const apiBase = ns.safeApiBase(root.dataset.tackquoteApi);
-      const tenantId = root.dataset.tackquoteTenant;
+      const proxy = ns.safeProxyPath(root.dataset.tackquoteProxy);
       const button = root.querySelector('[data-tackquote-action]');
       const status = root.querySelector('[data-tackquote-status]');
-      if (!apiBase || !tenantId || !button) return;
+      if (!proxy || !button) return;
 
       const variants = ns.variants(root);
 
@@ -174,8 +175,7 @@
         };
 
         const ctx = {
-          apiBase: apiBase,
-          tenantId: tenantId,
+          proxy: proxy,
           currency: root.dataset.tackquoteCurrency,
           customerName: root.dataset.tackquoteCustomerName,
           customerEmail: root.dataset.tackquoteCustomerEmail,

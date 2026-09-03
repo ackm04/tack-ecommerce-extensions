@@ -25,15 +25,11 @@
   const ns = {};
   window.TackQuote = ns;
 
-  /** Reject anything that is not an absolute https URL, so a mistyped setting cannot become an exfiltration target. */
-  ns.safeApiBase = (raw) => {
-    try {
-      const url = new URL(raw);
-      return url.protocol === 'https:' ? url.origin + url.pathname.replace(/\/+$/, '') : null;
-    } catch (_err) {
-      return null;
-    }
-  };
+  // `safeApiBase` was removed with the last two blocks that took a merchant-typed
+  // API URL (GH-423). Every block now reaches TackQuote through the App Proxy on
+  // the merchant's own domain, so no block needs an absolute URL and none should
+  // grow one back: an unused validator for a caller-supplied API base is an
+  // invitation to re-add the pattern it was guarding.
 
   /** The proxy path must stay same-origin and relative, so it cannot be pointed off-store. */
   ns.safeProxyPath = (raw) => {
