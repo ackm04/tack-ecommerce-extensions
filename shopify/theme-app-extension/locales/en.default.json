@@ -2,8 +2,7 @@
   "tackquote": {
     "setup": {
       "title": "TackQuote is not configured yet",
-      "body": "Add your TackQuote Tenant ID in this block's settings. Until then the block is hidden from shoppers.",
-      "proxy": "Set the app proxy path in this block's settings so the price lookup can reach TackQuote.",
+      "proxy": "Set the app proxy path in this block's settings so this block can reach TackQuote. Until then it is hidden from shoppers.",
       "form_slug": "Set the wholesale application form in this block's settings — it is the form's slug as named in TackQuote."
     },
     "price": {

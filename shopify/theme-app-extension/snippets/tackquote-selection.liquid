@@ -7,6 +7,25 @@
   front of a sales rep as though the buyer had asked for it. TackQuote prices every
   line server-side regardless.
 
+  KNOWN LIMIT — products with more than 250 variants.
+
+  Shopify caps `product.variants` at 250 to stop themes over-fetching, while the
+  merchant-facing variant limit has been 2,048 since October 2025. So on a
+  high-variant product this list is TRUNCATED, and there is no loop bound to
+  raise: the cap is on the object, not on the `for`.
+  https://shopify.dev/docs/storefronts/themes/product-merchandising/variants/support-high-variant-products
+
+  It fails closed, which is why it is recorded here rather than worked around.
+  `ns.findVariant` returns null for a variant past the cap, so the SKU is empty
+  and the price and quantity-break blocks report "unpriced" / hide themselves
+  instead of pricing the wrong variant. Add to Quote still sends the line, with
+  the product title and no SKU.
+
+  The real fix is to stop shipping the variant table at all and resolve the
+  selected variant on demand — the Section Rendering API with `option_values`, or
+  a `?variant=` lookup — which is a larger change than this snippet. Do not
+  "solve" it by raising a limit; there isn't one.
+
   @param {product} product - The product whose variants should be emitted.
   @example
   {% render 'tackquote-selection', product: product %}

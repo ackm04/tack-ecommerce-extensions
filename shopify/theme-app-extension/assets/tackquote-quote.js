@@ -1,10 +1,27 @@
 /*
  * "Add to Quote" and "Request a Quote".
  *
- * Both POST to TackQuote's public widget endpoint with a merchant-configured
- * tenant id. That is a WRITE into the merchant's own drafts which reads nothing
- * back — the same surface every other TackQuote storefront plugin uses. The
- * price block deliberately does NOT work this way; see tackquote-price.js.
+ * Both POST to `<proxy>/quote-request` through the App Proxy, on the MERCHANT's
+ * own domain, exactly like the read blocks. Shopify signs `shop` and the server
+ * derives the tenant from that signature, so no tenant id travels from this page
+ * and there is none to configure in the theme editor.
+ *
+ * This docblock used to say the opposite — "TackQuote's public widget endpoint
+ * with a merchant-configured tenant id" — which was true before these two blocks
+ * were moved onto the proxy, and stayed on the file afterwards. It is called out
+ * rather than quietly deleted because a comment that understates the security
+ * posture is an invitation to "restore" the caller-supplied tenant id it
+ * describes.
+ *
+ * ---------------------------------------------------------------------------
+ * There is no "add to quote" ENDPOINT, and that is the design
+ * ---------------------------------------------------------------------------
+ * `POST /quote-request` is the only write on this surface. "Add to Quote"
+ * therefore accumulates lines in localStorage and submits the whole basket
+ * through that same endpoint when the shopper sends it; "Request a Quote"
+ * submits just the product in front of them. The difference is entirely on this
+ * side of the wire — a server-side draft would need a shopper identity to hang
+ * itself on, and an anonymous visitor has none to offer.
  *
  * No per-line price is ever sent. See snippets/tackquote-selection.liquid.
  */
