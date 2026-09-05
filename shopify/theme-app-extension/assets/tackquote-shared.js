@@ -173,6 +173,26 @@
       : title;
   };
 
+  /**
+   * Fill `{name}` placeholders in a localized string.
+   *
+   * Localized copy has to keep its numbers inside the sentence — "Minimum order
+   * 10 units" is one word order in English and another in most other
+   * languages, so a block cannot concatenate the number onto a fragment and
+   * stay translatable. The locale file owns the whole sentence and names its
+   * holes; this fills them.
+   *
+   * Returns '' for a missing template rather than printing `undefined` beside a
+   * product, and leaves an unknown placeholder untouched so a typo in a
+   * translation is visible to whoever added it instead of silently blanking.
+   */
+  ns.format = (template, values) => {
+    if (!template) return '';
+    return String(template).replace(/\{(\w+)\}/g, (match, key) =>
+      Object.prototype.hasOwnProperty.call(values || {}, key) ? String(values[key]) : match,
+    );
+  };
+
   /** Initialise `selector` blocks now and again whenever the theme editor reloads a section. */
   ns.boot = (selector, init) => {
     function run(scope) {

@@ -55,6 +55,36 @@
     "badge": {
       "label": "Your pricing tier",
       "empty": "No buyer group applies to this shopper."
+    },
+    "order_limits": {
+      "qty_min": "Minimum order: {min} units",
+      "qty_max": "Maximum order: {max} units",
+      "qty_range": "Order between {min} and {max} units",
+      "total_min": "Minimum order value: {min}",
+      "total_max": "Maximum order value: {max}",
+      "total_range": "Order value between {min} and {max}",
+      "items_min": "Minimum {min} items per order",
+      "items_max": "Maximum {max} items per order",
+      "items_range": "Between {min} and {max} items per order",
+      "account_note": "Based on your account.",
+      "empty": "No order minimums apply to this product.",
+      "error": "Order minimums are unavailable right now."
+    },
+    "credit": {
+      "sign_in": "Sign in to your account to apply for net terms.",
+      "label_business": "Legal business name",
+      "label_email": "Contact email",
+      "label_phone": "Contact phone",
+      "label_tax_id": "Tax ID",
+      "label_limit": "Requested credit limit",
+      "label_terms": "Requested terms (days)",
+      "label_notes": "Anything else we should know",
+      "submit": "Submit application",
+      "submitting": "Sending your application…",
+      "success": "Thanks — your application has been received and is under review.",
+      "already_pending": "You already have an application under review. We will be in touch.",
+      "too_large": "That is too long to send. Please shorten the notes and try again.",
+      "error": "We could not send your application. Please try again shortly."
     }
   }
 }

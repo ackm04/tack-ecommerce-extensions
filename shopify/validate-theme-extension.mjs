@@ -157,6 +157,15 @@ export const EXPECTED_TEMPLATES = {
   // a fact about their ACCOUNT, so it is equally meaningful beside a product,
   // in the cart, and on a wholesale landing page.
   'buyer-group-badge.liquid': ['product', 'cart', 'page'],
+  // Added 2026-09-05 with the block itself. `product` only: an order MINIMUM is
+  // a statement about ordering THIS item, and the API route it calls takes a
+  // sku/productId pair. On a cart template it would have nothing to ask about.
+  'order-limits.liquid': ['product'],
+  // Added 2026-09-05. NOT a product template: applying for payment terms is
+  // about the ACCOUNT, not the item being viewed — merchants put it on a
+  // dedicated page, and `customers/account` is where a signed-in wholesale
+  // buyer would look for it. Same reasoning as wholesale-signup.
+  'credit-application.liquid': ['page', 'customers/account'],
 };
 
 describe('the shipped blocks', () => {
@@ -279,6 +288,146 @@ describe('the signup block matches the API wire contract', () => {
     // deliberately does not accept.
     assert.match(signup, /body: JSON\.stringify\(\{ values \}\)/);
     assert.doesNotMatch(signup, /turnstile/i);
+  });
+});
+
+/**
+ * The order-limits block against the route it calls.
+ *
+ * `GET {proxy}/order-limits` shipped in the API on 2026-09-04 and nothing in
+ * this repository called it for a day — no block, no asset, no locale key. The
+ * API side now fails its own build when a proxy route has no caller
+ * (`shopify-proxy-route-coverage.spec.ts`); this is the other direction, and it
+ * pins the parts of the contract a caller can get wrong while still "working".
+ */
+describe('the order-limits block matches the API wire contract', () => {
+  const limitsSource = fs.readFileSync(
+    path.join(EXTENSION_DIR, 'assets', 'tackquote-order-limits.js'),
+    'utf8',
+  );
+  // Comments stripped first, for the reason the signup group records: the first
+  // run of an assertion like this failed on the file's own docblock, which
+  // pressures whoever hits it into deleting the explanation to get green.
+  const limits = limitsSource
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+
+  test('calls the route, with the sku and productId the rules are matched on', () => {
+    assert.match(limits, /\$\{proxy\}\/order-limits\?/);
+    assert.match(limits, /sku=\$\{encodeURIComponent\(sku\)\}/);
+    assert.match(limits, /productId=\$\{encodeURIComponent\(productId\)\}/);
+  });
+
+  test('renders only on status "limited"', () => {
+    // `none` is the common healthy answer and `unlinked` is the merchant's
+    // problem; drawing a notice for either would put an empty or alarming box
+    // on most product pages.
+    //
+    // MATCHED ON THE GUARD ITSELF, not on the bare phrase. The first version of
+    // this assertion searched for `data.status !== 'limited'` anywhere and
+    // survived deletion of the guard — because the same comparison appears in
+    // the design-mode branch a few lines below. An assertion that a string
+    // exists somewhere in a file is not an assertion about control flow.
+    assert.match(limits, /if \(data\.status !== 'limited' \|\| !Array\.isArray\(data\.limits\)/);
+  });
+
+  test('claims "based on your account" only when the server says accountSpecific', () => {
+    // The failure this prevents is a blanket policy presented as the shopper's
+    // own terms, or the reverse. The server sets the flag precisely because the
+    // block cannot know.
+    assert.match(limits, /if \(data\.accountSpecific\)/);
+    assert.doesNotMatch(limits, /accountSpecific\s*(\|\||\?\?)\s*true/);
+  });
+
+  test('never caches an "unlinked" answer', () => {
+    // A merchant who finishes installing must not keep seeing the uninstalled
+    // answer from a cache with a minute left on it.
+    assert.match(limits, /data\.status === 'limited' \|\| data\.status === 'none'/);
+  });
+
+  test('sends no tenant id — identity is whatever Shopify signed', () => {
+    assert.doesNotMatch(limits, /tenant/i);
+  });
+
+  test('reads the product ID from its own attribute, not the product TITLE', () => {
+    // `data-tackquote-product` is the product title everywhere in this
+    // extension (`ns.label` reads it). Sending a title where the API expects an
+    // id matches no rule and looks exactly like "this product has no minimum" —
+    // a wrong answer that renders as a healthy one.
+    assert.match(limits, /dataset\.tackquoteProductId/);
+    assert.doesNotMatch(limits, /dataset\.tackquoteProduct\b/);
+  });
+
+  test('falls back to composed copy when a rule carries no merchant message', () => {
+    // `message` is nullable on every rule, so a block that rendered only
+    // `limits[].message` would draw an empty notice for most of them.
+    assert.match(limits, /if \(limit\.message && limit\.message\.trim\(\)\) return/);
+    assert.match(limits, /msg\$\{key\}Range|msgQtyRange/);
+  });
+
+  test('says nothing at all for a limit type it does not understand', () => {
+    // Guessing a sentence from an unrecognised `limitType` is how a future
+    // scope or unit gets described wrongly to a shopper.
+    assert.match(limits, /if \(!key\) return null;/);
+  });
+});
+
+/**
+ * The net-terms block against the route it calls.
+ *
+ * The second of the two orphaned endpoints (#423). This one is sharper than
+ * `order-limits`: the API refuses it outright without a signed customer id, so
+ * the block's most important behaviour is one it performs WITHOUT making a
+ * request at all.
+ */
+describe('the credit-application block matches the API wire contract', () => {
+  const creditSource = fs.readFileSync(
+    path.join(EXTENSION_DIR, 'assets', 'tackquote-credit.js'),
+    'utf8',
+  );
+  const credit = creditSource
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+
+  test('shows a sign-in prompt instead of a form, and makes no request, when signed out', () => {
+    // The controller answers a signed-out shopper with 401. Rendering the form
+    // anyway means seven fields filled in and then refused — and it spends one
+    // of only three attempts per fifteen minutes to learn what Liquid already
+    // knew.
+    assert.match(credit, /if \(!signedIn\) \{/);
+    assert.match(credit, /show\(line\(msg\('msgSignIn'\)/);
+    // The early return is what guarantees no fetch happens on that path.
+    assert.match(credit, /msgSignIn'\), 'tackquote-credit__signin'\)\);\s*return;/);
+  });
+
+  test('POSTs to the route with a JSON body', () => {
+    assert.match(credit, /\$\{proxy\}\/credit-application/);
+    assert.match(credit, /method: 'POST'/);
+  });
+
+  test('omits empty optional fields rather than sending null', () => {
+    // ValidationPipe runs with forbidNonWhitelisted and the optional fields are
+    // `@IsString()`; a null phone would 400 the entire application.
+    assert.match(credit, /if \(payload\[key\] === undefined\) delete payload\[key\];/);
+  });
+
+  test('sends no tenant id and no customer id — identity is whatever Shopify signed', () => {
+    assert.doesNotMatch(credit, /tenant/i);
+    assert.doesNotMatch(credit, /customerId|customer_id/);
+  });
+
+  test('treats already_pending as success, not as an error', () => {
+    // The server returns it when this customer already has an application under
+    // review. Reporting a failure invites a duplicate the seller must reconcile.
+    assert.match(credit, /result\.status === 'already_pending'/);
+    assert.match(credit, /msgAlreadyPending/);
+  });
+
+  test('checks the body size the server enforces', () => {
+    // 16 KB, refused before the signature is even verified. Checking here turns
+    // a bare 400 into a sentence naming what to shorten.
+    assert.match(credit, /16 \* 1024/);
+    assert.match(credit, /new Blob\(\[serialized\]\)\.size > MAX_BODY_BYTES/);
   });
 });
 

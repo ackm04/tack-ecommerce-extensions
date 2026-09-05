@@ -1,0 +1,92 @@
+{%- liquid
+  assign proxy_path = block.settings.proxy_path | strip | remove_last: '/'
+-%}
+
+{%- if proxy_path == blank -%}
+  {%- if request.design_mode -%}
+    <div class="tackquote-setup" {{ block.shopify_attributes }}>
+      <strong>{{ 'tackquote.setup.title' | t }}</strong>
+      <p>{{ 'tackquote.setup.proxy' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
+  <div
+    class="tackquote-block tackquote-credit"
+    data-tackquote-mode="credit-application"
+    data-tackquote-proxy="{{ proxy_path | escape }}"
+    {%- comment -%}
+      Whether to draw the FORM or the sign-in prompt, and nothing more.
+
+      The API refuses this route outright without a signed
+      `logged_in_customer_id`, so a logged-out visitor must never be given a
+      form to fill in — they would complete seven fields and be told to sign in.
+      Liquid already knows, so the block decides here rather than spending one
+      of the caller's three attempts per fifteen minutes discovering it.
+
+      This is NOT identity. The identity is the customer id Shopify signs into
+      the proxy request; a shopper editing this attribute gets a form whose
+      submission the server then refuses.
+    {%- endcomment -%}
+    data-tackquote-signed-in="{% if customer %}true{% else %}false{% endif %}"
+    data-msg-sign-in="{{ 'tackquote.credit.sign_in' | t | escape }}"
+    data-msg-label-business="{{ 'tackquote.credit.label_business' | t | escape }}"
+    data-msg-label-email="{{ 'tackquote.credit.label_email' | t | escape }}"
+    data-msg-label-phone="{{ 'tackquote.credit.label_phone' | t | escape }}"
+    data-msg-label-tax-id="{{ 'tackquote.credit.label_tax_id' | t | escape }}"
+    data-msg-label-limit="{{ 'tackquote.credit.label_limit' | t | escape }}"
+    data-msg-label-terms="{{ 'tackquote.credit.label_terms' | t | escape }}"
+    data-msg-label-notes="{{ 'tackquote.credit.label_notes' | t | escape }}"
+    data-msg-submit="{{ 'tackquote.credit.submit' | t | escape }}"
+    data-msg-submitting="{{ 'tackquote.credit.submitting' | t | escape }}"
+    data-msg-success="{{ 'tackquote.credit.success' | t | escape }}"
+    data-msg-already-pending="{{ 'tackquote.credit.already_pending' | t | escape }}"
+    data-msg-too-large="{{ 'tackquote.credit.too_large' | t | escape }}"
+    data-msg-error="{{ 'tackquote.credit.error' | t | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    <h3 class="tackquote-credit__heading">
+      {{ block.settings.heading | default: 'Apply for net terms' }}
+    </h3>
+    <div class="tackquote-credit__body" data-tackquote-credit-body></div>
+  </div>
+
+  <script src="{{ 'tackquote-shared.js' | asset_url }}" async></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Net Terms Application",
+  "target": "section",
+  "enabled_on": {
+    "templates": [
+      "page",
+      "customers/account"
+    ]
+  },
+  "stylesheet": "tackquote.css",
+  "javascript": "tackquote-credit.js",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Lets a signed-in wholesale customer apply for net payment terms. Applications land in TackQuote for review; nothing is approved automatically."
+    },
+    {
+      "type": "paragraph",
+      "content": "Signed-out visitors see a prompt to sign in instead of a form, because an application has to belong to an account."
+    },
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/tackquote",
+      "info": "Must match Settings > Apps and sales channels > TackQuote > App proxy. Change it here if you renamed the proxy URL there."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Apply for net terms"
+    }
+  ]
+}
+{% endschema %}

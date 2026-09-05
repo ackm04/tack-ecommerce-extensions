@@ -1,0 +1,79 @@
+{%- liquid
+  assign proxy_path = block.settings.proxy_path | strip | remove_last: '/'
+  assign variant = product.selected_or_first_available_variant
+-%}
+
+{%- if proxy_path == blank -%}
+  {%- if request.design_mode -%}
+    <div class="tackquote-setup" {{ block.shopify_attributes }}>
+      <strong>{{ 'tackquote.setup.title' | t }}</strong>
+      <p>{{ 'tackquote.setup.proxy' | t }}</p>
+    </div>
+  {%- endif -%}
+{%- else -%}
+  <div
+    class="tackquote-block tackquote-limits"
+    data-tackquote-mode="order-limits"
+    data-tackquote-proxy="{{ proxy_path | escape }}"
+    data-tackquote-variant="{{ variant.id }}"
+    {%- comment -%}
+      The product ID, sent alongside the SKU because an order-limit rule may
+      name either one. `data-tackquote-product-id`, deliberately distinct from
+      `data-tackquote-product`, which is the product TITLE that `ns.label`
+      reads — sending a title where the API expects an id would match no rule
+      and look exactly like "this product has no minimum".
+    {%- endcomment -%}
+    data-tackquote-product-id="{{ product.id }}"
+    data-tackquote-customer="{{ customer.id }}"
+    data-tackquote-design="{% if request.design_mode %}true{% else %}false{% endif %}"
+    data-msg-qty-min="{{ 'tackquote.order_limits.qty_min' | t | escape }}"
+    data-msg-qty-max="{{ 'tackquote.order_limits.qty_max' | t | escape }}"
+    data-msg-qty-range="{{ 'tackquote.order_limits.qty_range' | t | escape }}"
+    data-msg-total-min="{{ 'tackquote.order_limits.total_min' | t | escape }}"
+    data-msg-total-max="{{ 'tackquote.order_limits.total_max' | t | escape }}"
+    data-msg-total-range="{{ 'tackquote.order_limits.total_range' | t | escape }}"
+    data-msg-items-min="{{ 'tackquote.order_limits.items_min' | t | escape }}"
+    data-msg-items-max="{{ 'tackquote.order_limits.items_max' | t | escape }}"
+    data-msg-items-range="{{ 'tackquote.order_limits.items_range' | t | escape }}"
+    data-msg-account-note="{{ 'tackquote.order_limits.account_note' | t | escape }}"
+    data-msg-empty="{{ 'tackquote.order_limits.empty' | t | escape }}"
+    data-msg-error="{{ 'tackquote.order_limits.error' | t | escape }}"
+    {{ block.shopify_attributes }}
+  >
+    {% render 'tackquote-selection', product: product %}
+    <div class="tackquote-limits__body" data-tackquote-limits-body role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="{{ 'tackquote-shared.js' | asset_url }}" async></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Order Minimums",
+  "target": "section",
+  "enabled_on": {
+    "templates": [
+      "product"
+    ]
+  },
+  "stylesheet": "tackquote.css",
+  "javascript": "tackquote-order-limits.js",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "States the minimum (or maximum) order rules that apply to this product, on the product page instead of as a rejection at checkout. Rules are managed in TackQuote under Order Limits."
+    },
+    {
+      "type": "paragraph",
+      "content": "Blanket rules are shown to every visitor, because everyone is subject to them. Rules that apply only to a specific buyer or company are shown only after that customer signs in, and are labelled as account-specific."
+    },
+    {
+      "type": "text",
+      "id": "proxy_path",
+      "label": "App proxy path",
+      "default": "/apps/tackquote",
+      "info": "Must match Settings > Apps and sales channels > TackQuote > App proxy. Change it here if you renamed the proxy URL there."
+    }
+  ]
+}
+{% endschema %}
