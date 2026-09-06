@@ -675,26 +675,50 @@ class Tack_Settings {
 	 * Payment gateway -> group codes.
 	 */
 	public function field_payment_group_map() {
-		$this->group_map_textarea(
-			Tack_Group_Restrictions::OPTION_PAYMENT_MAP,
-			/* translators: this is an example configuration, shown as placeholder text. */
-			__( "cod: TIER2, TIER3\nbacs: TIER3", 'tackquote' )
-		);
+		// NOT translatable: this is SYNTAX the merchant types verbatim, not prose.
+		// A translator localising `cod` or the punctuation produces a broken example.
+		$this->group_map_textarea( Tack_Group_Restrictions::OPTION_PAYMENT_MAP, "cod: TIER2, TIER3\nbacs: TIER3" );
 		echo '<p class="description">' . esc_html__(
-			'One rule per line, as "gateway id: GROUP_CODE, GROUP_CODE". Find gateway ids under WooCommerce → Settings → Payments; group codes come from TackQuote.',
+			'One rule per line, as "gateway id: GROUP_CODE, GROUP_CODE". Group codes come from TackQuote and are matched case-insensitively.',
 			'tackquote'
 		) . '</p>';
+		// The Payments screen shows gateway TITLES ("Cash on delivery"), not the id
+		// ("cod") this field needs — so the ids are listed here rather than sending
+		// the merchant somewhere that does not show them.
+		if ( function_exists( 'WC' ) && WC()->payment_gateways() ) {
+			$ids = array_keys( WC()->payment_gateways()->payment_gateways() );
+			if ( ! empty( $ids ) ) {
+				/*
+				 * Escaped at the point of OUTPUT, one id at a time.
+				 *
+				 * Two earlier attempts were wrong in opposite directions:
+				 * `esc_html( implode( '</code>, <code>', $ids ) )` escapes the
+				 * SEPARATORS too, so the merchant sees a literal "</code>, <code>"
+				 * between every id; and pre-escaping into `$escaped` then echoing
+				 * it fails Plugin Check's `EscapeOutput` sniff, which cannot see
+				 * through `array_map`. Escaping inline in the loop satisfies both
+				 * the sniff and the rendering.
+				 */
+				echo '<p class="description">' . esc_html__( 'Gateway ids on this store:', 'tackquote' ) . ' ';
+				$first = true;
+				foreach ( $ids as $gateway_id ) {
+					if ( ! $first ) {
+						echo ', ';
+					}
+					echo '<code>' . esc_html( $gateway_id ) . '</code>';
+					$first = false;
+				}
+				echo '</p>';
+			}
+		}
 	}
 
 	/**
 	 * Shipping method -> group codes.
 	 */
 	public function field_shipping_group_map() {
-		$this->group_map_textarea(
-			Tack_Group_Restrictions::OPTION_SHIPPING_MAP,
-			/* translators: this is an example configuration, shown as placeholder text. */
-			__( "free_shipping: TIER3\nlocal_pickup: TIER2, TIER3", 'tackquote' )
-		);
+		// Not translatable, for the same reason as the payment example above.
+		$this->group_map_textarea( Tack_Group_Restrictions::OPTION_SHIPPING_MAP, "free_shipping: TIER3\nlocal_pickup: TIER2, TIER3" );
 		echo '<p class="description">' . esc_html__(
 			'Same format. Use the method id (for example free_shipping) or the full rate id.',
 			'tackquote'

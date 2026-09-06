@@ -215,7 +215,16 @@ class Tack_Group_Restrictions {
 			return ! apply_filters( 'tackquote_restrict_when_group_unknown', false, $id );
 		}
 
-		return in_array( $allowed, $map[ $id ], true );
+		/*
+		 * Compared case-INSENSITIVELY, and the codes were upper-cased when the
+		 * map was parsed. A merchant typing `bacs: tier3` while TackQuote
+		 * returns `TIER3` would otherwise match nothing — and because the rule
+		 * then fails for EVERY group, that gateway silently disappears for
+		 * every customer, permanently. The "never empty the list" guard does
+		 * not catch it either: that only fires when a rule removes every
+		 * gateway, not when one gateway is wrongly blocked for everyone.
+		 */
+		return in_array( strtoupper( $allowed ), $map[ $id ], true );
 	}
 
 	/**
@@ -263,7 +272,9 @@ class Tack_Group_Restrictions {
 			}
 			$groups = array();
 			foreach ( explode( ',', $parts[1] ) as $code ) {
-				$code = trim( $code );
+				// Upper-cased here so the comparison in `permitted()` can be a
+				// strict in_array against a single normalised form.
+				$code = strtoupper( trim( $code ) );
 				if ( '' !== $code ) {
 					$groups[] = $code;
 				}

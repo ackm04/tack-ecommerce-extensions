@@ -157,6 +157,45 @@ check(
 	implode( ',', array_keys( $out ) )
 );
 
+// ── Case ────────────────────────────────────────────────────────────────────
+//
+// A merchant typing a code in the wrong case would otherwise match nothing —
+// and because the rule then fails for EVERY group, the gateway silently
+// disappears for every customer, permanently. The "never empty" guard does not
+// catch it: that only fires when a rule removes EVERY gateway.
+
+tack_test_set_option( Tack_Group_Restrictions::OPTION_PAYMENT_MAP, "bacs: tier3" );
+$r   = new Tack_Group_Restrictions( $tier3 );
+$out = $r->filter_gateways( $gateways );
+check(
+	'a lowercase group code in the config still matches an uppercase group',
+	isset( $out['bacs'] ),
+	implode( ',', array_keys( $out ) )
+);
+
+$r   = new Tack_Group_Restrictions( $tier2 );
+$out = $r->filter_gateways( $gateways );
+check(
+	'...and still excludes the group it should',
+	! isset( $out['bacs'] ),
+	implode( ',', array_keys( $out ) )
+);
+
+// The falsifier for the OTHER half. The parser upper-cases the config, so the
+// two cases above pass with or without normalising the group side — a mutation
+// removing `strtoupper($allowed)` left them green, which is exactly the kind of
+// test that proves nothing. This one drives a LOWERCASE group code back from
+// TackQuote, which is the only input that exercises it.
+$lower = new Tack_Test_Group_Source( array( 'name' => 'Tier 3', 'code' => 'tier3' ) );
+tack_test_set_option( Tack_Group_Restrictions::OPTION_PAYMENT_MAP, "bacs: TIER3" );
+$r     = new Tack_Group_Restrictions( $lower );
+$out   = $r->filter_gateways( $gateways );
+check(
+	'a lowercase code RETURNED BY TACKQUOTE still matches an uppercase rule',
+	isset( $out['bacs'] ),
+	implode( ',', array_keys( $out ) )
+);
+
 // ── Parsing ─────────────────────────────────────────────────────────────────
 
 $r   = new Tack_Group_Restrictions( $tier2 );
