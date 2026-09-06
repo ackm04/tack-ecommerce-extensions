@@ -76,6 +76,8 @@ class Tack_Settings {
 		register_setting( self::OPTION_GROUP, 'tack_quotes_enable_order_sync', array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_Wholesale_Pricing::OPTION_ENABLED, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_B2B_Notices::OPTION_ORDER_LIMITS, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_B2B_Notices::OPTION_BUYER_GROUP, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 
 		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_MODE, array( 'sanitize_callback' => array( $this, 'sanitize_store_mode' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_SCOPE, array( 'sanitize_callback' => array( $this, 'sanitize_scope' ) ) );
@@ -127,6 +129,8 @@ class Tack_Settings {
 		add_settings_field( 'tack_quotes_enable_order_sync', __( 'Sync orders to TackQuote', 'tackquote' ), array( $this, 'field_enable_order_sync' ), self::PAGE_SLUG, 'tack_quotes_sync' );
 		add_settings_field( Tack_Wholesale_Pricing::OPTION_ENABLED, __( 'Use TackQuote prices', 'tackquote' ), array( $this, 'field_enable_wholesale_pricing' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
 		add_settings_field( Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS, __( 'Show volume pricing table', 'tackquote' ), array( $this, 'field_show_quantity_breaks' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_B2B_Notices::OPTION_ORDER_LIMITS, __( 'Enforce order limits', 'tackquote' ), array( $this, 'field_enable_order_limits' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_B2B_Notices::OPTION_BUYER_GROUP, __( 'Show buyer group', 'tackquote' ), array( $this, 'field_enable_buyer_group' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
 	}
 
 	// ── Sanitizers ────────────────────────────────────────────────────────────
@@ -596,6 +600,34 @@ class Tack_Settings {
 		);
 		echo '<p class="description">' . esc_html__(
 			'Only appears when the customer actually has more than one price tier for that product.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * The order-limits switch.
+	 */
+	public function field_enable_order_limits() {
+		$this->checkbox_default_off(
+			Tack_B2B_Notices::OPTION_ORDER_LIMITS,
+			__( 'Show and enforce TackQuote minimum/maximum order quantities.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'The notice on the product page is a courtesy; the cart and checkout are what actually refuse an order that breaks a limit. If TackQuote cannot be reached, nothing is blocked — a checkout that fails on a slow API is worse than an unenforced minimum.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * The buyer-group badge switch.
+	 */
+	public function field_enable_buyer_group() {
+		$this->checkbox_default_off(
+			Tack_B2B_Notices::OPTION_BUYER_GROUP,
+			__( 'Show the signed-in customer which pricing group they are on.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'Without it a discounted price appears with no explanation, which reads as a pricing error rather than the negotiated rate it is.',
 			'tackquote'
 		) . '</p>';
 	}

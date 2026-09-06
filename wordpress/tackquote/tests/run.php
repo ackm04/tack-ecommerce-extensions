@@ -82,5 +82,9 @@ require_once TACK_QUOTES_DIR . 'includes/class-tack-api-client.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-wholesale-pricing.php';
 require __DIR__ . '/wholesale-pricing-test.php';
 
+// Order limits and the buyer-group badge.
+require_once TACK_QUOTES_DIR . 'includes/class-tack-b2b-notices.php';
+require __DIR__ . '/b2b-notices-test.php';
+
 echo $failures ? "\n$failures failure(s)\n" : "\nAll checks passed\n";
 exit( $failures ? 1 : 0 );

@@ -255,3 +255,105 @@ if ( ! function_exists( 'wc_get_price_including_tax' ) ) {
 function tack_test_set_prices_include_tax( $include ) {
 	$GLOBALS['TACK_PRICES_INCLUDE_TAX'] = (bool) $include;
 }
+
+
+// ── Cart + notice stubs, for Tack_B2B_Notices ───────────────────────────────
+$GLOBALS['TACK_CART_LINES'] = array();
+
+if ( ! class_exists( 'Tack_Stub_WC' ) ) {
+	/** Stands in for the WC() singleton's cart. */
+	class Tack_Stub_WC {
+		/** @var object|null */
+		public $cart;
+	}
+}
+
+if ( ! function_exists( 'WC' ) ) {
+	/**
+	 * @return Tack_Stub_WC
+	 */
+	function WC() { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid
+		$wc       = new Tack_Stub_WC();
+		$wc->cart = new Tack_Stub_Cart( $GLOBALS['TACK_CART_LINES'] );
+		return $wc;
+	}
+}
+
+if ( ! class_exists( 'Tack_Stub_Cart' ) ) {
+	/** A cart of stub lines. */
+	class Tack_Stub_Cart {
+		/** @var array */
+		private $lines;
+
+		/**
+		 * @param array $lines Lines.
+		 */
+		public function __construct( $lines ) {
+			$this->lines = $lines;
+		}
+
+		/** @return array */
+		public function get_cart() {
+			return $this->lines;
+		}
+	}
+}
+
+if ( ! class_exists( 'Tack_Stub_Cart_Product' ) ) {
+	/** A product on a stub cart line. */
+	class Tack_Stub_Cart_Product {
+		/** @var string */
+		private $sku;
+		/** @var string */
+		private $name;
+
+		/**
+		 * @param string $sku  SKU.
+		 * @param string $name Name.
+		 */
+		public function __construct( $sku, $name ) {
+			$this->sku  = $sku;
+			$this->name = $name;
+		}
+
+		/** @return string */
+		public function get_sku() {
+			return $this->sku;
+		}
+
+		/** @return string */
+		public function get_name() {
+			return $this->name;
+		}
+	}
+}
+
+/**
+ * Replace the cart contents from a test.
+ *
+ * @param array $lines Array of array{sku:string,qty:int,name:string}.
+ */
+function tack_test_set_cart( $lines ) {
+	$out = array();
+	foreach ( $lines as $i => $line ) {
+		$out[ 'line' . $i ] = array(
+			'data'     => new Tack_Stub_Cart_Product( $line['sku'], isset( $line['name'] ) ? $line['name'] : $line['sku'] ),
+			'quantity' => (int) $line['qty'],
+		);
+	}
+	$GLOBALS['TACK_CART_LINES'] = $out;
+}
+
+/** Clear collected notices. */
+function tack_test_reset_notices() {
+	$GLOBALS['TACK_NOTICES'] = array();
+}
+
+/**
+ * Notices collected since the last reset.
+ *
+ * @return array
+ */
+function tack_test_notices() {
+	return (array) $GLOBALS['TACK_NOTICES'];
+}

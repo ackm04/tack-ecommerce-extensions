@@ -15,6 +15,7 @@ require_once TACK_QUOTES_DIR . 'includes/class-tack-widget.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-order-sync.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-catalog-mode.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-wholesale-pricing.php';
+require_once TACK_QUOTES_DIR . 'includes/class-tack-b2b-notices.php';
 
 /**
  * Main plugin class (singleton).
@@ -64,6 +65,12 @@ final class Tack_Quotes {
 		// and the order, so it must not attach itself by default on an update.
 		if ( Tack_Wholesale_Pricing::is_enabled() ) {
 			( new Tack_Wholesale_Pricing() )->init();
+		}
+
+		// Order limits and the buyer-group badge. Each half has its own switch;
+		// the class registers only the hooks whose switch is on.
+		if ( Tack_B2B_Notices::is_enabled() ) {
+			( new Tack_B2B_Notices() )->init();
 		}
 
 		// Frontend "Request a Quote" widget/button.

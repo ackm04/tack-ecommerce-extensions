@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -237,6 +237,13 @@ So shoppers can add multiple products before requesting one combined quote. Use 
 4. Quote-only mode on the storefront. Add to Cart is withdrawn and the quote buttons remain, so the catalogue still works and only checkout goes away.
 
 == Changelog ==
+
+= 1.7.0 =
+* New: **order limits**. TackQuote already held minimum/maximum order quantities and enforced them when a quote was converted, but a WooCommerce shopper never saw them — they filled a cart, reached checkout, and the order was refused. The limit is now shown on the product page AND enforced on the cart and at checkout.
+* New: **buyer group badge**. Shows a signed-in customer which pricing group they are on. Without it a discounted price appears with no explanation, which reads as a pricing error rather than the negotiated rate it is.
+* A TackQuote outage never blocks checkout. Nothing is refused unless TackQuote actually answered with a limit — a checkout that stops working because a supplier's API is slow costs the day's revenue, while an unenforced minimum costs a phone call.
+* Quantities are summed across cart lines of the same product before checking, so 10 + 20 satisfies a minimum of 25.
+* Both switches are off by default, under **WooCommerce → TackQuote → B2B pricing**.
 
 = 1.6.0 =
 * New: **B2B pricing**. A signed-in trade customer can now be priced from their TackQuote price book, buyer group and quantity breaks — the same pricing authority that prices a quote. Until now the plugin could send a quote request and receive Tack-resolved prices back on the quote, but a customer browsing the shop still saw the retail price, because nothing let the storefront ASK what Tack would charge before a quote existed.
