@@ -17,12 +17,16 @@
  * a quote. This class asks it, and applies the answer.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * WHY IT IS SAFE TO PUT THIS ON `woocommerce_product_get_price`
+ * WHAT IS CHARGED, AND WHAT IS SHOWN, ARE TWO DIFFERENT HOOKS
  * ─────────────────────────────────────────────────────────────────────────────
- * That filter reaches the CART and the ORDER, not just the label — which is the
- * point (a trade customer should be charged their price), and also the whole
- * risk. Three rules keep it honest, and each one is a test in
- * tests/wholesale-pricing-test.php:
+ * See `init()` for the full argument. In short: the cart is priced on
+ * `woocommerce_before_calculate_totals`, because that is the only hook that
+ * knows how many of each line the buyer actually ordered — and without a
+ * quantity a quantity BREAK cannot exist. The label is a separate filter on
+ * `woocommerce_get_price_html`.
+ *
+ * Money is involved either way, so three rules keep it honest, and each one is
+ * a test in tests/wholesale-pricing-test.php:
  *
  *   1. NO ANSWER MEANS NO CHANGE. A network failure, a timeout, an unknown SKU
  *      or a `null` unitPrice all leave the store's own price untouched. The
@@ -133,13 +137,37 @@ class Tack_Wholesale_Pricing {
 
 	/**
 	 * Register hooks.
+	 *
+	 * ── Two hooks, deliberately, rather than one ──────────────────────────────
+	 *
+	 * The obvious implementation is a single filter on
+	 * `woocommerce_product_get_price`, and the first version of this class did
+	 * exactly that. It is wrong twice over:
+	 *
+	 *   · THAT FILTER HAS NO QUANTITY. It is asked "what does this product
+	 *     cost", not "what do 100 of them cost", so a quantity break can never
+	 *     be applied through it — it always resolves at quantity 1. The volume
+	 *     table would advertise "100+ £55.00" and the cart would charge £61.50.
+	 *     Displaying a discount the checkout does not honour is worse than not
+	 *     offering one.
+	 *   · IT FIRES EVERYWHERE. Every product read, in admin, REST, cron, emails
+	 *     and reports, several times per product per page.
+	 *
+	 * So the work is split the way WooCommerce intends, and the way the mature
+	 * B2B plugins do it:
+	 *
+	 *   DISPLAY -> `woocommerce_get_price_html`, which is only about the label.
+	 *   MONEY   -> `woocommerce_before_calculate_totals`, which is the one place
+	 *              that knows the real quantity of each line, and where
+	 *              `$item['data']->set_price()` is the documented way to price a
+	 *              cart line dynamically.
 	 */
 	public function init() {
-		// Priority 20: after WooCommerce's own sale-price handling, so the Tack
-		// price is what survives when both apply. A merchant who wants the lower
-		// of the two can filter `tackquote_wholesale_price` below.
-		add_filter( 'woocommerce_product_get_price', array( $this, 'filter_price' ), 20, 2 );
-		add_filter( 'woocommerce_product_variation_get_price', array( $this, 'filter_price' ), 20, 2 );
+		// The money. Priority 20, after WooCommerce settles its own sale prices.
+		add_action( 'woocommerce_before_calculate_totals', array( $this, 'apply_cart_prices' ), 20 );
+
+		// The label.
+		add_filter( 'woocommerce_get_price_html', array( $this, 'filter_price_html' ), 20, 2 );
 
 		if ( 'yes' === get_option( self::OPTION_SHOW_BREAKS, 'yes' ) ) {
 			add_action( 'woocommerce_single_product_summary', array( $this, 'render_quantity_breaks' ), 25 );
@@ -147,40 +175,111 @@ class Tack_Wholesale_Pricing {
 	}
 
 	/**
-	 * Replace the price with the one Tack resolves for the signed-in buyer.
+	 * Price every cart line at the buyer's rate FOR THE QUANTITY THEY ORDERED.
 	 *
-	 * @param string|float $price   The store's price.
-	 * @param object       $product WC_Product.
-	 * @return string|float
+	 * This is the hook that makes a quantity break real. Each line is resolved
+	 * at its own quantity, in ONE batched request for the whole cart, and only a
+	 * line Tack actually priced is touched.
+	 *
+	 * @param object $cart WC_Cart.
 	 */
-	public function filter_price( $price, $product ) {
+	public function apply_cart_prices( $cart ) {
+		if ( ! $this->should_apply() || ! is_object( $cart ) ) {
+			return;
+		}
+		if ( ! method_exists( $cart, 'get_cart' ) ) {
+			return;
+		}
+
+		$contents = $cart->get_cart();
+		if ( empty( $contents ) ) {
+			return;
+		}
+
+		// Batch first: one request for the whole cart rather than one per line.
+		$wanted = array();
+		foreach ( $contents as $item ) {
+			if ( empty( $item['data'] ) || ! method_exists( $item['data'], 'get_sku' ) ) {
+				continue;
+			}
+			$sku = (string) $item['data']->get_sku();
+			$qty = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
+			if ( '' === $sku || $qty < 1 ) {
+				continue;
+			}
+			$wanted[ $sku . '|' . $qty ] = array( 'sku' => $sku, 'quantity' => $qty );
+		}
+		if ( empty( $wanted ) ) {
+			return;
+		}
+		$this->resolve( array_values( $wanted ) );
+
+		foreach ( $contents as $key => $item ) {
+			if ( empty( $item['data'] ) || ! method_exists( $item['data'], 'get_sku' ) ) {
+				continue;
+			}
+			$sku = (string) $item['data']->get_sku();
+			$qty = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
+			if ( '' === $sku || $qty < 1 ) {
+				continue;
+			}
+
+			$unit = $this->unit_price( $sku, $qty );
+			if ( null === $unit ) {
+				// No answer: the line keeps the store's own price. Never zeroed.
+				continue;
+			}
+
+			/** This filter is documented in this class. */
+			$unit = apply_filters( 'tackquote_wholesale_price', $unit, $item['data']->get_price(), $sku );
+
+			if ( method_exists( $item['data'], 'set_price' ) ) {
+				$item['data']->set_price( $unit );
+			}
+			unset( $key );
+		}
+	}
+
+	/**
+	 * Show the buyer's own unit price on the label.
+	 *
+	 * Quantity 1, because a product listing has no quantity — the volume table
+	 * below carries the tiers. This only changes what is DISPLAYED; what is
+	 * charged is settled in `apply_cart_prices()`.
+	 *
+	 * @param string $html    Price markup WooCommerce built.
+	 * @param object $product WC_Product.
+	 * @return string
+	 */
+	public function filter_price_html( $html, $product ) {
 		if ( ! $this->should_apply() ) {
-			return $price;
+			return $html;
 		}
 		if ( ! is_object( $product ) || ! method_exists( $product, 'get_sku' ) ) {
-			return $price;
+			return $html;
 		}
-
 		$sku = (string) $product->get_sku();
 		if ( '' === $sku ) {
-			// Tack prices by SKU. A product without one cannot be matched, and
-			// guessing from the title would be worse than leaving it alone.
-			return $price;
+			return $html;
 		}
 
-		$resolved = $this->unit_price( $sku, 1 );
-		if ( null === $resolved ) {
-			return $price;
+		$unit = $this->unit_price( $sku, 1 );
+		if ( null === $unit ) {
+			return $html;
 		}
 
-		/**
-		 * Filters the wholesale unit price before it replaces the store price.
-		 *
-		 * @param float  $resolved Price resolved by TackQuote.
-		 * @param mixed  $price    The store's own price.
-		 * @param string $sku      Product SKU.
-		 */
-		return apply_filters( 'tackquote_wholesale_price', $resolved, $price, $sku );
+		$store = method_exists( $product, 'get_regular_price' ) ? (float) $product->get_regular_price() : null;
+
+		// Struck-through original only when Tack is genuinely cheaper. Showing a
+		// "was" price that is lower than the "now" price reads as a price rise.
+		if ( null !== $store && $store > $unit ) {
+			return '<del aria-hidden="true">' . wp_kses_post( wc_price( $store ) ) . '</del> '
+				. '<ins>' . wp_kses_post( wc_price( $unit ) ) . '</ins>'
+				. '<span class="screen-reader-text">'
+				. esc_html__( 'Your price', 'tackquote' ) . '</span>';
+		}
+
+		return wp_kses_post( wc_price( $unit ) );
 	}
 
 	/**
