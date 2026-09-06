@@ -76,5 +76,11 @@ require __DIR__ . '/catalog-mode-test.php';
 echo "\n-- order-sync payload contract --\n";
 require __DIR__ . '/order-payload-test.php';
 
+// B2B pricing resolved by Tack. Requires the API client, which the pricing class
+// takes by injection so no HTTP is ever attempted here.
+require_once TACK_QUOTES_DIR . 'includes/class-tack-api-client.php';
+require_once TACK_QUOTES_DIR . 'includes/class-tack-wholesale-pricing.php';
+require __DIR__ . '/wholesale-pricing-test.php';
+
 echo $failures ? "\n$failures failure(s)\n" : "\nAll checks passed\n";
 exit( $failures ? 1 : 0 );

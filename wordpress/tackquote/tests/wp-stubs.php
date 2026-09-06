@@ -62,11 +62,15 @@ function remove_action( $hook, $callback, $priority = 10 ) {
 $GLOBALS['TACK_LOGGED_IN'] = false;
 $GLOBALS['TACK_CAPS']      = array();
 $GLOBALS['TACK_ROLES']     = array();
+$GLOBALS['TACK_USER_EMAIL'] = '';
 
 function is_user_logged_in() { return (bool) $GLOBALS['TACK_LOGGED_IN']; }
 function wp_get_current_user() {
-	$u        = new stdClass();
-	$u->roles = (array) $GLOBALS['TACK_ROLES'];
+	$u             = new stdClass();
+	$u->roles      = (array) $GLOBALS['TACK_ROLES'];
+	// Added for the wholesale-pricing tests: the buyer email is what selects the
+	// price book, so a stub without it would let a broken lookup pass.
+	$u->user_email = (string) $GLOBALS['TACK_USER_EMAIL'];
 	return $u;
 }
 function checked( $a, $b = true, $echo = true ) { return (string) $a === (string) $b ? "checked='checked'" : ''; }
@@ -107,3 +111,113 @@ function add_submenu_page( $parent, $page_title, $menu_title, $capability, $menu
 function home_url( $path = '' ) { return 'https://shop.example' . $path; }
 function wp_json_encode( $data, $options = 0, $depth = 512 ) { return json_encode( $data, $options, $depth ); }
 function wp_strip_all_tags( $text, $remove_breaks = false ) { return trim( strip_tags( (string) $text ) ); }
+
+
+// ── Stubs added for Tack_Wholesale_Pricing ───────────────────────────────────
+//
+// Guarded with function_exists/class_exists so this file stays safe to include
+// alongside any other harness, and so a real WordPress bootstrap would win.
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	/** Minimal stand-in for WordPress's error object. */
+	class WP_Error {
+		/** @var string */
+		private $code;
+		/** @var string */
+		private $message;
+
+		/**
+		 * Constructor.
+		 *
+		 * @param string $code    Error code.
+		 * @param string $message Error message.
+		 */
+		public function __construct( $code = '', $message = '' ) {
+			$this->code    = $code;
+			$this->message = $message;
+		}
+
+		/** @return string */
+		public function get_error_message() {
+			return $this->message;
+		}
+
+		/** @return string */
+		public function get_error_code() {
+			return $this->code;
+		}
+	}
+}
+
+if ( ! function_exists( 'is_wp_error' ) ) {
+	/**
+	 * @param mixed $thing Value to test.
+	 * @return bool
+	 */
+	function is_wp_error( $thing ) {
+		return $thing instanceof WP_Error;
+	}
+}
+
+if ( ! function_exists( 'is_admin' ) ) {
+	/** @return bool */
+	function is_admin() {
+		return (bool) $GLOBALS['TACK_IS_ADMIN'];
+	}
+}
+$GLOBALS['TACK_IS_ADMIN'] = false;
+
+if ( ! function_exists( 'wp_doing_ajax' ) ) {
+	/** @return bool */
+	function wp_doing_ajax() {
+		return false;
+	}
+}
+
+if ( ! function_exists( 'wp_kses_post' ) ) {
+	/**
+	 * @param string $html Markup.
+	 * @return string
+	 */
+	function wp_kses_post( $html ) {
+		return $html;
+	}
+}
+
+if ( ! function_exists( 'wc_price' ) ) {
+	/**
+	 * @param float $amount Amount.
+	 * @return string
+	 */
+	function wc_price( $amount ) {
+		return '<span class="amount">$' . number_format( (float) $amount, 2 ) . '</span>';
+	}
+}
+
+if ( ! function_exists( 'wc_get_logger' ) ) {
+	/** @return null Logging is a no-op under the harness. */
+	function wc_get_logger() {
+		return null;
+	}
+}
+
+/**
+ * Set an option from a test.
+ *
+ * @param string $key   Option name.
+ * @param mixed  $value Value.
+ */
+function tack_test_set_option( $key, $value ) {
+	$GLOBALS['TACK_OPTIONS'][ $key ] = $value;
+}
+
+/**
+ * Set the signed-in state from a test.
+ *
+ * @param bool   $logged_in Whether a user is signed in.
+ * @param string $email     That user's email.
+ */
+function tack_test_set_logged_in( $logged_in, $email ) {
+	$GLOBALS['TACK_LOGGED_IN']  = (bool) $logged_in;
+	$GLOBALS['TACK_USER_EMAIL'] = (string) $email;
+}

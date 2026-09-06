@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -237,6 +237,14 @@ So shoppers can add multiple products before requesting one combined quote. Use 
 4. Quote-only mode on the storefront. Add to Cart is withdrawn and the quote buttons remain, so the catalogue still works and only checkout goes away.
 
 == Changelog ==
+
+= 1.6.0 =
+* New: **B2B pricing**. A signed-in trade customer can now be priced from their TackQuote price book, buyer group and quantity breaks — the same pricing authority that prices a quote. Until now the plugin could send a quote request and receive Tack-resolved prices back on the quote, but a customer browsing the shop still saw the retail price, because nothing let the storefront ASK what Tack would charge before a quote existed.
+* New: an optional **Volume pricing** table on product pages, showing only the tiers that actually change the price for that customer. It renders nothing when there is one tier, rather than showing an empty table under a heading.
+* Both are **off by default** and must be switched on under **WooCommerce → TackQuote → B2B pricing**. B2B pricing changes the price used at CHECKOUT, not just the price displayed, so it is opted into rather than inherited from a plugin update.
+* Safety: if TackQuote cannot be reached, returns no price for a SKU, or your plan does not include B2B pricing, your store keeps its own prices. No product is ever left unpriced or silently zeroed — a resolved price of `0` is honoured as a real price, while "no answer" is not.
+* Anonymous shoppers are never priced and no request is made for them, so a page cache holding a logged-out render can never contain one customer's negotiated price.
+* One batched request per page rather than one per product: a category page resolves up to 50 SKUs in a single call.
 
 = 1.5.1 =
 * Shortened the description and added links to the WooCommerce integration page and to account signup, so it is clear where to get an API key.

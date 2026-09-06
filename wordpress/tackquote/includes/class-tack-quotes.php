@@ -14,6 +14,7 @@ require_once TACK_QUOTES_DIR . 'includes/class-tack-api-client.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-widget.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-order-sync.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-catalog-mode.php';
+require_once TACK_QUOTES_DIR . 'includes/class-tack-wholesale-pricing.php';
 
 /**
  * Main plugin class (singleton).
@@ -57,6 +58,13 @@ final class Tack_Quotes {
 		// re-checks whether it applies per request, because the current user is
 		// not resolved this early and a page cache would freeze a wrong answer.
 		( new Tack_Catalog_Mode() )->init();
+
+		// B2B pricing resolved by Tack. Registered only when the merchant switched
+		// it on: it filters `woocommerce_product_get_price`, which reaches the cart
+		// and the order, so it must not attach itself by default on an update.
+		if ( Tack_Wholesale_Pricing::is_enabled() ) {
+			( new Tack_Wholesale_Pricing() )->init();
+		}
 
 		// Frontend "Request a Quote" widget/button.
 		if ( 'yes' === get_option( 'tack_quotes_enable_widget', 'yes' ) ) {
