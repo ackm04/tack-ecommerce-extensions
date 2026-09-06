@@ -90,6 +90,21 @@
      */
     function explain(err, proxyPath) {
       const msg = err && err.message ? String(err.message) : '';
+      if (msg === 'STOREFRONT_PASSWORD') {
+        return (
+          'This store is password protected, and the request was sent to the password ' +
+          'page instead of TackQuote. Development stores are always password protected ' +
+          'and it cannot be switched off. Preview the real storefront and enter the ' +
+          'password (Online Store → Preferences) — prices resolve normally there.'
+        );
+      }
+      if (msg === 'NOT_JSON') {
+        return (
+          'Something other than TackQuote answered ' + proxyPath + ' — an HTML page ' +
+          'rather than data. Usually the storefront password gate, occasionally a theme ' +
+          'or another app claiming that path.'
+        );
+      }
       if (msg === 'HTTP 404') {
         return (
           'Shopify returned 404 for ' + proxyPath + '. The app proxy subpath does not ' +
