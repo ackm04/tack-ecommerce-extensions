@@ -1,6 +1,6 @@
 # TackQuote for Shopware 6
 
-Store-side companion plugin. Lives at `integrations/shopware/TackQuote/`.
+Store-side companion plugin. Lives at `shopware/TackQuote/`.
 Distribution authority: the public GitHub release asset is
 [`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack-shopware.zip).
 This monorepo directory is build/source only. No Shopware Store listing is claimed.
@@ -275,7 +275,7 @@ repo came to encode the same wrong assumptions as their code.
 **Gap — needs a new Nest endpoint to fully match the WooCommerce plugin's
 integration depth:**
 
-The WooCommerce plugin (`integrations/wordpress/tackquote/`) authenticates
+The WooCommerce plugin (`wordpress/tackquote/`) authenticates
 with an **API key** against a dedicated, WooCommerce-specific controller —
 `apps/api/src/modules/integrations/woocommerce/woocommerce-plugin.controller.ts`
 (`ApiKeyGuard`-protected `POST /integrations/woocommerce/quote-requests` and
@@ -329,7 +329,7 @@ Shopware resolves a plugin by matching the directory to the plugin class
 The Composer path repository below is for maintainers working from this monorepo:
 
 ```bash
-composer config repositories.tackquote-shopware path /path/to/tack/integrations/shopware/TackQuote
+composer config repositories.tackquote-shopware path /path/to/tack-ecommerce-extensions/shopware/TackQuote
 composer require tackquote/shopware-tack-quote:@dev
 bin/console plugin:refresh
 bin/console plugin:install --activate TackQuote
@@ -395,4 +395,4 @@ config storage for a future tighter integration.
 - API connector (Admin API, seller-side sync): `apps/api/src/modules/integrations/shopware/shopware.service.ts`
 - Public widget endpoint this plugin calls: `apps/api/src/modules/quotes/widget.controller.ts`
 - Widget request/response contract: `apps/api/src/modules/quotes/dto/widget-quote.dto.ts`
-- Pattern mirrored (WooCommerce plugin): `integrations/wordpress/tackquote/`
+- Pattern mirrored (WooCommerce plugin): `wordpress/tackquote/`

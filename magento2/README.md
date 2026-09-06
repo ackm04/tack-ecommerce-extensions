@@ -5,7 +5,7 @@ that adds B2B quoting to the storefront: a **"Request a Quote"** button on produ
 multi-product **quote list** with its own drawer, and an admin dashboard with a connection
 test. Submissions create real quote requests — and, where the seller's policy allows it,
 real buyer companies — in TackQuote. It is the Magento counterpart to the TackQuote
-WooCommerce plugin (`integrations/wordpress/tackquote/`).
+WooCommerce plugin (`wordpress/tackquote/`).
 
 Magento's product catalog sync, inventory pull, quote-to-checkout and order import are
 handled entirely outside this module, by
@@ -448,7 +448,7 @@ In your Magento store's root `composer.json`:
   "repositories": {
     "tackquote-quotes": {
       "type": "path",
-      "url": "../path/to/tack/integrations/magento2"
+      "url": "../path/to/tack-ecommerce-extensions/magento2"
     }
   }
 }
@@ -466,7 +466,7 @@ bin/magento cache:flush
 
 ```bash
 mkdir -p app/code/TackQuote/Quotes
-cp -r /path/to/tack/integrations/magento2/* app/code/TackQuote/Quotes/
+cp -r /path/to/tack-ecommerce-extensions/magento2/* app/code/TackQuote/Quotes/
 bin/magento module:enable TackQuote_Quotes
 bin/magento setup:upgrade
 bin/magento setup:di:compile
@@ -510,7 +510,7 @@ bin/magento cache:flush
 ## File map
 
 ```
-integrations/magento2/
+magento2/
 ├── registration.php                            Module registration
 ├── composer.json                               Package metadata (tackquote/module-quotes)
 ├── LICENSE.txt                                 GPL-2.0 text (required in the package)

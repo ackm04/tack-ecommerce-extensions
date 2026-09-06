@@ -42,7 +42,7 @@ asking the theme.
 The extension is source material. It is deployed as part of the TackQuote Shopify app:
 
 ```bash
-cp -R integrations/shopify/theme-app-extension <shopify-app>/extensions/tackquote
+cp -R shopify/theme-app-extension <shopify-app>/extensions/tackquote
 cd <shopify-app>
 shopify app deploy
 ```
