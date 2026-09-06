@@ -32,14 +32,34 @@
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  min-height: 44px; /* pointer target floor */
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.4rem;
-  font: inherit;
-  font-weight: 600;
-  line-height: 1.2;
+  /* Shopify's app-block UX guidance asks for a 44px hit target. */
+  min-height: 44px;
   cursor: pointer;
   transition: opacity 0.15s ease;
+
+  /*
+   * TYPOGRAPHY AND SHAPE COME FROM THE THEME, NOT FROM HERE.
+   *
+   * Shopify's guidance is explicit that app blocks "inherit styling properties
+   * from the theme, such as typography and colors", and the previous version did
+   * not: it hardcoded 0.75rem/1.25rem padding, a 0.4rem radius and weight 600, so
+   * the button was a different shape and weight from every other button on the
+   * page in every theme.
+   *
+   * Each value reads the theme's own custom property first and only falls back to
+   * a neutral default when the theme does not publish one. Dawn and the OS 2.0
+   * themes derived from it expose `--buttons-radius`, `--buttons-border-width`
+   * and the font scale; a theme that exposes none still gets something sane.
+   */
+  font-family: var(--font-body-family, inherit);
+  font-style: var(--font-body-style, inherit);
+  font-weight: var(--font-body-weight-bold, 600);
+  font-size: inherit;
+  line-height: 1.2;
+  padding: var(--tackquote-button-padding, 0.75rem 1.25rem);
+  border-radius: var(--buttons-radius, var(--border-radius, 0.4rem));
+  border-width: var(--buttons-border-width, 1px);
+  border-style: solid;
 }
 
 .tackquote-button:hover {
@@ -56,21 +76,49 @@
   opacity: 0.55;
 }
 
+/*
+ * ── THE SOLID VARIANT PAINTED ITS LABEL INVISIBLE ──────────────────────────
+ *
+ * It was:
+ *     background: currentColor;   -- resolves to the element's own color
+ *     color: inherit;             -- the same value
+ * so the label and the background were the SAME COLOUR and the text could not be
+ * read. The comment above it described the opposite intent, which is how it
+ * survived review.
+ *
+ * Now it asks the theme for its button colours — the same pair Dawn's own
+ * `.button` uses — and only falls back to the inverted-text approximation when a
+ * theme publishes neither. The fallback sets the label to the PAGE background,
+ * which is the one value guaranteed to contrast with the page text being used as
+ * the fill.
+ */
 .tackquote-button--solid {
-  border: 1px solid currentColor;
-  background: currentColor;
-}
-
-/* The label needs to contrast with the button's own background, and the theme's
-   background colour is the only value guaranteed to do that here. */
-.tackquote-button--solid {
-  color: inherit;
+  background: rgb(var(--color-button, var(--color-base-accent-1, 0 0 0)));
+  color: rgb(var(--color-button-text, var(--color-base-solid-button-labels, 255 255 255)));
+  border-color: rgb(var(--color-button, var(--color-base-accent-1, 0 0 0)));
 }
 
 .tackquote-button--outline {
-  border: 1px solid currentColor;
   background: transparent;
   color: inherit;
+  border-color: currentColor;
+}
+
+/*
+ * The variant that blends hardest: it wears no colour of its own at all and
+ * relies on the theme's `.button` class, which the Liquid adds alongside. Only
+ * layout is declared, so nothing here can out-specify the theme's own rules —
+ * that is the whole point of the variant, and adding a background here would
+ * defeat it.
+ */
+.tackquote-button--theme {
+  background: initial;
+  color: inherit;
+  border-color: currentColor;
+  border-width: 0;
+  padding: 0;
+  border-radius: 0;
+  font-weight: inherit;
 }
 
 .tackquote-helper,

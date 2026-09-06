@@ -23,7 +23,7 @@
     {% render 'tackquote-selection', product: product %}
     <button
       type="button"
-      class="tackquote-button tackquote-button--{{ block.settings.button_style }}"
+      class="tackquote-button tackquote-button--{{ block.settings.button_style }}{% if block.settings.button_style == 'theme' %} button btn{% endif %}"
       data-tackquote-action="add"
     >
       {{ block.settings.button_label | default: 'Add to Quote' }}
@@ -66,6 +66,10 @@
       "label": "Button style",
       "options": [
         {
+          "value": "theme",
+          "label": "Match my theme's buttons"
+        },
+        {
           "value": "solid",
           "label": "Solid"
         },
@@ -74,7 +78,7 @@
           "label": "Outline"
         }
       ],
-      "default": "outline"
+      "default": "theme"
     }
   ]
 }
