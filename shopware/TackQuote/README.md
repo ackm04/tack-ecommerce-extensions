@@ -2,12 +2,17 @@
 
 Store-side companion plugin. Lives at `integrations/shopware/TackQuote/`.
 Distribution authority: the public GitHub release asset is
-[`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-shopware.zip).
+[`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack-shopware.zip).
 This monorepo directory is build/source only. No Shopware Store listing is claimed.
 
-> ⚠️ **UNVERIFIED:** the release-asset URL above has not been checked from this
-> environment. It also predates the fixes recorded below, so if the asset does exist it
-> ships the broken version. Rebuild the zip from this directory before pointing anyone at it.
+> The link above is `releases/latest/download/`, not a version-pinned tag: this
+> repository cuts one repo-wide `v*` tag per release covering every platform, and
+> `scripts/package-all.sh` rebuilds `tack-shopware.zip` from this directory on every
+> tag push (`.github/workflows/release.yml`, verified running end-to-end on the
+> v1.7.1 tag). A pinned link would go stale the next time any *other* platform
+> ships. The asset therefore always matches this directory's current source —
+> including the fixes recorded below — with no separate "rebuild it yourself"
+> step needed.
 
 ## Tested version
 
@@ -315,7 +320,7 @@ Shopware Admin → **Extensions → My extensions → TackQuote → Configure**:
 
 ## Install (public release, or Composer path for maintainers)
 
-Download [`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.1.0/tack-shopware.zip)
+Download [`tack-shopware.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack-shopware.zip)
 and follow the included README, or copy the extracted plugin into
 `custom/plugins/TackQuote`. **The directory name must be exactly `TackQuote`** —
 Shopware resolves a plugin by matching the directory to the plugin class

@@ -1,0 +1,30 @@
+name: README release contract
+
+# Runs scripts/check-release-claims.sh against every README.md / readme.txt in
+# the repository. Exists because ackm04/tack-ecommerce-extensions#20 found the
+# root README five releases out of date — every download link pinned to
+# v1.1.0, and a fabricated `/v1/webhooks` "Tack creates orders automatically"
+# claim that no connector in this repo implements — and nothing caught it: no
+# build broke, no test failed, the stale doc simply sat there. This is the
+# check that would have failed on that PR.
+#
+# Deliberately separate from release.yml: this should run on every push and
+# pull request that touches a README, not only on a version tag.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - '**/README.md'
+      - '**/readme.txt'
+      - 'scripts/check-release-claims.sh'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check README release claims
+        run: bash scripts/check-release-claims.sh

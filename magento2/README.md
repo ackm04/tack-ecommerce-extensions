@@ -413,7 +413,7 @@ so the suite has to be run from inside a Magento installation, not from this dir
 ## Installation
 
 Distribution authority: the public GitHub release asset is
-[`tack-magento2.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/download/v1.2.0/tack-magento2.zip).
+[`tack-magento2.zip`](https://github.com/ackm04/tack-ecommerce-extensions/releases/latest/download/tack-magento2.zip).
 This monorepo directory is build/source only. No Magento Marketplace or Packagist listing
 is claimed.
 
