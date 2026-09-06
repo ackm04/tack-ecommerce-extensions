@@ -383,3 +383,72 @@ body.tack-quote-modal-open {
   font-size: 1em;
   margin: 0 0 0.5rem;
 }
+
+/* ── B2B pricing surfaces (1.6.0 / 1.7.0) ─────────────────────────────────────
+ *
+ * Deliberately restrained: these render inside whatever theme the merchant
+ * runs, so they inherit colour and font rather than imposing a palette. Only
+ * layout, spacing and emphasis are set here. `currentColor` throughout means a
+ * dark theme gets readable text without a second stylesheet.
+ */
+
+/* The volume-tier ladder. Scrolls rather than overflowing on a narrow phone. */
+.tackquote-quantity-breaks {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.tackquote-quantity-breaks caption {
+  text-align: start;
+  font-weight: 600;
+  padding-bottom: 6px;
+}
+
+.tackquote-quantity-breaks th,
+.tackquote-quantity-breaks td {
+  /* `currentColor` at low alpha, so the rule is visible on light and dark. */
+  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  padding: 6px 10px;
+  text-align: start;
+}
+
+.tackquote-quantity-breaks th {
+  font-weight: 600;
+}
+
+/* Minimum/maximum order quantity. An advisory, not an error — so it is not
+ * styled red. The refusal at the cart is where the alarming styling belongs,
+ * and WooCommerce already owns that. */
+.tackquote-order-limit {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-inline-start: 3px solid currentColor;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  font-size: 0.95em;
+}
+
+/* "You're on Tier 2 pricing". Sits above the title, so it reads as a status
+ * about the viewer rather than a label on the product. */
+.tackquote-buyer-group {
+  margin: 0 0 8px;
+}
+
+.tackquote-buyer-group-name {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* The struck-through store price next to the buyer's price. `del` is already
+ * aria-hidden in the markup, so this is purely visual. */
+.woocommerce div.product p.price del.tackquote-was,
+del + ins {
+  text-decoration: none;
+}
