@@ -423,3 +423,17 @@
   font-size: 0.875rem;
   opacity: 0.85;
 }
+
+/*
+ * The merchant-only diagnostic under the price block's error line.
+ *
+ * Never reaches a shopper: the JS renders it solely when `Shopify.designMode` is
+ * true. Deliberately quieter than the message above it — it is a hint about what
+ * to go and check, not the headline.
+ */
+.tackquote-price__error-detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+  line-height: 1.4;
+}

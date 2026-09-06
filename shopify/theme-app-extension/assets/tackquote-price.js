@@ -82,15 +82,69 @@
     }
 
     /**
+     * Turn a fetch failure into something the merchant can act on.
+     *
+     * Every branch names the ONE thing to go and check. `fetchJson` already throws
+     * `HTTP <status>`, and that detail was being discarded by an empty catch — which
+     * is the whole reason this block could only ever say "something went wrong".
+     */
+    function explain(err, proxyPath) {
+      const msg = err && err.message ? String(err.message) : '';
+      if (msg === 'HTTP 404') {
+        return (
+          'Shopify returned 404 for ' + proxyPath + '. The app proxy subpath does not ' +
+          "match this block's \"App proxy path\" setting — check Settings → Apps and " +
+          'sales channels → TackQuote → App proxy.'
+        );
+      }
+      if (msg === 'HTTP 401' || msg === 'HTTP 403') {
+        return (
+          'Shopify forwarded the request but TackQuote rejected the signature. That ' +
+          'usually means the app was reinstalled and the stored secret is stale — ' +
+          'reconnect the store.'
+        );
+      }
+      if (/^HTTP 5/.test(msg)) {
+        return 'TackQuote answered ' + msg + '. Nothing is wrong with this block; try again shortly.';
+      }
+      if (err && err.name === 'AbortError') {
+        return 'TackQuote did not answer within 2.5 seconds, so the price was skipped rather than delaying the page.';
+      }
+      return msg
+        ? 'The request to ' + proxyPath + ' failed: ' + msg
+        : 'The request to ' + proxyPath + ' failed before it reached TackQuote.';
+    }
+
+    /**
      * Rule 2. We could not get an answer, so we get out of the way.
      *
      * Hiding rather than emptying, because an empty block still occupies its
      * heading and its spacing, which reads as a broken widget rather than as an
      * absent one.
      */
-    function standDown() {
+    /**
+     * @param {string} [why] What actually failed — merchant only.
+     *
+     * Rendered ONLY in the theme editor. Shopify's own theme-editor guidance
+     * names this as a use for `Shopify.designMode`: "working with a third-party
+     * API that returns and outputs any errors to the theme editor but never to
+     * the live store". A shopper still sees nothing at all.
+     *
+     * It exists because the old message could not be acted on. A wrong app proxy
+     * path, an unsigned request, a 5xx, a timeout and a store that is simply not
+     * connected all produced one sentence — "We could not load your price just
+     * now" — which tells the only person who can fix it nothing about which.
+     */
+    function standDown(why) {
       if (designMode) {
-        show(line(root.dataset.msgError, 'tackquote-price__error'));
+        const frag = document.createDocumentFragment();
+        frag.appendChild(line(root.dataset.msgError, 'tackquote-price__error'));
+        if (why) {
+          const detail = line(why, 'tackquote-price__error-detail');
+          detail.setAttribute('data-tackquote-diagnostic', '');
+          frag.appendChild(detail);
+        }
+        show(frag);
         return;
       }
       root.hidden = true;
@@ -128,7 +182,10 @@
         // live storefront it hides. So the person who can fix a broken install
         // is the one who is told about it, which is what the issue asked for.
         if (data.reason === 'shop_not_installed') {
-          standDown();
+          standDown(
+            'This store is not connected to a TackQuote account. Connect it from ' +
+              'TackQuote → Connections → Shopify, then reload the editor.',
+          );
           return;
         }
         show(line(root.dataset.msgUnlinked));
@@ -190,12 +247,12 @@
           }
           render(data);
         })
-        .catch(() => {
+        .catch((err) => {
           if (token !== inFlight) return;
           // Rule 3, second half. A stale price already on screen survives an
           // outage, and there is nothing better to replace it with.
           if (cached) return;
-          standDown();
+          standDown(explain(err, proxy));
         });
     }
 
