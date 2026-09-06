@@ -201,16 +201,38 @@ class Tack_Group_Restrictions {
 		}
 
 		if ( null === $allowed ) {
+			/*
+			 * ── "WE COULD NOT ASK" AND "WE ASKED, AND THE ANSWER IS NO" ────────
+			 *
+			 * These need OPPOSITE defaults, and collapsing them was a real hole:
+			 * a buyer TackQuote had definitively placed in no group was treated
+			 * exactly like an outage, and therefore handed every restricted
+			 * payment method. Net-30 for anyone who registers.
+			 *
+			 *   unavailable  TackQuote unreachable, or no API key. FAIL OPEN —
+			 *                a checkout that dies because a supplier's API is
+			 *                slow costs the day's revenue.
+			 *   none         TackQuote answered: this buyer is in no group.
+			 *   anonymous    Nobody is signed in, or the identity is not
+			 *                trusted (see Tack_B2B_Notices::buyer_email()).
+			 *                Both are real answers, so a method restricted to a
+			 *                named group is NOT for them. FAIL CLOSED.
+			 */
+			$status = $this->notices->buyer_group_status();
+			if ( 'unavailable' !== $status ) {
+				return false;
+			}
+
 			/**
-			 * Filters whether a restricted method is hidden when the buyer's
-			 * group could not be determined (anonymous, or TackQuote
-			 * unreachable).
+			 * Filters whether a restricted method is hidden when TackQuote could
+			 * not be reached at all.
 			 *
-			 * Default false: leave it visible. Returning true is the strict
-			 * reading, and means a TackQuote outage removes payment options.
+			 * Default false: leave it visible, so an outage does not remove the
+			 * customer's ability to pay. This no longer covers "the buyer has no
+			 * group" — that is a real answer and is refused regardless.
 			 *
-			 * @param bool  $restrict Whether to hide the method.
-			 * @param string $id      Gateway or shipping method id.
+			 * @param bool   $restrict Whether to hide the method.
+			 * @param string $id       Gateway or shipping method id.
 			 */
 			return ! apply_filters( 'tackquote_restrict_when_group_unknown', false, $id );
 		}

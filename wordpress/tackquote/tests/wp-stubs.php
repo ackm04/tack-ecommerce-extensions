@@ -71,6 +71,7 @@ function wp_get_current_user() {
 	// Added for the wholesale-pricing tests: the buyer email is what selects the
 	// price book, so a stub without it would let a broken lookup pass.
 	$u->user_email = (string) $GLOBALS['TACK_USER_EMAIL'];
+	$u->ID         = 1;
 	return $u;
 }
 function checked( $a, $b = true, $echo = true ) { return (string) $a === (string) $b ? "checked='checked'" : ''; }
@@ -396,4 +397,67 @@ function tack_test_add_filter_return( $hook, $value ) {
 /** Remove every forced filter return. */
 function tack_test_clear_filter_returns() {
 	$GLOBALS['TACK_FILTERS'] = array();
+}
+
+
+// ── User-meta stubs, for the email-trust guard ──────────────────────────────
+$GLOBALS['TACK_USER_META'] = array();
+
+if ( ! function_exists( 'get_user_meta' ) ) {
+	/**
+	 * @param int    $user_id User id.
+	 * @param string $key     Meta key.
+	 * @param bool   $single  Single value.
+	 * @return mixed
+	 */
+	function get_user_meta( $user_id, $key = '', $single = false ) {
+		unset( $single );
+		return $GLOBALS['TACK_USER_META'][ $user_id ][ $key ] ?? '';
+	}
+}
+
+if ( ! function_exists( 'update_user_meta' ) ) {
+	/**
+	 * @param int    $user_id User id.
+	 * @param string $key     Meta key.
+	 * @param mixed  $value   Value.
+	 * @return bool
+	 */
+	function update_user_meta( $user_id, $key, $value ) {
+		$GLOBALS['TACK_USER_META'][ $user_id ][ $key ] = $value;
+		return true;
+	}
+}
+
+if ( ! function_exists( 'delete_user_meta' ) ) {
+	/**
+	 * @param int    $user_id User id.
+	 * @param string $key     Meta key.
+	 * @return bool
+	 */
+	function delete_user_meta( $user_id, $key ) {
+		unset( $GLOBALS['TACK_USER_META'][ $user_id ][ $key ] );
+		return true;
+	}
+}
+
+if ( ! function_exists( 'get_userdata' ) ) {
+	/**
+	 * @param int $user_id User id.
+	 * @return object|false
+	 */
+	function get_userdata( $user_id ) {
+		if ( (int) $user_id !== 1 ) {
+			return false;
+		}
+		$u             = new stdClass();
+		$u->ID         = 1;
+		$u->user_email = (string) $GLOBALS['TACK_USER_EMAIL'];
+		return $u;
+	}
+}
+
+/** Clear all stubbed user meta. */
+function tack_test_reset_user_meta() {
+	$GLOBALS['TACK_USER_META'] = array();
 }

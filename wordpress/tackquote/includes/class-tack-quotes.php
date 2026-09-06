@@ -70,6 +70,12 @@ final class Tack_Quotes {
 
 		// Order limits and the buyer-group badge. Each half has its own switch;
 		// the class registers only the hooks whose switch is on.
+		// Armed unconditionally, and deliberately so. It protects an entitlement
+		// read by both the pricing and the restriction features, and a store that
+		// switches one of them on later must not inherit a customer base whose
+		// email changes went unnoticed while it was off.
+		Tack_B2B_Notices::register_email_trust_guard();
+
 		$b2b_notices = new Tack_B2B_Notices();
 		if ( Tack_B2B_Notices::is_enabled() ) {
 			$b2b_notices->init();

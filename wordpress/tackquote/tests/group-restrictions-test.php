@@ -21,13 +21,21 @@ class Tack_Test_Group_Source extends Tack_B2B_Notices {
 	/** @var array|null */
 	private $group;
 
+	/** @var string grouped|none|anonymous|unavailable */
+	private $status;
+
 	/**
 	 * Constructor.
 	 *
-	 * @param array|null $group array{name:string,code:string} or null.
+	 * @param array|null $group  array{name:string,code:string} or null.
+	 * @param string     $status Why, when there is no group. Defaults to the
+	 *                           outage case, which is the permissive one — so a
+	 *                           test asserting a DENIAL has to opt in and cannot
+	 *                           pass by accident.
 	 */
-	public function __construct( $group ) {
-		$this->group = $group;
+	public function __construct( $group, $status = 'unavailable' ) {
+		$this->group  = $group;
+		$this->status = $group ? 'grouped' : $status;
 	}
 
 	/**
@@ -37,6 +45,15 @@ class Tack_Test_Group_Source extends Tack_B2B_Notices {
 	 */
 	public function buyer_group() {
 		return $this->group;
+	}
+
+	/**
+	 * Why the answer is what it is.
+	 *
+	 * @return string
+	 */
+	public function buyer_group_status() {
+		return $this->status;
 	}
 }
 
@@ -154,6 +171,42 @@ $out = $r->filter_shipping_rates( $rates );
 check(
 	'and the permitted group still gets it',
 	isset( $out['free_shipping:3'] ),
+	implode( ',', array_keys( $out ) )
+);
+
+// ── "Could not ask" vs "asked, answer is no" ────────────────────────────────
+//
+// These need OPPOSITE defaults and were collapsed into one `null`. A buyer
+// TackQuote had DEFINITIVELY placed in no group was treated exactly like an
+// outage, and therefore handed every restricted payment method — Net-30 for
+// anyone who registers. This is the pair that pins the fix.
+
+tack_test_set_option( Tack_Group_Restrictions::OPTION_PAYMENT_MAP, "bacs: TIER3" );
+
+$definitely_none = new Tack_Test_Group_Source( null, 'none' );
+$r   = new Tack_Group_Restrictions( $definitely_none );
+$out = $r->filter_gateways( $gateways );
+check(
+	'a buyer TackQuote says is in NO group is REFUSED a group-restricted gateway',
+	! isset( $out['bacs'] ) && isset( $out['cod'] ),
+	implode( ',', array_keys( $out ) )
+);
+
+$anon_answer = new Tack_Test_Group_Source( null, 'anonymous' );
+$r   = new Tack_Group_Restrictions( $anon_answer );
+$out = $r->filter_gateways( $gateways );
+check(
+	'an anonymous shopper is refused it too — that is a real answer, not an outage',
+	! isset( $out['bacs'] ),
+	implode( ',', array_keys( $out ) )
+);
+
+$outage = new Tack_Test_Group_Source( null, 'unavailable' );
+$r   = new Tack_Group_Restrictions( $outage );
+$out = $r->filter_gateways( $gateways );
+check(
+	'but a TackQuote OUTAGE still leaves it visible, so a slow API cannot stop checkout',
+	isset( $out['bacs'] ),
 	implode( ',', array_keys( $out ) )
 );
 

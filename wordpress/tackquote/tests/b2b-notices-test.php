@@ -243,6 +243,68 @@ check(
 );
 tack_test_set_logged_in( true, 'buyer@trade-customer.test' );
 
+// ── The privilege-escalation path, and the guard that closes it ─────────────
+//
+// TackQuote resolves a buyer — price book, group, and through the group their
+// PAYMENT TERMS — from the email this plugin sends. WooCommerce lets a customer
+// change their own email on My Account with no verification at all:
+// `WC_Form_Handler::save_account_details()` demands the current password only
+// when the PASSWORD changes, and otherwise calls `wp_update_user()` directly
+// (read from the installed WooCommerce 11.1 source).
+//
+// Its only protection is `email_exists()`, which refuses an address already
+// held by another WORDPRESS user. That is the gap: a TackQuote buyer approved
+// for Net-30 who never registered on this store is not a WordPress user, so
+// their address is free to take. Register, retype their email, reload.
+
+tack_test_reset_user_meta();
+tack_test_set_logged_in( true, 'attacker@example.test' );
+
+// First sight of an account records the address without flagging it — otherwise
+// upgrading the plugin would strip entitlements from every existing customer.
+Tack_B2B_Notices::flag_email_change( 1 );
+$c = new Tack_Test_Notices_Client( array( 'buyer-group' => array( 'status' => 'grouped', 'name' => 'Tier 3', 'code' => 'TIER3' ) ) );
+$n = new Tack_B2B_Notices( $c );
+check(
+	'an account seen for the first time is NOT flagged, so an upgrade strips nobody',
+	is_array( $n->buyer_group() ),
+	'expected the group to resolve'
+);
+
+// Now the customer changes their own email to an approved buyer's address.
+tack_test_set_logged_in( true, 'approved-net30-buyer@example.test' );
+Tack_B2B_Notices::flag_email_change( 1 );
+
+$c2 = new Tack_Test_Notices_Client( array( 'buyer-group' => array( 'status' => 'grouped', 'name' => 'Tier 3', 'code' => 'TIER3' ) ) );
+$n2 = new Tack_B2B_Notices( $c2 );
+check(
+	'a SELF-CHANGED email no longer resolves a buyer, so the group cannot be inherited',
+	null === $n2->buyer_group(),
+	'group was still resolved after an unverified email change'
+);
+check(
+	'...and it is not even asked about, so nothing leaks to TackQuote either',
+	0 === $c2->calls,
+	'calls=' . $c2->calls
+);
+check(
+	'...and it reads as ANONYMOUS, not as an outage — so a restricted method is refused, not granted',
+	'anonymous' === $n2->buyer_group_status(),
+	'status=' . $n2->buyer_group_status()
+);
+
+// A store with its own verification can opt back in, explicitly.
+tack_test_add_filter_return( 'tackquote_trust_unverified_email', true );
+$c3 = new Tack_Test_Notices_Client( array( 'buyer-group' => array( 'status' => 'grouped', 'name' => 'Tier 3', 'code' => 'TIER3' ) ) );
+$n3 = new Tack_B2B_Notices( $c3 );
+check(
+	'a store that verifies email another way can opt back in through the filter',
+	is_array( $n3->buyer_group() ),
+	'filter did not restore trust'
+);
+tack_test_clear_filter_returns();
+tack_test_reset_user_meta();
+
 // Clean up for later test files.
 tack_test_set_logged_in( false, '' );
 tack_test_set_cart( array() );
