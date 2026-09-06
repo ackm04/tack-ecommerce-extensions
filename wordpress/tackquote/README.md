@@ -3,6 +3,9 @@
 Add a **Request a Quote** button to your WooCommerce store and sync orders with your [TackQuote](https://tackquote.com) B2B quoting account.
 
 - 🧾 "Add to Quote" and "Request a Quote" buttons on product pages, plus a floating quote list with "Checkout as Quote"
+- 💷 **B2B pricing** — signed-in trade customers priced from their TackQuote price book, buyer group and quantity breaks, with an optional volume-pricing table
+- 📦 **Order limits** — minimum/maximum order quantities shown on the product page and enforced at the cart and checkout
+- 🏷️ **Buyer group badge** — tells a customer which pricing group they are on, so a discounted price does not read as an error
 - 🔁 Optional one-way order sync to TackQuote (on creation and status change), queued through Action Scheduler so it never runs inside checkout
 - 🔑 Simple setup: paste your TackQuote API key
 - 🛡️ HPOS- and Cart/Checkout-blocks-compatible; nonce, capability and rate-limit protected; removes its own options and transients on uninstall
@@ -35,6 +38,33 @@ The plugin talks to your TackQuote account over HTTPS using your API key (Bearer
 | Connection test | `GET /integrations/woocommerce/ping` (falls back to `/health`) |
 | Quote request from product/cart | `POST /integrations/woocommerce/quote-requests` |
 | Order sync | `POST /integrations/woocommerce/order-sync` |
+| B2B pricing (per buyer, per quantity) | `POST /storefront-pricing/resolve` |
+| Order limits | `GET /storefront-b2b/order-limits` |
+| Buyer group | `GET /storefront-b2b/buyer-group` |
+
+### What happens when TackQuote cannot be reached
+
+Every one of the B2B lookups **fails open**, and that is a deliberate design
+decision rather than an oversight:
+
+| Lookup | On failure |
+|---|---|
+| B2B pricing | the store's own price is used — no product is ever unpriced or zeroed |
+| Order limits | **nothing is blocked** — the cart and checkout behave as they always did |
+| Buyer group | no badge |
+
+The reasoning for order limits is the one worth stating: a checkout that stops
+working because a supplier's API is slow costs the day's revenue, while an
+unenforced minimum costs a phone call. Failures are written to
+**WooCommerce → Status → Logs** (source `tackquote`), so the merchant can see
+that B2B pricing is not being applied even though the shop still works.
+
+### Plan gating
+
+The B2B endpoints are gated **server-side** by your TackQuote plan — the plugin
+does not check your plan, because a client-side plan check is not a check. On a
+plan without B2B pricing the API declines and, by the table above, your store
+simply keeps its own prices.
 
 ## Development
 
