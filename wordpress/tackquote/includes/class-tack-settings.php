@@ -74,6 +74,10 @@ class Tack_Settings {
 		register_setting( self::OPTION_GROUP, 'tack_quotes_show_request_quote', array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, 'tack_quotes_enable_widget', array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, 'tack_quotes_enable_order_sync', array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Wholesale_Pricing::OPTION_ENABLED, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_B2B_Notices::OPTION_ORDER_LIMITS, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_B2B_Notices::OPTION_BUYER_GROUP, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 
 		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_MODE, array( 'sanitize_callback' => array( $this, 'sanitize_store_mode' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_SCOPE, array( 'sanitize_callback' => array( $this, 'sanitize_scope' ) ) );
@@ -105,6 +109,12 @@ class Tack_Settings {
 			array( $this, 'section_sync' ),
 			self::PAGE_SLUG
 		);
+		add_settings_section(
+			'tack_quotes_b2b_pricing',
+			__( 'B2B pricing', 'tackquote' ),
+			array( $this, 'section_b2b_pricing' ),
+			self::PAGE_SLUG
+		);
 
 		add_settings_field( Tack_Catalog_Mode::OPT_MODE, __( 'How customers buy', 'tackquote' ), array( $this, 'field_store_mode' ), self::PAGE_SLUG, 'tack_quotes_store_mode' );
 		add_settings_field( Tack_Catalog_Mode::OPT_SCOPE, __( 'Applies to', 'tackquote' ), array( $this, 'field_quote_only_scope' ), self::PAGE_SLUG, 'tack_quotes_store_mode' );
@@ -117,6 +127,10 @@ class Tack_Settings {
 		add_settings_field( 'tack_quotes_request_button_label', __( '"Request a Quote" button label (product page)', 'tackquote' ), array( $this, 'field_request_button_label' ), self::PAGE_SLUG, 'tack_quotes_storefront' );
 		add_settings_field( 'tack_quotes_checkout_button_label', __( '"Checkout as Quote" button label (quote list)', 'tackquote' ), array( $this, 'field_checkout_button_label' ), self::PAGE_SLUG, 'tack_quotes_storefront' );
 		add_settings_field( 'tack_quotes_enable_order_sync', __( 'Sync orders to TackQuote', 'tackquote' ), array( $this, 'field_enable_order_sync' ), self::PAGE_SLUG, 'tack_quotes_sync' );
+		add_settings_field( Tack_Wholesale_Pricing::OPTION_ENABLED, __( 'Use TackQuote prices', 'tackquote' ), array( $this, 'field_enable_wholesale_pricing' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS, __( 'Show volume pricing table', 'tackquote' ), array( $this, 'field_show_quantity_breaks' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_B2B_Notices::OPTION_ORDER_LIMITS, __( 'Enforce order limits', 'tackquote' ), array( $this, 'field_enable_order_limits' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_B2B_Notices::OPTION_BUYER_GROUP, __( 'Show buyer group', 'tackquote' ), array( $this, 'field_enable_buyer_group' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
 	}
 
 	// ── Sanitizers ────────────────────────────────────────────────────────────
@@ -545,6 +559,97 @@ class Tack_Settings {
 		$this->checkbox(
 			'tack_quotes_enable_widget',
 			__( 'Display quote buttons on products and the floating quote-list drawer. Turn off to hide all of them at once.', 'tackquote' )
+		);
+	}
+
+	/**
+	 * Explains what switching store prices over actually does.
+	 */
+	public function section_b2b_pricing() {
+		echo '<p>' . esc_html__(
+			'Price signed-in trade customers using their TackQuote price book, buyer group and quantity breaks — the same pricing that would appear on a quote. Prices are resolved per customer, so nothing changes for anonymous shoppers.',
+			'tackquote'
+		) . '</p>';
+		echo '<p class="description">' . esc_html__(
+			'Requires a TackQuote plan that includes B2B pricing. If your plan does not include it, or TackQuote cannot be reached, your store keeps its own prices — no product is ever left unpriced.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * The B2B pricing on/off switch.
+	 */
+	public function field_enable_wholesale_pricing() {
+		$this->checkbox_default_off(
+			Tack_Wholesale_Pricing::OPTION_ENABLED,
+			__( 'Replace store prices with TackQuote prices for signed-in customers.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'This changes the price used at checkout, not just the price shown. Off by default.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * The quantity-break table switch.
+	 */
+	public function field_show_quantity_breaks() {
+		$this->checkbox(
+			Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS,
+			__( 'Show a "Volume pricing" table on product pages.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'Only appears when the customer actually has more than one price tier for that product.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * The order-limits switch.
+	 */
+	public function field_enable_order_limits() {
+		$this->checkbox_default_off(
+			Tack_B2B_Notices::OPTION_ORDER_LIMITS,
+			__( 'Show and enforce TackQuote minimum/maximum order quantities.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'The notice on the product page is a courtesy; the cart and checkout are what actually refuse an order that breaks a limit. If TackQuote cannot be reached, nothing is blocked — a checkout that fails on a slow API is worse than an unenforced minimum.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * The buyer-group badge switch.
+	 */
+	public function field_enable_buyer_group() {
+		$this->checkbox_default_off(
+			Tack_B2B_Notices::OPTION_BUYER_GROUP,
+			__( 'Show the signed-in customer which pricing group they are on.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'Without it a discounted price appears with no explanation, which reads as a pricing error rather than the negotiated rate it is.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * A checkbox whose stored default is OFF.
+	 *
+	 * `checkbox()` defaults to 'yes', which is right for the switches that ship
+	 * enabled. Anything that changes what a customer is CHARGED must default to
+	 * off, so it is opted into rather than inherited from a plugin update.
+	 *
+	 * @param string $option Option name.
+	 * @param string $label  Visible label.
+	 */
+	private function checkbox_default_off( $option, $label ) {
+		$checked = ( 'yes' === get_option( $option, 'no' ) );
+		printf(
+			'<input type="hidden" name="%1$s" value="no" />' .
+			'<label><input type="checkbox" name="%1$s" value="yes" %2$s /> %3$s</label>',
+			esc_attr( $option ),
+			checked( $checked, true, false ),
+			esc_html( $label )
 		);
 	}
 

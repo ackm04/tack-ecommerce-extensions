@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -237,6 +237,23 @@ So shoppers can add multiple products before requesting one combined quote. Use 
 4. Quote-only mode on the storefront. Add to Cart is withdrawn and the quote buttons remain, so the catalogue still works and only checkout goes away.
 
 == Changelog ==
+
+= 1.7.0 =
+* New: **order limits**. TackQuote already held minimum/maximum order quantities and enforced them when a quote was converted, but a WooCommerce shopper never saw them — they filled a cart, reached checkout, and the order was refused. The limit is now shown on the product page AND enforced on the cart and at checkout.
+* New: **buyer group badge**. Shows a signed-in customer which pricing group they are on. Without it a discounted price appears with no explanation, which reads as a pricing error rather than the negotiated rate it is.
+* A TackQuote outage never blocks checkout. Nothing is refused unless TackQuote actually answered with a limit — a checkout that stops working because a supplier's API is slow costs the day's revenue, while an unenforced minimum costs a phone call.
+* Quantities are summed across cart lines of the same product before checking, so 10 + 20 satisfies a minimum of 25.
+* Both switches are off by default, under **WooCommerce → TackQuote → B2B pricing**.
+
+= 1.6.0 =
+* New: **B2B pricing**. A signed-in trade customer can now be priced from their TackQuote price book, buyer group and quantity breaks — the same pricing authority that prices a quote. Until now the plugin could send a quote request and receive Tack-resolved prices back on the quote, but a customer browsing the shop still saw the retail price, because nothing let the storefront ASK what Tack would charge before a quote existed.
+* New: an optional **Volume pricing** table on product pages, showing only the tiers that actually change the price for that customer. It renders nothing when there is one tier, rather than showing an empty table under a heading.
+* Quantity breaks apply to the CART, at the quantity actually ordered — not just to the table. The price is set on `woocommerce_before_calculate_totals`, which is the only hook that knows how many of each line the buyer wants; a filter on `woocommerce_product_get_price` has no quantity at all, so it could only ever resolve at one unit and would have advertised a volume discount the checkout did not honour.
+* Both are **off by default** and must be switched on under **WooCommerce → TackQuote → B2B pricing**. B2B pricing changes the price used at CHECKOUT, not just the price displayed, so it is opted into rather than inherited from a plugin update.
+* Correct on tax-inclusive stores. TackQuote returns a NET unit price, while `set_price()` means "the price in the basis this store is configured for". On a store set to enter prices inclusive of tax, the net figure is grossed up using the product's own tax class first — without that, WooCommerce would extract the tax back out of it and the seller would absorb the VAT on every wholesale line (a £100 net line at 20% would charge £100 instead of £120).
+* Safety: if TackQuote cannot be reached, returns no price for a SKU, or your plan does not include B2B pricing, your store keeps its own prices. No product is ever left unpriced or silently zeroed — a resolved price of `0` is honoured as a real price, while "no answer" is not.
+* Anonymous shoppers are never priced and no request is made for them, so a page cache holding a logged-out render can never contain one customer's negotiated price.
+* One batched request per page rather than one per product: a category page resolves up to 50 SKUs in a single call.
 
 = 1.5.1 =
 * Shortened the description and added links to the WooCommerce integration page and to account signup, so it is clear where to get an API key.
