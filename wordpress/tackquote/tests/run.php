@@ -90,5 +90,10 @@ require __DIR__ . '/b2b-notices-test.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-group-restrictions.php';
 require __DIR__ . '/group-restrictions-test.php';
 
+// The admin surface: how the settings page is grouped, and what a save does to
+// rules the merchant already had.
+echo "\n-- settings page structure + rule editing --\n";
+require __DIR__ . '/settings-page-test.php';
+
 echo $failures ? "\n$failures failure(s)\n" : "\nAll checks passed\n";
 exit( $failures ? 1 : 0 );

@@ -84,9 +84,36 @@ class TackStubRoles {
 	public function get_names() { return array( 'administrator' => 'Administrator', 'customer' => 'Customer', 'wholesale' => 'Wholesale' ); }
 }
 function wp_roles() { return new TackStubRoles(); }
-function register_setting() {}
-function add_settings_section() {}
-function add_settings_field() {}
+function register_setting( $group = '', $option = '', $args = array() ) {
+	$GLOBALS['TACK_SETTINGS'][] = array( 'group' => $group, 'option' => $option, 'args' => $args );
+}
+
+/*
+ * These two used to be no-ops, which meant the page's STRUCTURE — which
+ * settings are grouped together and in what order a merchant reads them —
+ * was the one thing about the settings screen no test could see. Recording
+ * the calls is what lets `settings-page-test.php` assert that no field is
+ * orphaned outside a section.
+ */
+function add_settings_section( $id = '', $title = '', $cb = null, $page = '' ) {
+	$GLOBALS['TACK_SECTIONS'][] = array( 'id' => $id, 'title' => $title, 'callback' => $cb, 'page' => $page );
+}
+function add_settings_field( $id = '', $title = '', $cb = null, $page = '', $section = 'default' ) {
+	$GLOBALS['TACK_FIELDS'][] = array( 'id' => $id, 'title' => $title, 'callback' => $cb, 'page' => $page, 'section' => $section );
+}
+
+/** Plural form. The stub ignores locale rules; only the branch matters. */
+function _n( $single, $plural, $number, $domain = null ) {
+	return 1 === (int) $number ? $single : $plural;
+}
+
+/** Reset everything the Settings API stubs recorded. */
+function tack_test_reset_settings_api() {
+	$GLOBALS['TACK_SETTINGS'] = array();
+	$GLOBALS['TACK_SECTIONS'] = array();
+	$GLOBALS['TACK_FIELDS']   = array();
+}
+tack_test_reset_settings_api();
 function plugin_basename( $file ) { return 'tackquote/tackquote.php'; }
 $GLOBALS['TACK_OPTIONS'] = array();
 function get_option( $key, $default = false ) {
@@ -266,7 +293,108 @@ if ( ! class_exists( 'Tack_Stub_WC' ) ) {
 	class Tack_Stub_WC {
 		/** @var object|null */
 		public $cart;
+
+		/** @return Tack_Stub_Payment_Gateways|null */
+		public function payment_gateways() {
+			return null === $GLOBALS['TACK_GATEWAYS'] ? null : new Tack_Stub_Payment_Gateways();
+		}
+
+		/** @return Tack_Stub_Shipping|null */
+		public function shipping() {
+			return null === $GLOBALS['TACK_SHIPPING'] ? null : new Tack_Stub_Shipping();
+		}
 	}
+}
+
+/*
+ * ── The gateway / shipping-method lists the settings grid is built from ─────
+ *
+ * Shaped after WooCommerce 11.1.0, and only where the plugin actually touches
+ * it: `WC()->payment_gateways()->payment_gateways()` returns gateways keyed by
+ * `$gateway->id` (class-wc-payment-gateways.php), and
+ * `WC()->shipping()->get_shipping_methods()` returns methods keyed by
+ * `$method->id` (class-wc-shipping.php, register_shipping_method()).
+ *
+ * Setting either global to null stands for "WooCommerce told us nothing" —
+ * the case the grid has to degrade on instead of rendering empty and wiping
+ * the merchant's rules.
+ */
+$GLOBALS['TACK_GATEWAYS'] = array();
+$GLOBALS['TACK_SHIPPING'] = array();
+
+if ( ! class_exists( 'Tack_Stub_Method' ) ) {
+	/** A payment gateway or shipping method, as far as the settings page cares. */
+	class Tack_Stub_Method {
+		/** @var string */
+		public $id;
+		/** @var string */
+		private $method_title;
+
+		/**
+		 * @param string $id    Id.
+		 * @param string $title Admin-facing title.
+		 */
+		public function __construct( $id, $title ) {
+			$this->id           = $id;
+			$this->method_title = $title;
+		}
+
+		/** @return string */
+		public function get_method_title() {
+			return $this->method_title;
+		}
+
+		/** @return string */
+		public function get_title() {
+			return $this->method_title;
+		}
+	}
+}
+
+if ( ! class_exists( 'Tack_Stub_Payment_Gateways' ) ) {
+	/** Stands in for WC_Payment_Gateways. */
+	class Tack_Stub_Payment_Gateways {
+		/** @return array */
+		public function payment_gateways() {
+			$out = array();
+			foreach ( (array) $GLOBALS['TACK_GATEWAYS'] as $id => $title ) {
+				$out[ $id ] = new Tack_Stub_Method( $id, $title );
+			}
+			return $out;
+		}
+	}
+}
+
+if ( ! class_exists( 'Tack_Stub_Shipping' ) ) {
+	/** Stands in for WC_Shipping. */
+	class Tack_Stub_Shipping {
+		/** @return array */
+		public function get_shipping_methods() {
+			$out = array();
+			foreach ( (array) $GLOBALS['TACK_SHIPPING'] as $id => $title ) {
+				$out[ $id ] = new Tack_Stub_Method( $id, $title );
+			}
+			return $out;
+		}
+	}
+}
+
+/**
+ * Set the store's payment gateways. Pass null for "WooCommerce reported none".
+ *
+ * @param array|null $gateways id => admin title.
+ */
+function tack_test_set_gateways( $gateways ) {
+	$GLOBALS['TACK_GATEWAYS'] = $gateways;
+}
+
+/**
+ * Set the store's shipping methods. Pass null for "WooCommerce reported none".
+ *
+ * @param array|null $methods id => admin title.
+ */
+function tack_test_set_shipping_methods( $methods ) {
+	$GLOBALS['TACK_SHIPPING'] = $methods;
 }
 
 if ( ! function_exists( 'WC' ) ) {

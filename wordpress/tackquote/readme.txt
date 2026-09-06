@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.7.1
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,7 +95,7 @@ WooCommerce must be installed and active first, and you need a TackQuote account
 2. Activate **TackQuote for WooCommerce**.
 3. Open **TackQuote** in the admin menu.
 4. Paste your **TackQuote API Key** (TackQuote → Settings → Developer → API Keys). Leave the API URL as the default unless support gives you another base URL.
-5. Enable or disable the quote buttons and order sync as needed, then click **Save TackQuote settings**.
+5. Work down the numbered sections in order — they are arranged as a setup sequence, and each one only depends on the ones above it. Then click **Save TackQuote settings**.
 6. Click **Test TackQuote connection** to verify.
 
 Before you enter an API key, read the **External services** section above: the plugin cannot
@@ -237,6 +237,14 @@ So shoppers can add multiple products before requesting one combined quote. Use 
 4. Quote-only mode on the storefront. Add to Cart is withdrawn and the quote buttons remain, so the catalogue still works and only checkout goes away.
 
 == Changelog ==
+
+= 1.8.0 =
+* **The settings screen is grouped into a setup sequence.** Everything used to sit under a handful of headings in no particular order, with seven unrelated controls filed under "B2B pricing" — four of them about prices and three about hiding checkout methods. The page now reads top to bottom as the order you actually set the plugin up in: connect, choose how customers buy, put the buttons on the storefront, turn on order sync, price your trade customers, then restrict checkout methods. A section that cannot work yet says so where you are reading it, rather than saving happily and doing nothing.
+* **Payment and shipping restrictions are no longer typed by hand.** Setting these up meant writing a small language into two text boxes — `cod: TIER2, TIER3`, one rule per line — which required knowing the WooCommerce GATEWAY ID (the Payments screen shows "Cash on delivery", not `cod`) and the TackQuote group code, from a different system. A wrong id did nothing; a wrong group code silently hid that payment method from every customer, permanently, with no error anywhere. You now get a row per real gateway and per real shipping method, showing the name you know it by with the id underneath, and you tick the buyer groups allowed to use it.
+* **You type a group code once, not once per rule.** The new "Your buyer group codes" field is the single place codes are entered, and every rule then becomes a checkbox. Codes already used by rules you saved earlier are picked up automatically, so nothing needs retyping after this update — and no saved code can go missing from the list, which is what would have made it possible to lose one.
+* **Nothing you already configured changes.** Rules are still stored in exactly the same format and read by exactly the same parser; the grid converts back to it on save. Rules for a gateway or shipping method your store does not currently offer — a payment plugin you deactivated, a full rate id you wrote by hand — are kept untouched and listed under the grid, instead of being quietly dropped because the screen could not draw a row for them. Your own `#` comments survive too.
+* If the store reports no gateways or shipping methods at all, the field falls back to the text box it used to be, pre-filled with your rules. An empty grid would have posted an empty rule set and deleted the lot on the next save, so it deliberately never renders one.
+* Fixed: uninstalling the plugin left thirteen options behind in the database — everything added in 1.6.0 and later, including the B2B pricing switches and the restriction rules. The readme said they were removed. They now are.
 
 = 1.7.1 =
 * **Security.** A customer could inherit another buyer's pricing group — and through it their payment terms — by changing their own email address. WooCommerce lets a customer change it on My Account with no verification: the current password is required only when the PASSWORD changes. Its one protection, `email_exists()`, refuses only an address already held by another WordPress user — so a TackQuote buyer approved for Net-30 who never registered on the store was takeable. A self-changed address is now untrusted until re-confirmed; the account still works normally, it is simply treated as anonymous by TackQuote. Stores that verify email another way can opt back in with `tackquote_trust_unverified_email`.
