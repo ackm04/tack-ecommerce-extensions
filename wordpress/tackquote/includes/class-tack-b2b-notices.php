@@ -71,6 +71,24 @@ class Tack_B2B_Notices {
 	private $group = false;
 
 	/**
+	 * WHY there is no group, which is not the same question as whether there is one.
+	 *
+	 * `''` not asked yet · `grouped` · `none` (TackQuote answered: this buyer
+	 * belongs to no group) · `anonymous` (nobody signed in, or the identity is
+	 * not trusted) · `unavailable` (TackQuote could not be reached).
+	 *
+	 * The distinction is load-bearing for `Tack_Group_Restrictions`. Collapsing
+	 * all four into `null` meant a buyer TackQuote had DEFINITIVELY placed in no
+	 * group was treated exactly like an outage — and since an outage must not
+	 * block checkout, that buyer was handed every restricted payment method.
+	 * "We could not ask" and "we asked, and the answer is no" need opposite
+	 * defaults.
+	 *
+	 * @var string
+	 */
+	private $group_status = '';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Tack_Api_Client|null $client Injected in tests; built here otherwise.
@@ -277,10 +295,12 @@ class Tack_B2B_Notices {
 		$this->group = null;
 
 		if ( ! $this->should_ask() ) {
+			$this->group_status = 'unavailable';
 			return null;
 		}
 		$email = $this->buyer_email();
 		if ( '' === $email ) {
+			$this->group_status = 'anonymous';
 			// Anonymous: there is no group to belong to, and asking would leak
 			// nothing useful anyway.
 			return null;
@@ -294,19 +314,37 @@ class Tack_B2B_Notices {
 		);
 		if ( is_wp_error( $response ) ) {
 			$this->log( 'buyer-group lookup failed: ' . $response->get_error_message() );
+			$this->group_status = 'unavailable';
 			return null;
 		}
 
 		$status = isset( $response['status'] ) ? (string) $response['status'] : '';
 		if ( 'grouped' !== $status || empty( $response['name'] ) ) {
+			// A real answer: TackQuote knows this buyer and places them in no
+			// group (or does not know them at all). NOT an outage.
+			$this->group_status = ( 'anonymous' === $status ) ? 'anonymous' : 'none';
 			return null;
 		}
+		$this->group_status = 'grouped';
 
 		$this->group = array(
 			'name' => (string) $response['name'],
 			'code' => isset( $response['code'] ) ? (string) $response['code'] : '',
 		);
 		return $this->group;
+	}
+
+	/**
+	 * Why the last `buyer_group()` answered as it did.
+	 *
+	 * Calls `buyer_group()` first so the answer is resolved; it is cached per
+	 * request, so this costs nothing extra.
+	 *
+	 * @return string One of grouped|none|anonymous|unavailable.
+	 */
+	public function buyer_group_status() {
+		$this->buyer_group();
+		return '' === $this->group_status ? 'unavailable' : $this->group_status;
 	}
 
 	/**
@@ -374,8 +412,81 @@ class Tack_B2B_Notices {
 		return '' !== (string) get_option( 'tack_quotes_api_key', '' );
 	}
 
+	/** Set when a customer changes their own email; cleared only by the merchant. */
+	const META_EMAIL_UNVERIFIED = '_tack_email_unverified';
+
 	/**
-	 * Email of the signed-in customer, or ''.
+	 * Register the guard that notices a self-service email change.
+	 *
+	 * Static and idempotent, because the entitlement it protects is read by two
+	 * classes and must be armed even when only one of them is switched on.
+	 */
+	public static function register_email_trust_guard() {
+		add_action( 'woocommerce_save_account_details', array( __CLASS__, 'flag_email_change' ), 10, 1 );
+	}
+
+	/**
+	 * Mark an account untrusted when the customer changes their own email.
+	 *
+	 * ── WHY THIS IS NEEDED ──────────────────────────────────────────────────
+	 *
+	 * TackQuote resolves a buyer — their price book, their group, and through
+	 * that their payment terms — from the EMAIL this plugin sends. WooCommerce
+	 * lets a customer change their own email on My Account with no verification
+	 * whatever: `WC_Form_Handler::save_account_details()` requires the current
+	 * password only when the PASSWORD is being changed, and otherwise calls
+	 * `wp_update_user()` directly. Read from the installed WooCommerce 11.1
+	 * source, not assumed.
+	 *
+	 * Its one protection is `email_exists()`, which refuses an address already
+	 * held by another WORDPRESS user. That is the whole gap: a TackQuote buyer
+	 * approved for Net-30 who has never registered on this store is not a
+	 * WordPress user, so their address is free to take. Register, retype their
+	 * email, reload — wholesale pricing and their payment terms.
+	 *
+	 * So a self-changed address stops being trusted until the merchant says
+	 * otherwise. Not blocked, not reverted — WooCommerce's own account page
+	 * still works exactly as before, and the customer still shops. They are
+	 * simply treated as anonymous by TackQuote until the link is re-confirmed,
+	 * which is the same state a brand-new shopper is in.
+	 *
+	 * @param int $user_id The user whose details were saved.
+	 */
+	public static function flag_email_change( $user_id ) {
+		$user_id = (int) $user_id;
+		if ( $user_id <= 0 ) {
+			return;
+		}
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
+			return;
+		}
+
+		$known = (string) get_user_meta( $user_id, '_tack_known_email', true );
+		$now   = (string) $user->user_email;
+
+		if ( '' === $known ) {
+			// First time we have seen this account. Record the address as it
+			// stands rather than flagging it: the customer has not changed
+			// anything yet, and flagging every existing buyer on upgrade would
+			// silently strip entitlements from the whole customer base.
+			update_user_meta( $user_id, '_tack_known_email', $now );
+			return;
+		}
+
+		if ( $known !== $now ) {
+			update_user_meta( $user_id, self::META_EMAIL_UNVERIFIED, '1' );
+			update_user_meta( $user_id, '_tack_known_email', $now );
+		}
+	}
+
+	/**
+	 * Email of the signed-in customer, or '' when there is nobody to trust.
+	 *
+	 * Returns '' for an account whose address was self-changed and not
+	 * re-confirmed. Downstream that reads as `anonymous`, which is a real
+	 * answer rather than an outage — so a restricted payment method is refused
+	 * rather than granted. See `Tack_Group_Restrictions::permitted()`.
 	 *
 	 * @return string
 	 */
@@ -384,7 +495,28 @@ class Tack_B2B_Notices {
 			return '';
 		}
 		$user = wp_get_current_user();
-		return ( $user && isset( $user->user_email ) ) ? (string) $user->user_email : '';
+		if ( ! $user || ! isset( $user->user_email ) ) {
+			return '';
+		}
+
+		if ( '1' === (string) get_user_meta( $user->ID, self::META_EMAIL_UNVERIFIED, true ) ) {
+			/**
+			 * Filters whether a self-changed, unconfirmed email may still
+			 * resolve a TackQuote buyer.
+			 *
+			 * Default false. A store that verifies email another way (an
+			 * identity plugin, SSO) can return true — but only if that
+			 * verification actually happened.
+			 *
+			 * @param bool $trust   Whether to trust it anyway.
+			 * @param int  $user_id The customer.
+			 */
+			if ( ! apply_filters( 'tackquote_trust_unverified_email', false, $user->ID ) ) {
+				return '';
+			}
+		}
+
+		return (string) $user->user_email;
 	}
 
 	/**

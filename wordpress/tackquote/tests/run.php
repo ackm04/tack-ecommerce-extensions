@@ -86,5 +86,9 @@ require __DIR__ . '/wholesale-pricing-test.php';
 require_once TACK_QUOTES_DIR . 'includes/class-tack-b2b-notices.php';
 require __DIR__ . '/b2b-notices-test.php';
 
+// Payment/shipping methods gated by buyer group.
+require_once TACK_QUOTES_DIR . 'includes/class-tack-group-restrictions.php';
+require __DIR__ . '/group-restrictions-test.php';
+
 echo $failures ? "\n$failures failure(s)\n" : "\nAll checks passed\n";
 exit( $failures ? 1 : 0 );

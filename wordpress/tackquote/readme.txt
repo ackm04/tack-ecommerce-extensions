@@ -5,7 +5,7 @@ Requires at least: 6.0
 Requires Plugins: woocommerce
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -237,6 +237,12 @@ So shoppers can add multiple products before requesting one combined quote. Use 
 4. Quote-only mode on the storefront. Add to Cart is withdrawn and the quote buttons remain, so the catalogue still works and only checkout goes away.
 
 == Changelog ==
+
+= 1.7.1 =
+* **Security.** A customer could inherit another buyer's pricing group — and through it their payment terms — by changing their own email address. WooCommerce lets a customer change it on My Account with no verification: the current password is required only when the PASSWORD changes. Its one protection, `email_exists()`, refuses only an address already held by another WordPress user — so a TackQuote buyer approved for Net-30 who never registered on the store was takeable. A self-changed address is now untrusted until re-confirmed; the account still works normally, it is simply treated as anonymous by TackQuote. Stores that verify email another way can opt back in with `tackquote_trust_unverified_email`.
+* **Security.** "TackQuote could not be reached" and "TackQuote says this buyer is in no group" were the same answer internally, and both fell through to the permissive default — so a buyer definitively placed in NO group was handed every group-restricted payment method. They are now distinguished: a real answer refuses a restricted method, and only a genuine outage leaves it visible.
+* Group codes are matched case-insensitively.
+* The payment/shipping rule fields now list the store's real gateway ids, since WooCommerce → Settings → Payments shows titles rather than the ids the field needs.
 
 = 1.7.0 =
 * New: **order limits**. TackQuote already held minimum/maximum order quantities and enforced them when a quote was converted, but a WooCommerce shopper never saw them — they filled a cart, reached checkout, and the order was refused. The limit is now shown on the product page AND enforced on the cart and at checkout.
