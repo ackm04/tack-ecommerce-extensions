@@ -18,10 +18,19 @@ name: Release plugin ZIP
 # scripts/package-all.sh, which is immune to the slug moving -- as it just did,
 # to `tackquote.zip`.
 #
-# NOTE: GitHub Actions is currently billing-blocked on this account, so this
-# still does not run. Until that is resolved, cut releases with
-# `scripts/package-all.sh` locally — which is what this workflow invokes, so the
-# two cannot drift.
+# This repo is public, so Actions minutes are free, and this workflow DOES run —
+# confirmed on the v1.7.1 tag (run 34026867487, 2026-09-06): it built all ten
+# platform artifacts via scripts/package-all.sh and uploaded them as release
+# assets automatically, with no hand-built zip involved. (An earlier version of
+# this comment claimed Actions was billing-blocked on this account and told
+# people to cut releases locally instead — that claim was never re-checked
+# after it stopped being true, and manual release-building is exactly the
+# failure mode the first half of this comment describes. Don't restore it.)
+#
+# To cut a release: push a `v*` tag to this repository. That's the whole
+# process — this workflow does the rest. See README.md "Cutting a release" for
+# the full walkthrough, including what to check if a platform artifact looks
+# wrong after the run.
 on:
   push:
     tags:
