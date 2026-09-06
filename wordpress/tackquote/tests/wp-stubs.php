@@ -357,3 +357,43 @@ function tack_test_reset_notices() {
 function tack_test_notices() {
 	return (array) $GLOBALS['TACK_NOTICES'];
 }
+
+
+// ── Filter-return helpers, for testing `apply_filters` defaults ─────────────
+
+if ( ! function_exists( 'esc_textarea' ) ) {
+	/**
+	 * @param string $t Text.
+	 * @return string
+	 */
+	function esc_textarea( $t ) {
+		return (string) $t;
+	}
+}
+
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	/**
+	 * @param string $t Text.
+	 * @return string
+	 */
+	function wp_strip_all_tags( $t ) {
+		return strip_tags( (string) $t );
+	}
+}
+
+/**
+ * Force a filter to return a fixed value.
+ *
+ * @param string $hook  Filter name.
+ * @param mixed  $value Value to return.
+ */
+function tack_test_add_filter_return( $hook, $value ) {
+	$GLOBALS['TACK_FILTERS'][ $hook ][] = function () use ( $value ) {
+		return $value;
+	};
+}
+
+/** Remove every forced filter return. */
+function tack_test_clear_filter_returns() {
+	$GLOBALS['TACK_FILTERS'] = array();
+}

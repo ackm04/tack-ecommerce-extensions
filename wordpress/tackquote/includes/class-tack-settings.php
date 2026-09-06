@@ -78,6 +78,9 @@ class Tack_Settings {
 		register_setting( self::OPTION_GROUP, Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_B2B_Notices::OPTION_ORDER_LIMITS, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_B2B_Notices::OPTION_BUYER_GROUP, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Group_Restrictions::OPTION_ENABLED, array( 'sanitize_callback' => array( $this, 'sanitize_checkbox' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Group_Restrictions::OPTION_PAYMENT_MAP, array( 'sanitize_callback' => array( $this, 'sanitize_group_map' ) ) );
+		register_setting( self::OPTION_GROUP, Tack_Group_Restrictions::OPTION_SHIPPING_MAP, array( 'sanitize_callback' => array( $this, 'sanitize_group_map' ) ) );
 
 		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_MODE, array( 'sanitize_callback' => array( $this, 'sanitize_store_mode' ) ) );
 		register_setting( self::OPTION_GROUP, Tack_Catalog_Mode::OPT_SCOPE, array( 'sanitize_callback' => array( $this, 'sanitize_scope' ) ) );
@@ -131,9 +134,31 @@ class Tack_Settings {
 		add_settings_field( Tack_Wholesale_Pricing::OPTION_SHOW_BREAKS, __( 'Show volume pricing table', 'tackquote' ), array( $this, 'field_show_quantity_breaks' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
 		add_settings_field( Tack_B2B_Notices::OPTION_ORDER_LIMITS, __( 'Enforce order limits', 'tackquote' ), array( $this, 'field_enable_order_limits' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
 		add_settings_field( Tack_B2B_Notices::OPTION_BUYER_GROUP, __( 'Show buyer group', 'tackquote' ), array( $this, 'field_enable_buyer_group' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_Group_Restrictions::OPTION_ENABLED, __( 'Restrict methods by group', 'tackquote' ), array( $this, 'field_enable_group_restrictions' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_Group_Restrictions::OPTION_PAYMENT_MAP, __( 'Payment methods by group', 'tackquote' ), array( $this, 'field_payment_group_map' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
+		add_settings_field( Tack_Group_Restrictions::OPTION_SHIPPING_MAP, __( 'Shipping methods by group', 'tackquote' ), array( $this, 'field_shipping_group_map' ), self::PAGE_SLUG, 'tack_quotes_b2b_pricing' );
 	}
 
 	// ── Sanitizers ────────────────────────────────────────────────────────────
+
+	/**
+	 * Sanitize a group map textarea.
+	 *
+	 * Kept as free text rather than parsed-and-rejected: a merchant mid-edit
+	 * should not lose the whole box because one line is incomplete. The parser
+	 * in Tack_Group_Restrictions skips lines it cannot read, so an unparsable
+	 * line restricts nothing rather than breaking checkout. What is stripped
+	 * here is markup, which has no business in an id list.
+	 *
+	 * @param mixed $value Submitted value.
+	 * @return string
+	 */
+	public function sanitize_group_map( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+		return trim( wp_strip_all_tags( $value ) );
+	}
 
 	/**
 	 * Sanitize the API key, treating an empty submission as "keep what is stored".
@@ -630,6 +655,65 @@ class Tack_Settings {
 			'Without it a discounted price appears with no explanation, which reads as a pricing error rather than the negotiated rate it is.',
 			'tackquote'
 		) . '</p>';
+	}
+
+	/**
+	 * The method-restriction switch.
+	 */
+	public function field_enable_group_restrictions() {
+		$this->checkbox_default_off(
+			Tack_Group_Restrictions::OPTION_ENABLED,
+			__( 'Limit payment and shipping methods to particular TackQuote buyer groups.', 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'A method you do not list below stays available to everyone, so switching this on changes nothing until you add a rule. If a rule would remove every payment or shipping option, it is ignored and logged — a checkout nobody can complete is never the right answer to a misconfiguration.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * Payment gateway -> group codes.
+	 */
+	public function field_payment_group_map() {
+		$this->group_map_textarea(
+			Tack_Group_Restrictions::OPTION_PAYMENT_MAP,
+			/* translators: this is an example configuration, shown as placeholder text. */
+			__( "cod: TIER2, TIER3\nbacs: TIER3", 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'One rule per line, as "gateway id: GROUP_CODE, GROUP_CODE". Find gateway ids under WooCommerce → Settings → Payments; group codes come from TackQuote.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * Shipping method -> group codes.
+	 */
+	public function field_shipping_group_map() {
+		$this->group_map_textarea(
+			Tack_Group_Restrictions::OPTION_SHIPPING_MAP,
+			/* translators: this is an example configuration, shown as placeholder text. */
+			__( "free_shipping: TIER3\nlocal_pickup: TIER2, TIER3", 'tackquote' )
+		);
+		echo '<p class="description">' . esc_html__(
+			'Same format. Use the method id (for example free_shipping) or the full rate id.',
+			'tackquote'
+		) . '</p>';
+	}
+
+	/**
+	 * Render one of the group-map textareas.
+	 *
+	 * @param string $option      Option name.
+	 * @param string $placeholder Example text.
+	 */
+	private function group_map_textarea( $option, $placeholder ) {
+		printf(
+			'<textarea name="%1$s" rows="4" cols="50" class="large-text code" placeholder="%2$s">%3$s</textarea>',
+			esc_attr( $option ),
+			esc_attr( $placeholder ),
+			esc_textarea( (string) get_option( $option, '' ) )
+		);
 	}
 
 	/**
