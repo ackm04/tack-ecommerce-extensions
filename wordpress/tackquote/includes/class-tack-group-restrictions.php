@@ -128,7 +128,7 @@ class Tack_Group_Restrictions {
 		 */
 		if ( empty( $out ) ) {
 			$this->log(
-				'Buyer-group restrictions would have removed EVERY payment gateway; leaving them all enabled. Check the group codes under WooCommerce -> TackQuote.'
+				'Buyer-group restrictions would have removed EVERY payment gateway; leaving them all enabled. Check the group codes on the TackQuote settings screen.'
 			);
 			return $gateways;
 		}
@@ -178,7 +178,7 @@ class Tack_Group_Restrictions {
 		// Same reasoning as gateways: no shipping rate at all blocks checkout.
 		if ( empty( $out ) ) {
 			$this->log(
-				'Buyer-group restrictions would have removed EVERY shipping rate; leaving them all enabled. Check the group codes under WooCommerce -> TackQuote.'
+				'Buyer-group restrictions would have removed EVERY shipping rate; leaving them all enabled. Check the group codes on the TackQuote settings screen.'
 			);
 			return $rates;
 		}
