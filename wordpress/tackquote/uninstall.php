@@ -28,6 +28,41 @@ $tack_quotes_options = array(
 	'tack_quotes_enable_widget',
 	'tack_quotes_enable_order_sync',
 	'tack_quotes_schema_version',
+
+	/*
+	 * Everything below was added in 1.6.0 and later and was never added HERE,
+	 * so an uninstall left thirteen options behind while the readme promised
+	 * it "removes every option above". Nothing visibly broke — orphaned rows
+	 * in wp_options are silent — which is exactly why it went unnoticed
+	 * through three releases.
+	 *
+	 * The names are written out literally rather than read from the class
+	 * constants on purpose: WordPress loads uninstall.php on its own, with
+	 * WP_UNINSTALL_PLUGIN defined and the plugin's own files NOT loaded, so
+	 * `Tack_Group_Restrictions::OPTION_PAYMENT_MAP` would be a fatal error
+	 * here. If you add an option, add it in both places.
+	 */
+
+	// Quote-only (B2B catalog) store mode — 1.5.0.
+	'tack_quotes_store_mode',
+	'tack_quotes_quote_only_scope',
+	'tack_quotes_quote_only_roles',
+	'tack_quotes_hide_prices',
+	'tack_quotes_hidden_price_text',
+
+	// B2B pricing — 1.6.0.
+	'tack_quotes_enable_wholesale_pricing',
+	'tack_quotes_show_quantity_breaks',
+
+	// Order limits + buyer group badge — 1.7.0.
+	'tack_quotes_enable_order_limits',
+	'tack_quotes_enable_buyer_group',
+
+	// Payment/shipping restrictions by buyer group — 1.7.0, 1.8.0.
+	'tack_quotes_enable_group_restrictions',
+	'tack_quotes_payment_group_map',
+	'tack_quotes_shipping_group_map',
+	'tack_quotes_buyer_group_codes',
 );
 
 /**
