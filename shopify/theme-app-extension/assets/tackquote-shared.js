@@ -64,7 +64,33 @@
       signal: controller ? controller.signal : undefined,
     })
       .then((res) => {
+        /*
+         * THE PASSWORD PAGE, WHICH IS NOT AN HTTP ERROR.
+         *
+         * A dev store is always password protected — Shopify's own docs say so
+         * plainly, and it cannot be turned off until the store is transferred or
+         * moved to a paid plan. A storefront request that has not cleared that
+         * gate is REDIRECTED to /password, and `fetch` follows redirects by
+         * default, so what comes back is a 200 carrying an HTML page.
+         *
+         * Without this check `res.ok` is true, `res.json()` throws a bare
+         * SyntaxError about unexpected token '<', and every block reports a
+         * generic failure for what is really "you are not past the password
+         * page". It is the likeliest thing to hit a merchant testing in the theme
+         * editor, where the preview runs in an iframe that may not carry the
+         * storefront cookie.
+         */
+        if (res.redirected && /\/password(\?|$)/.test(res.url)) {
+          throw new Error('STOREFRONT_PASSWORD');
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        // Belt and braces: a store can serve the gate without a redirect fetch
+        // can see, and an HTML body is never a valid answer from this API.
+        const type = res.headers.get('content-type') || '';
+        if (type && type.indexOf('json') === -1) {
+          throw new Error('NOT_JSON');
+        }
         return res.json();
       })
       .finally(() => {
