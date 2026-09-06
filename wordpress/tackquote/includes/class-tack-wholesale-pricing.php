@@ -234,7 +234,7 @@ class Tack_Wholesale_Pricing {
 			$unit = apply_filters( 'tackquote_wholesale_price', $unit, $item['data']->get_price(), $sku );
 
 			if ( method_exists( $item['data'], 'set_price' ) ) {
-				$item['data']->set_price( $unit );
+				$item['data']->set_price( $this->to_store_tax_basis( $unit, $item['data'] ) );
 			}
 			unset( $key );
 		}
@@ -268,6 +268,7 @@ class Tack_Wholesale_Pricing {
 			return $html;
 		}
 
+		$unit  = $this->to_store_tax_basis( $unit, $product );
 		$store = method_exists( $product, 'get_regular_price' ) ? (float) $product->get_regular_price() : null;
 
 		// Struck-through original only when Tack is genuinely cheaper. Showing a
@@ -438,6 +439,41 @@ class Tack_Wholesale_Pricing {
 		}
 
 		echo '</tbody></table>';
+	}
+
+	/**
+	 * Tack's NET price expressed in whatever basis this store prices in.
+	 *
+	 * ── The bug this exists to prevent ──────────────────────────────────────
+	 *
+	 * `set_price()` does not mean "charge this". It means "this is the price in
+	 * the basis the store is configured for", and WooCommerce derives the rest.
+	 * Tack always returns a NET unit price — `QuoteCalculationEngine` builds
+	 * `subtotal` from `quantity * unitPrice` and then adds `taxAmount` ON TOP,
+	 * so tax is never inside the figure.
+	 *
+	 * On a store set to "I will enter prices inclusive of tax", handing that net
+	 * figure straight to `set_price()` makes WooCommerce read it as gross and
+	 * extract the tax back OUT of it. At 20% VAT a £100 net line becomes £83.33
+	 * + £16.67 = £100 charged, where £120 was owed — the seller silently eats
+	 * the tax on every wholesale line.
+	 *
+	 * `wc_get_price_including_tax()` does the conversion using the product's own
+	 * tax class and the store's rates, which is the only correct way: the rate
+	 * is per product, not a single site-wide number.
+	 *
+	 * @param float  $net     Net unit price from Tack.
+	 * @param object $product WC_Product, for its tax class.
+	 * @return float
+	 */
+	private function to_store_tax_basis( $net, $product ) {
+		if ( ! function_exists( 'wc_prices_include_tax' ) || ! wc_prices_include_tax() ) {
+			return $net;
+		}
+		if ( ! function_exists( 'wc_get_price_including_tax' ) ) {
+			return $net;
+		}
+		return (float) wc_get_price_including_tax( $product, array( 'qty' => 1, 'price' => $net ) );
 	}
 
 	/**

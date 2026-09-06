@@ -290,6 +290,40 @@ check(
 	'calls=' . $nosku->calls
 );
 
+// ── Tax basis ───────────────────────────────────────────────────────────────
+//
+// Tack always returns a NET unit price. `set_price()` means "this is the price
+// in the basis the store is configured for". On a tax-INCLUSIVE store the two
+// disagree, and handing the net figure over unchanged makes WooCommerce extract
+// the tax back out of it — the seller eats the VAT on every wholesale line.
+
+$net     = new Tack_Test_Pricing_Client(
+	array( 'items' => array( array( 'sku' => 'SG-100', 'quantity' => 1, 'unitPrice' => 100.0 ) ) )
+);
+$pricing = new Tack_Wholesale_Pricing( $net );
+$fixture = tack_test_cart( 'SG-100', 1, 150.0 );
+tack_test_set_prices_include_tax( false );
+$pricing->apply_cart_prices( $fixture['cart'] );
+check(
+	'a tax-EXCLUSIVE store gets the net price unchanged',
+	100.0 === $fixture['product']->get_price(),
+	'got ' . var_export( $fixture['product']->get_price(), true )
+);
+
+$net2    = new Tack_Test_Pricing_Client(
+	array( 'items' => array( array( 'sku' => 'SG-100', 'quantity' => 1, 'unitPrice' => 100.0 ) ) )
+);
+$pricing = new Tack_Wholesale_Pricing( $net2 );
+$fixture = tack_test_cart( 'SG-100', 1, 150.0 );
+tack_test_set_prices_include_tax( true );
+$pricing->apply_cart_prices( $fixture['cart'] );
+check(
+	'a tax-INCLUSIVE store gets the net price grossed up, so the seller does not eat the VAT',
+	120.0 === $fixture['product']->get_price(),
+	'got ' . var_export( $fixture['product']->get_price(), true ) . ' (expected 120.00 from 100.00 net at 20%)'
+);
+tack_test_set_prices_include_tax( false );
+
 // ── Gating ──────────────────────────────────────────────────────────────────
 
 tack_test_set_logged_in( false, '' );

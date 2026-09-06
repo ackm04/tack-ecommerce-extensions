@@ -221,3 +221,37 @@ function tack_test_set_logged_in( $logged_in, $email ) {
 	$GLOBALS['TACK_LOGGED_IN']  = (bool) $logged_in;
 	$GLOBALS['TACK_USER_EMAIL'] = (string) $email;
 }
+
+
+// ── Tax stubs, for the net -> store-basis conversion ────────────────────────
+$GLOBALS['TACK_PRICES_INCLUDE_TAX'] = false;
+$GLOBALS['TACK_TAX_RATE']           = 0.20;
+
+if ( ! function_exists( 'wc_prices_include_tax' ) ) {
+	/** @return bool */
+	function wc_prices_include_tax() {
+		return (bool) $GLOBALS['TACK_PRICES_INCLUDE_TAX'];
+	}
+}
+
+if ( ! function_exists( 'wc_get_price_including_tax' ) ) {
+	/**
+	 * @param object $product Product.
+	 * @param array  $args    qty/price.
+	 * @return float
+	 */
+	function wc_get_price_including_tax( $product, $args = array() ) {
+		$price = isset( $args['price'] ) ? (float) $args['price'] : 0.0;
+		unset( $product );
+		return round( $price * ( 1 + (float) $GLOBALS['TACK_TAX_RATE'] ), 2 );
+	}
+}
+
+/**
+ * Switch the store's tax basis from a test.
+ *
+ * @param bool $include Whether entered prices include tax.
+ */
+function tack_test_set_prices_include_tax( $include ) {
+	$GLOBALS['TACK_PRICES_INCLUDE_TAX'] = (bool) $include;
+}
